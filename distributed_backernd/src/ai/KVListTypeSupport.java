@@ -6,10 +6,10 @@ import com.zrdds.publication.DataWriter;
 import com.zrdds.subscription.DataReader;
 import java.io.UnsupportedEncodingException;
 
-public class PingTypeSupport extends TypeSupport {
-    private String type_name = "Ping";
+public class KVListTypeSupport extends TypeSupport {
+    private String type_name = "KVList";
     private static TypeCodeImpl s_typeCode = null;
-    private static PingTypeSupport m_instance = new PingTypeSupport();
+    private static KVListTypeSupport m_instance = new KVListTypeSupport();
 
     private final byte[] tmp_byte_obj = new byte[1];
     private final char[] tmp_char_obj = new char[1];
@@ -21,13 +21,13 @@ public class PingTypeSupport extends TypeSupport {
     private final boolean[] tmp_boolean_obj = new boolean[1];
 
     
-    public PingTypeSupport(){}
+    private KVListTypeSupport(){}
 
     
     public static TypeSupport get_instance() { return m_instance; }
 
     public Object create_sampleI() {
-        Ping sample = new Ping();
+        KVList sample = new KVList();
         return sample;
     }
 
@@ -36,9 +36,9 @@ public class PingTypeSupport extends TypeSupport {
     }
 
     public int copy_sampleI(Object dst,Object src) {
-        Ping PingDst = (Ping)dst;
-        Ping PingSrc = (Ping)src;
-        PingDst.copy(PingSrc);
+        KVList KVListDst = (KVList)dst;
+        KVList KVListSrc = (KVList)src;
+        KVListDst.copy(KVListSrc);
         return 1;
     }
 
@@ -47,12 +47,11 @@ public class PingTypeSupport extends TypeSupport {
             System.out.println("NULL");
             return -1;
         }
-        Ping sample = (Ping)_sample;
-        if (sample.msg != null){
-            System.out.println("sample.msg:" + sample.msg);
-        }
-        else{
-            System.out.println("sample.msg: null");
+        KVList sample = (KVList)_sample;
+        int valueTmpLen = sample.value.length();
+        System.out.println("sample.value.length():" +valueTmpLen);
+        for (int i = 0; i < valueTmpLen; ++i){
+            ai.KVTypeSupport.get_instance().print_sample(sample.value.get_at(i));
         }
         return 0;
     }
@@ -62,11 +61,11 @@ public class PingTypeSupport extends TypeSupport {
     }
 
     public int get_max_sizeI(){
-        return 260;
+        return 132604;
     }
 
     public int get_max_key_sizeI(){
-        return 260;
+        return 132604;
     }
 
     public boolean has_keyI(){
@@ -77,9 +76,9 @@ public class PingTypeSupport extends TypeSupport {
         return "-1";
     }
 
-    public DataReader create_data_reader() {return new PingDataReader();}
+    public DataReader create_data_reader() {return new KVListDataReader();}
 
-    public DataWriter create_data_writer() {return new PingDataWriter();}
+    public DataWriter create_data_writer() {return new KVListDataWriter();}
 
     public TypeCode get_inner_typecode(){
         TypeCode userTypeCode = get_typecode();
@@ -89,29 +88,53 @@ public class PingTypeSupport extends TypeSupport {
 
     public int get_sizeI(Object _sample,long cdr, int offset) throws UnsupportedEncodingException {
         int initialAlignment = offset;
-        Ping sample = (Ping)_sample;
-        offset += CDRSerializer.get_string_size(sample.msg == null ? 0 : sample.msg.getBytes().length, offset);
+        KVList sample = (KVList)_sample;
+        offset += CDRSerializer.get_untype_size(4, offset);
+        int valueLen = sample.value.length();
+        if (valueLen != 0){
+            for (int i = 0; i < valueLen; ++i){
+                ai.KV curEle = sample.value.get_at(i);
+                offset += ai.KVTypeSupport.get_instance().get_sizeI(curEle, cdr, offset);
+            }
+        }
 
         return offset - initialAlignment;
     }
 
     public int serializeI(Object _sample ,long cdr) {
-         Ping sample = (Ping) _sample;
+         KVList sample = (KVList) _sample;
 
-        if (!CDRSerializer.put_string(cdr, sample.msg, sample.msg == null ? 0 : sample.msg.length())){
-            System.out.println("serialize sample.msg failed.");
+        if (!CDRSerializer.put_int(cdr, sample.value.length())){
+            System.out.println("serialize length of sample.value failed.");
             return -2;
+        }
+        for (int i = 0; i < sample.value.length(); ++i){
+            if (ai.KVTypeSupport.get_instance().serializeI(sample.value.get_at(i),cdr) < 0){
+                System.out.println("serialize sample.valuefailed.");
+                return -2;
+            }
         }
 
         return 0;
     }
 
     synchronized public int deserializeI(Object _sample, long cdr){
-        Ping sample = (Ping) _sample;
-        sample.msg = CDRDeserializer.get_string(cdr);
-        if(sample.msg ==null){
-            System.out.println("deserialize member sample.msg failed.");
+        KVList sample = (KVList) _sample;
+        if (!CDRDeserializer.get_int_array(cdr, tmp_int_obj, 1)){
+            System.out.println("deserialize length of sample.value failed.");
+            return -2;
+        }
+        if (!sample.value.ensure_length(tmp_int_obj[0], tmp_int_obj[0])){
+            System.out.println("Set maxiumum member sample.value failed.");
             return -3;
+        }
+        ai.KV tmpvalue = new ai.KV();
+        for (int i = 0; i < sample.value.length(); ++i){
+            if (ai.KVTypeSupport.get_instance().deserializeI(tmpvalue, cdr) < 0){
+                System.out.println("deserialize sample.value failed.");
+                return -2;
+            }
+            sample.value.set_at(i, tmpvalue);
         }
 
         return 0;
@@ -119,18 +142,18 @@ public class PingTypeSupport extends TypeSupport {
 
     public int get_key_sizeI(Object _sample,long cdr,int offset)throws UnsupportedEncodingException {
         int initialAlignment = offset;
-        Ping sample = (Ping)_sample;
+        KVList sample = (KVList)_sample;
         offset += get_sizeI(sample, cdr, offset);
         return offset - initialAlignment;
     }
 
     public int serialize_keyI(Object _sample, long cdr){
-        Ping sample = (Ping)_sample;
+        KVList sample = (KVList)_sample;
         return 0;
     }
 
     public int deserialize_keyI(Object _sample, long cdr) {
-        Ping sample = (Ping)_sample;
+        KVList sample = (KVList)_sample;
         return 0;
     }
 
@@ -140,18 +163,22 @@ public class PingTypeSupport extends TypeSupport {
         }
         TypeCodeFactory factory = TypeCodeFactory.get_instance();
 
-        s_typeCode = factory.create_struct_TC("ai.Ping");
+        s_typeCode = factory.create_struct_TC("ai.KVList");
         if (s_typeCode == null){
-            System.out.println("create struct Ping typecode failed.");
+            System.out.println("create struct KVList typecode failed.");
             return s_typeCode;
         }
         int ret = 0;
         TypeCodeImpl memberTc = new TypeCodeImpl();
         TypeCodeImpl eleTc = new TypeCodeImpl();
 
-        memberTc = factory.create_string_TC(255);
+        memberTc = (TypeCodeImpl)ai.KVTypeSupport.get_instance().get_typecode();
+        if (memberTc != null)
+        {
+            memberTc = factory.create_sequence_TC(255, memberTc);
+        }
         if (memberTc == null){
-            System.out.println("Get Member msg TypeCode failed.");
+            System.out.println("Get Member value TypeCode failed.");
             factory.delete_TC(s_typeCode);
             s_typeCode = null;
             return null;
@@ -159,7 +186,7 @@ public class PingTypeSupport extends TypeSupport {
         ret = s_typeCode.add_member_to_struct(
             0,
             0,
-            "msg",
+            "value",
             memberTc,
             false,
             false);

@@ -2,19 +2,19 @@ package ai;
 
 import com.zrdds.infrastructure.ZRSequence;
 
-public class PingSeq extends ZRSequence<Ping> {
+public class WorkerResultSeq extends ZRSequence<WorkerResult> {
 
     protected Object[] alloc_element(int length) {
-        Ping[] result = new Ping[length];
+        WorkerResult[] result = new WorkerResult[length];
         for (int i = 0; i < result.length; ++i) {
-             result[i] = new Ping();
+             result[i] = new WorkerResult();
         }
         return result;
     }
 
     protected Object copy_from_element(Object dstEle, Object srcEle){
-        Ping typedDst = (Ping)dstEle;
-        Ping typedSrc = (Ping)srcEle;
+        WorkerResult typedDst = (WorkerResult)dstEle;
+        WorkerResult typedSrc = (WorkerResult)srcEle;
         return typedDst.copy(typedSrc);
     }
 

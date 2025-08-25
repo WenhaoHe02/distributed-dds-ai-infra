@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <!-- OCR识别区域 -->
+        <TextView
+            android:id="@+id/tvOcrTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="OCR识别"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <Button
+            android:id="@+id/btnPickOcr"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="选择OCR图片"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/tvOcrTitle"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:id="@+id/tvOcrInfo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="尚未选择OCR图片"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/btnPickOcr"
+            android:layout_marginTop="8dp" />
+
+        <HorizontalScrollView
+            android:id="@+id/horizontalScrollViewOcr"
+            android:layout_width="0dp"
+            android:layout_height="150dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/tvOcrInfo"
+            android:layout_marginTop="8dp"
+            android:background="#EEEEEE">
+
+            <LinearLayout
+                android:id="@+id/imageContainerOcr"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:padding="4dp" />
+        </HorizontalScrollView>
+
+        <!-- 物体检测区域 -->
+        <TextView
+            android:id="@+id/tvDetectTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="物体检测"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/horizontalScrollViewOcr" />
+
+        <Button
+            android:id="@+id/btnPickDetect"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="选择检测图片"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/tvDetectTitle"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:id="@+id/tvDetectInfo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="尚未选择检测图片"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/btnPickDetect"
+            android:layout_marginTop="8dp" />
+
+        <HorizontalScrollView
+            android:id="@+id/horizontalScrollViewDetect"
+            android:layout_width="0dp"
+            android:layout_height="150dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/tvDetectInfo"
+            android:layout_marginTop="8dp"
+            android:background="#EEEEEE">
+
+            <LinearLayout
+                android:id="@+id/imageContainerDetect"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:padding="4dp" />
+        </HorizontalScrollView>
+
+        <!-- 上传区域 -->
+        <Button
+            android:id="@+id/btnUploadAll"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="上传所有图片"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/horizontalScrollViewDetect"
+            android:layout_marginTop="16dp" />
+
+        <ProgressBar
+            android:id="@+id/progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:layout_constraintTop_toBottomOf="@+id/btnUploadAll"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="16dp" />
+
+        <TextView
+            android:id="@+id/tvResult"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="识别结果将显示在这里"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/progress"
+            android:layout_marginTop="16dp" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

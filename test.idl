@@ -1,0 +1,5 @@
+module ai {
+  struct Ping {
+    string msg;
+  };
+};

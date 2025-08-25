@@ -1,4 +1,4 @@
-package com.example.client
+package com.example.ocrclient
 
 import org.junit.Test
 

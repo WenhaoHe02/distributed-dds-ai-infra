@@ -1,0 +1,91 @@
+// ai.idl
+// DDS IDL for inference serving (final version)
+
+module ai {
+
+  // -----------------------------
+  // Common helper types
+  // -----------------------------
+  typedef sequence<octet> Bytes;
+
+  struct KV {
+    string key;
+    string value;
+  };
+  typedef sequence<KV> KVSeq;
+
+  struct KVList {
+    KVSeq value;
+  };
+
+  // -----------------------------
+  // Client -> Dispatcher
+  // -----------------------------
+  struct SingleTask {
+    Bytes  input_blob;
+    string request_id;   // correlation: which request this task belongs to
+    string model_id;
+    string client_id;
+    string task_id;      // unique inside the request
+  };
+  typedef sequence<SingleTask> SingleTaskSeq;
+
+  struct InferenceRequest {
+    string request_id;
+    // NOTE: 按你的最终图命名为 input_blob（虽然它其实是任务列表）
+    SingleTaskSeq input_blob;
+    long timeout_ms;
+    KVList info;
+  };
+
+  // -----------------------------
+  // Dispatcher -> Worker (mixed batch allowed)
+  // -----------------------------
+  struct TaskList {
+    SingleTaskSeq tasks;
+    long task_num;
+    string worker_id;
+    KVList meta;
+  };
+
+  // -----------------------------
+  // Worker -> Aggregator
+  // -----------------------------
+  struct SingleResult {
+    SingleTask task;     // 结果与任务一一对应
+    string status;       // e.g. "OK"/"TIMEOUT"/"ERROR"
+    string output_type;  // e.g. "TENSOR"/"JSON"/"BYTES"
+    long   latency_ms;
+    Bytes  output_blob;
+  };
+  typedef sequence<SingleResult> SingleResultSeq;
+
+  struct WorkerResult {
+    SingleResultSeq results;
+    long result_num;
+  };
+
+  // -----------------------------
+  // Worker -> Dispatcher (heartbeat / capacity)
+  // -----------------------------
+  struct NodeStatus {
+    string worker_id;
+    string model_id;
+    string host;
+    long   queue_depth;
+    long   est_capacity;
+    string health;
+    long   heartbeat_ms;
+  };
+
+  // -----------------------------
+  // Aggregator -> Client
+  // -----------------------------
+  struct AggregatedResult {
+    SingleResultSeq results;
+    string client_id;
+    string request_id;
+    string status;         // overall: "OK"/"PARTIAL"/"FAILED"
+    string error_message;
+  };
+};

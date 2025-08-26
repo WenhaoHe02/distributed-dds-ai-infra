@@ -109,11 +109,8 @@ public class Aggregator {
                     SingleResultSeq seq = groupedResults.computeIfAbsent(requestId, k -> new SingleResultSeq());
                     seq.append(result);
 
-                    System.out.println("result "+i);
-                    int blubLen= result.output_blob.length();
-                    System.out.println("blubLen "+blubLen);
-                    for(int j=0;j<blubLen;++j)
-                        System.out.println(result.output_blob.get_at(j));
+                    // 打印结果
+                    SingleResultTypeSupport.get_instance().print_sample(result);
                 }
 
                 // 遍历分好组的结果，每组生成一个 AggregatedResult 并发布

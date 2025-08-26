@@ -20,7 +20,6 @@ public class ModelRunner {
                 r.output_type = "NONE";
                 r.output_blob = new Bytes();
                 r.output_blob.from_array(new byte[0], 0);
-                r.latency_ms = (System.nanoTime() - t0) / 1_000_000L;
                 return r;
             }
 
@@ -52,7 +51,6 @@ public class ModelRunner {
             r.output_blob = new Bytes();
             r.output_blob.from_array(new byte[0], 0);
         } finally {
-            r.latency_ms = (System.nanoTime() - t0) / 1_000_000L;
         }
         return r;
     }

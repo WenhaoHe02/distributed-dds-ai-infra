@@ -61,7 +61,6 @@ public class SingleResultTypeSupport extends TypeSupport {
         else{
             System.out.println("sample.output_type: null");
         }
-        System.out.println("sample.latency_ms:" + sample.latency_ms);
         int output_blobTmpLen = sample.output_blob.length();
         System.out.println("sample.output_blob.length():" +output_blobTmpLen);
         for (int i = 0; i < output_blobTmpLen; ++i){
@@ -138,11 +137,6 @@ public class SingleResultTypeSupport extends TypeSupport {
             return -2;
         }
 
-        if (!CDRSerializer.put_long(cdr, sample.latency_ms)){
-            System.out.println("serialize sample.latency_ms failed.");
-            return -2;
-        }
-
         if (!CDRSerializer.put_int(cdr, sample.output_blob.length())){
             System.out.println("serialize length of sample.output_blob failed.");
             return -2;
@@ -180,7 +174,6 @@ public class SingleResultTypeSupport extends TypeSupport {
             System.out.println("deserialize sample.latency_ms failed.");
             return -2;
         }
-        sample.latency_ms= tmp_int_obj[0];
 
         if (!CDRDeserializer.get_int_array(cdr, tmp_int_obj, 1)){
             System.out.println("deserialize length of sample.output_blob failed.");

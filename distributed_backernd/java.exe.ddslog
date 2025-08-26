@@ -1,3 +1,163 @@
-********************  2025-08-26 19:40:54:404  ********************
+********************  2025-08-26 20:06:46:550  ********************
 Current ZRDDS version(2.4.4-r2761701) for SEU was compiled at Aug 22 2025 16:10:46
+*******************************************************************
+********************  2025-08-26 20:06:46:578  ********************
+LOGINFO: LEVEL(WARNING)
+FUNC: ZRNetRecvThread.cpp:ZRNetTCPListenThread::setKeepAliveOption(LINE: 1305)
+ignoring keep_alive option on Windows.
+*******************************************************************
+********************  2025-08-26 20:06:46:578  ********************
+LOGINFO: LEVEL(WARNING)
+FUNC: ZRNetRecvThread.cpp:ZRNetTCPListenThread::setKeepAliveOption(LINE: 1305)
+ignoring keep_alive option on Windows.
+*******************************************************************
+********************  2025-08-26 20:06:46:604  ********************
+LOGINFO: LEVEL(WARNING)
+FUNC: ZRNetRecvThread.cpp:ZRNetTCPListenThread::setKeepAliveOption(LINE: 1305)
+ignoring keep_alive option on Windows.
+*******************************************************************
+********************  2025-08-26 20:06:46:604  ********************
+LOGINFO: LEVEL(WARNING)
+FUNC: ZRNetRecvThread.cpp:ZRNetTCPListenThread::setKeepAliveOption(LINE: 1305)
+ignoring keep_alive option on Windows.
+*******************************************************************
+********************  2025-08-26 20:06:49:526  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DataReaderImpl.cpp:DataReaderImplFillDataSampleNode(LINE: 5358)
+reader((d1e8fea9)(a86f0000)(00000000)(0d000004) workerResult WorkerResult) deserialize sample failed(-2).
+*******************************************************************
+********************  2025-08-26 20:06:49:526  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DomainParticipantImpl.cpp:DomainParticipantOnDataReceived(LINE: 2773)
+domainId(100) participant((d1e8fea9)(a86f0000)(00000000)) reader((d1e8fea9)(c4690000)(00000000)(0d000003)) process data from((d1e8fea9)(a86f0000)(00000000)(0d000004)) failed(-1)
+*******************************************************************
+********************  2025-08-26 20:06:49:811  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DataReaderImpl.cpp:DataReaderImplFillDataSampleNode(LINE: 5358)
+reader((d1e8fea9)(a86f0000)(00000000)(0d000004) workerResult WorkerResult) deserialize sample failed(-2).
+*******************************************************************
+********************  2025-08-26 20:06:49:811  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DomainParticipantImpl.cpp:DomainParticipantOnDataReceived(LINE: 2773)
+domainId(100) participant((d1e8fea9)(a86f0000)(00000000)) reader((d1e8fea9)(c4690000)(00000000)(0d000003)) process data from((d1e8fea9)(a86f0000)(00000000)(0d000004)) failed(-1)
+*******************************************************************
+********************  2025-08-26 20:06:50:139  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DataReaderImpl.cpp:DataReaderImplFillDataSampleNode(LINE: 5358)
+reader((d1e8fea9)(a86f0000)(00000000)(0d000004) workerResult WorkerResult) deserialize sample failed(-2).
+*******************************************************************
+********************  2025-08-26 20:06:50:139  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DomainParticipantImpl.cpp:DomainParticipantOnDataReceived(LINE: 2773)
+domainId(100) participant((d1e8fea9)(a86f0000)(00000000)) reader((d1e8fea9)(c4690000)(00000000)(0d000003)) process data from((d1e8fea9)(a86f0000)(00000000)(0d000004)) failed(-1)
+*******************************************************************
+********************  2025-08-26 20:06:50:418  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DataReaderImpl.cpp:DataReaderImplFillDataSampleNode(LINE: 5358)
+reader((d1e8fea9)(a86f0000)(00000000)(0d000004) workerResult WorkerResult) deserialize sample failed(-2).
+*******************************************************************
+********************  2025-08-26 20:06:50:418  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DomainParticipantImpl.cpp:DomainParticipantOnDataReceived(LINE: 2773)
+domainId(100) participant((d1e8fea9)(a86f0000)(00000000)) reader((d1e8fea9)(c4690000)(00000000)(0d000003)) process data from((d1e8fea9)(a86f0000)(00000000)(0d000004)) failed(-1)
+*******************************************************************
+********************  2025-08-26 20:06:50:716  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DataReaderImpl.cpp:DataReaderImplFillDataSampleNode(LINE: 5358)
+reader((d1e8fea9)(a86f0000)(00000000)(0d000004) workerResult WorkerResult) deserialize sample failed(-2).
+*******************************************************************
+********************  2025-08-26 20:06:50:716  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DomainParticipantImpl.cpp:DomainParticipantOnDataReceived(LINE: 2773)
+domainId(100) participant((d1e8fea9)(a86f0000)(00000000)) reader((d1e8fea9)(c4690000)(00000000)(0d000003)) process data from((d1e8fea9)(a86f0000)(00000000)(0d000004)) failed(-1)
+*******************************************************************
+********************  2025-08-26 20:06:58:472  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DataReaderImpl.cpp:DataReaderImplFillDataSampleNode(LINE: 5358)
+reader((d1e8fea9)(a86f0000)(00000000)(0d000004) workerResult WorkerResult) deserialize sample failed(-2).
+*******************************************************************
+********************  2025-08-26 20:06:58:472  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DomainParticipantImpl.cpp:DomainParticipantOnDataReceived(LINE: 2773)
+domainId(100) participant((d1e8fea9)(a86f0000)(00000000)) reader((d1e8fea9)(c4690000)(00000000)(0d000003)) process data from((d1e8fea9)(a86f0000)(00000000)(0d000004)) failed(-1)
+*******************************************************************
+********************  2025-08-26 20:06:58:753  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DataReaderImpl.cpp:DataReaderImplFillDataSampleNode(LINE: 5358)
+reader((d1e8fea9)(a86f0000)(00000000)(0d000004) workerResult WorkerResult) deserialize sample failed(-2).
+*******************************************************************
+********************  2025-08-26 20:06:58:753  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DomainParticipantImpl.cpp:DomainParticipantOnDataReceived(LINE: 2773)
+domainId(100) participant((d1e8fea9)(a86f0000)(00000000)) reader((d1e8fea9)(c4690000)(00000000)(0d000003)) process data from((d1e8fea9)(a86f0000)(00000000)(0d000004)) failed(-1)
+*******************************************************************
+********************  2025-08-26 20:06:59:030  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DataReaderImpl.cpp:DataReaderImplFillDataSampleNode(LINE: 5358)
+reader((d1e8fea9)(a86f0000)(00000000)(0d000004) workerResult WorkerResult) deserialize sample failed(-2).
+*******************************************************************
+********************  2025-08-26 20:06:59:030  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DomainParticipantImpl.cpp:DomainParticipantOnDataReceived(LINE: 2773)
+domainId(100) participant((d1e8fea9)(a86f0000)(00000000)) reader((d1e8fea9)(c4690000)(00000000)(0d000003)) process data from((d1e8fea9)(a86f0000)(00000000)(0d000004)) failed(-1)
+*******************************************************************
+********************  2025-08-26 20:06:59:307  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DataReaderImpl.cpp:DataReaderImplFillDataSampleNode(LINE: 5358)
+reader((d1e8fea9)(a86f0000)(00000000)(0d000004) workerResult WorkerResult) deserialize sample failed(-2).
+*******************************************************************
+********************  2025-08-26 20:06:59:307  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DomainParticipantImpl.cpp:DomainParticipantOnDataReceived(LINE: 2773)
+domainId(100) participant((d1e8fea9)(a86f0000)(00000000)) reader((d1e8fea9)(c4690000)(00000000)(0d000003)) process data from((d1e8fea9)(a86f0000)(00000000)(0d000004)) failed(-1)
+*******************************************************************
+********************  2025-08-26 20:06:59:585  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DataReaderImpl.cpp:DataReaderImplFillDataSampleNode(LINE: 5358)
+reader((d1e8fea9)(a86f0000)(00000000)(0d000004) workerResult WorkerResult) deserialize sample failed(-2).
+*******************************************************************
+********************  2025-08-26 20:06:59:585  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DomainParticipantImpl.cpp:DomainParticipantOnDataReceived(LINE: 2773)
+domainId(100) participant((d1e8fea9)(a86f0000)(00000000)) reader((d1e8fea9)(c4690000)(00000000)(0d000003)) process data from((d1e8fea9)(a86f0000)(00000000)(0d000004)) failed(-1)
+*******************************************************************
+********************  2025-08-26 20:06:59:875  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DataReaderImpl.cpp:DataReaderImplFillDataSampleNode(LINE: 5358)
+reader((d1e8fea9)(a86f0000)(00000000)(0d000004) workerResult WorkerResult) deserialize sample failed(-2).
+*******************************************************************
+********************  2025-08-26 20:06:59:875  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DomainParticipantImpl.cpp:DomainParticipantOnDataReceived(LINE: 2773)
+domainId(100) participant((d1e8fea9)(a86f0000)(00000000)) reader((d1e8fea9)(c4690000)(00000000)(0d000003)) process data from((d1e8fea9)(a86f0000)(00000000)(0d000004)) failed(-1)
+*******************************************************************
+********************  2025-08-26 20:07:00:162  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DataReaderImpl.cpp:DataReaderImplFillDataSampleNode(LINE: 5358)
+reader((d1e8fea9)(a86f0000)(00000000)(0d000004) workerResult WorkerResult) deserialize sample failed(-2).
+*******************************************************************
+********************  2025-08-26 20:07:00:162  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DomainParticipantImpl.cpp:DomainParticipantOnDataReceived(LINE: 2773)
+domainId(100) participant((d1e8fea9)(a86f0000)(00000000)) reader((d1e8fea9)(c4690000)(00000000)(0d000003)) process data from((d1e8fea9)(a86f0000)(00000000)(0d000004)) failed(-1)
+*******************************************************************
+********************  2025-08-26 20:07:00:444  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DataReaderImpl.cpp:DataReaderImplFillDataSampleNode(LINE: 5358)
+reader((d1e8fea9)(a86f0000)(00000000)(0d000004) workerResult WorkerResult) deserialize sample failed(-2).
+*******************************************************************
+********************  2025-08-26 20:07:00:444  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DomainParticipantImpl.cpp:DomainParticipantOnDataReceived(LINE: 2773)
+domainId(100) participant((d1e8fea9)(a86f0000)(00000000)) reader((d1e8fea9)(c4690000)(00000000)(0d000003)) process data from((d1e8fea9)(a86f0000)(00000000)(0d000004)) failed(-1)
+*******************************************************************
+********************  2025-08-26 20:07:00:731  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DataReaderImpl.cpp:DataReaderImplFillDataSampleNode(LINE: 5358)
+reader((d1e8fea9)(a86f0000)(00000000)(0d000004) workerResult WorkerResult) deserialize sample failed(-2).
+*******************************************************************
+********************  2025-08-26 20:07:00:731  ********************
+LOGINFO: LEVEL(ERROR)
+FUNC: DomainParticipantImpl.cpp:DomainParticipantOnDataReceived(LINE: 2773)
+domainId(100) participant((d1e8fea9)(a86f0000)(00000000)) reader((d1e8fea9)(c4690000)(00000000)(0d000003)) process data from((d1e8fea9)(a86f0000)(00000000)(0d000004)) failed(-1)
 *******************************************************************

@@ -64,7 +64,6 @@ public class Worker {
 
                     // 调模型
                     SingleResult sr = runSingleTask(task);
-                    sr.latency_ms = (System.nanoTime() - t0) / 1_000_000L;
 
                     // 打包为 WorkerResult（只含 1 条）并发布
                     WorkerResult wr = new WorkerResult();

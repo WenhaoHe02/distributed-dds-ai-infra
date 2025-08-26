@@ -73,13 +73,12 @@ public class Dispatcher {
                     String cliId = (res.task != null && res.task.client_id  != null) ? res.task.client_id  : "";
                     String taskId= (res.task != null && res.task.task_id    != null) ? res.task.task_id    : "";
                     String model = (res.task != null && res.task.model_id   != null) ? res.task.model_id   : "";
-                    long   latMs = res.latency_ms;
                     String status= (res.status != null) ? res.status : "";
                     int outLen = (res.output_blob != null) ? res.output_blob.length() : 0;
 
                     System.out.println(String.format(
                             "  result[%d]: req=%s client=%s task=%s model=%s status=%s latency=%dms out_len=%d",
-                            i, reqId, cliId, taskId, model, status, latMs, outLen));
+                            i, reqId, cliId, taskId, model, status, outLen));
                 }
             } catch (Throwable t) { t.printStackTrace(); }
         }

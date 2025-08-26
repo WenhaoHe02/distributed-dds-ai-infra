@@ -57,35 +57,41 @@ public class ModelRunner {
         return r;
     }
 
-    static String runModel(String inputDir, String taskId)
-    {
-        try
-        {
-            // 构建命令及参数（不要手动拼接字符串）
+    static String runModel(String inputPath, String taskId) {
+        try {
+            // 用正确的参数格式：用两段式 "--param", "value"
             ProcessBuilder pb = new ProcessBuilder(
-                    "python",                  // Python 解释器命令（Linux 下可能是 python3）
-                    "../yolo_service/pred.py",             // Python 脚本
-                    "--path ../test/img1.jpg",
-                    "--task_id" +" " + taskId
-
+                    "C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe",  // ✅ 用绝对路径！
+                    "E:/distributed-dds-ai-serving-system/distributed_backernd/src/yolo_service/pred.py",
+                    "--path", inputPath,
+                    "--task_id", taskId
             );
 
-            // 合并标准错误流
-            pb.redirectErrorStream(true);
 
-            // 启动进程
+            pb.redirectErrorStream(true);
             Process process = pb.start();
 
-            // 等待执行完成
-            int exitCode = process.waitFor();
+            // 打印 Python 输出
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println("[PYTHON] " + line);
+            }
 
-        }
-        catch (IOException | InterruptedException e)
-        {
+            int exitCode = process.waitFor();
+            System.out.println("exitcode=" + exitCode);
+
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
-        return "../yolo_servic/" + taskId + ".jpg";
+
+        // 正确拼接输出路径
+        return Paths.get(
+                "E:/distributed-dds-ai-serving-system/distributed_backernd/src/yolo_service",
+                taskId + ".jpg"
+        ).toString();
     }
+
 
     static WorkerResult runBatchedTask(TaskList tasks) {
         return new WorkerResult();

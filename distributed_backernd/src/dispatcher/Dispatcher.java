@@ -198,7 +198,6 @@ public class Dispatcher {
             t.request_id = "req-test-1";
             t.client_id = "cli-local";
             t.model_id = "model-x";
-
             // 加载第一张 jpg
             byte[] jpgBytes = loadFirstJpgFromPackage("resources.images");
             if (jpgBytes != null) {

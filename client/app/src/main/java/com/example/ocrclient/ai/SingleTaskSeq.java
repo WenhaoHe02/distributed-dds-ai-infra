@@ -18,6 +18,16 @@ public class SingleTaskSeq extends ZRSequence<SingleTask> {
         return typedDst.copy(typedSrc);
     }
 
+    /**
+     * 添加一个SingleTask到序列末尾
+     * @param task 要添加的SingleTask对象
+     */
+    public void add(SingleTask task) {
+        int currentLength = this.length();
+        this.ensure_length(currentLength + 1, currentLength + 1);
+        this.set_at(currentLength, task);
+    }
+
     public void pull_from_nativeI(long nativeSeq){
 
     }

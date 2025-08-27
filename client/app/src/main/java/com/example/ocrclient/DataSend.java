@@ -67,7 +67,7 @@ public class DataSend {
             task.request_id = request.request_id;
             task.model_id = "ocr_model";
             task.client_id = clientId;
-            task.task_id = UUID.randomUUID().toString();
+            task.task_id = String.valueOf(i + 1); // 从1开始自增
 
             // 将图片转换为字节数组并存储到input_blob中
             byte[] imageBytes = uriToByteArray(ocrUris.get(i));
@@ -85,7 +85,7 @@ public class DataSend {
             task.request_id = request.request_id;
             task.model_id = "detect_model";
             task.client_id = clientId;
-            task.task_id = UUID.randomUUID().toString();
+            task.task_id = String.valueOf(ocrUris.size() + i + 1); // 继续从OCR任务之后自增
 
             // 将图片转换为字节数组并存储到input_blob中
             byte[] imageBytes = uriToByteArray(detectUris.get(i));

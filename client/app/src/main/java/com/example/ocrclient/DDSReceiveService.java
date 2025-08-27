@@ -2,9 +2,12 @@ package com.example.ocrclient;
 
 import android.util.Log;
 
+import com.example.ocrclient.ai.AggregatedResult;
 import com.example.ocrclient.ai.AggregatedResultDataReader;
 import com.example.ocrclient.ai.AggregatedResultSeq;
 import com.example.ocrclient.ai.AggregatedResultTypeSupport;
+import com.example.ocrclient.ai.SingleResult;
+import com.example.ocrclient.util.ResultSortUtil;
 import com.zrdds.domain.DomainParticipant;
 import com.zrdds.domain.DomainParticipantFactory;
 import com.zrdds.domain.DomainParticipantFactoryQos;
@@ -28,6 +31,9 @@ import com.zrdds.subscription.DataReaderListener;
 import com.zrdds.subscription.Subscriber;
 import com.zrdds.topic.Topic;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class DDSReceiveService {
     private static final String TAG = "DataReceiveByListener";
     private static final int DOMAIN_ID = 100;
@@ -37,6 +43,12 @@ public class DDSReceiveService {
     private Subscriber subscriber;
     private Topic topic;
     private DataReader dataReader;
+    private MainActivity mainActivity; // 添加MainActivity引用
+
+    // 添加设置MainActivity的方法
+    public void setMainActivity(MainActivity activity) {
+        this.mainActivity = activity;
+    }
 
     public void work() {
         loadLibrary();
@@ -185,6 +197,7 @@ public class DDSReceiveService {
 
     //TODO: 处理接收到的数据，保证顺序等
     private void readData(DataReader reader) {
+        Log.i(TAG,"开始处理数据");
         try {
             AggregatedResultDataReader dr = (AggregatedResultDataReader) reader;
             AggregatedResultSeq dataSeq = new AggregatedResultSeq();
@@ -201,7 +214,20 @@ public class DDSReceiveService {
                 for (int i = 0; i < infoSeq.length(); i++) {
                     if (!infoSeq.get_at(i).valid_data) continue;
 
-                    Log.i(TAG, "📨 收到新消息: " + dataSeq.get_at(i).toString());
+                    AggregatedResult result = dataSeq.get_at(i);
+
+                    Log.i(TAG, "📨 收到新消息: "
+                            + "client_id=" + result.client_id
+                            + ", request_id=" + result.request_id
+                            + ", status=" + result.status
+                            + ", error=" + result.error_message);
+                    
+                    if (mainActivity != null && mainActivity.isRequestValid(result.request_id, result.client_id)) {
+                        Log.i(TAG, "将AggregatedResult传递给MainActivity处理");
+                        mainActivity.handleAggregatedResult(result);
+                    } else {
+                        Log.i(TAG, "忽略非本客户端的响应消息: " + result.request_id);
+                    }
                 }
                 dr.return_loan(dataSeq, infoSeq);
             }

@@ -9,69 +9,81 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-public class ModelRunner {
-    static SingleResult runSingleTask(SingleTask task) {
-        SingleResult r = new SingleResult();
-        r.task = task; // 保留原始任务信息
-        long t0 = System.nanoTime();
+public class ModelRunner  {
+
+    /** 跑一整个 TaskList（批） */
+    public static WorkerResult runBatchedTask(TaskList tasks) {
+        WorkerResult wr = new WorkerResult();
+        wr.batch_id = tasks.batch_id;
+        wr.model_id = tasks.model_id;
+
+        int n = (tasks == null || tasks.tasks == null) ? 0 : tasks.tasks.length();
+        WorkerTaskResultSeq out = new WorkerTaskResultSeq();
+        out.ensure_length(n, n);
+
+        for (int i = 0; i < n; i++) {
+            Task t = (Task) tasks.tasks.get_at(i);
+            WorkerTaskResult r = runSingleTask(t);
+            out.set_at(i, r);
+        }
+
+        wr.results = out;
+        return wr;
+    }
+
+    /** 单条任务：保持你原有的写文件 → 调 python → 读输出的逻辑 */
+    static WorkerTaskResult runSingleTask(Task task) {
+        WorkerTaskResult r = new WorkerTaskResult();
+        r.request_id = task.request_id;
+        r.task_id = task.task_id;
+        r.client_id = task.client_id;
+
         try {
-            if (task == null || task.input_blob == null || task.input_blob.length() == 0) {
+            if (task == null || task.payload == null || task.payload.length() == 0) {
                 r.status = "ERROR_INVALID_INPUT";
-                r.output_type = "NONE";
-                r.output_blob = new Bytes();
-                r.output_blob.from_array(new byte[0], 0);
-                r.latency_ms = (System.nanoTime() - t0) / 1_000_000L;
+                r.output_blob = emptyBytes();
                 return r;
             }
 
-            // 1) 把 input_blob 写到固定目录，文件名可用 task_id
-            int inLen = task.input_blob.length();
+            // 1) 把 payload 写到固定目录（保持原路径规则）
+            int inLen = task.payload.length();
             byte[] inBytes = new byte[inLen];
-            task.input_blob.to_array(inBytes, inLen);
+            task.payload.to_array(inBytes, inLen);
 
             Path inputPath = Paths.get("workdir", task.task_id + ".jpg");
             Files.createDirectories(inputPath.getParent());
             Files.write(inputPath, inBytes);
 
-            // 2) 调模型，传入输入图片路径
+            // 2) 调用模型脚本（保持你原来的绝对路径）
             String outputPathStr = runModel(inputPath.toString(), task.task_id);
 
-            // 3) 读结果图片，放进 SingleResult
+            // 3) 读结果文件
             Path outPath = Paths.get(outputPathStr);
             byte[] outBytes = Files.readAllBytes(outPath);
 
             r.status = "OK";
-            r.output_type = "IMAGE_JPG";
-            r.output_blob = new Bytes();
-            r.output_blob.from_array(outBytes, outBytes.length);
+            r.output_blob = toBytes(outBytes);
 
         } catch (Throwable e) {
             e.printStackTrace();
             r.status = "ERROR";
-            r.output_type = "NONE";
-            r.output_blob = new Bytes();
-            r.output_blob.from_array(new byte[0], 0);
-        } finally {
-            r.latency_ms = (System.nanoTime() - t0) / 1_000_000L;
+            r.output_blob = emptyBytes();
         }
         return r;
     }
 
+    /** 保持你原来的 python 调用方式和路径 */
     static String runModel(String inputPath, String taskId) {
         try {
-            // 用正确的参数格式：用两段式 "--param", "value"
             ProcessBuilder pb = new ProcessBuilder(
-                    "C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe",  // ✅ 用绝对路径！
+                    "C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe",  // 保持原有路径
                     "E:/distributed-dds-ai-serving-system/distributed_backernd/src/yolo_service/pred.py",
                     "--path", inputPath,
                     "--task_id", taskId
             );
-
-
             pb.redirectErrorStream(true);
             Process process = pb.start();
 
-            // 打印 Python 输出
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
             while ((line = reader.readLine()) != null) {
@@ -85,15 +97,22 @@ public class ModelRunner {
             e.printStackTrace();
         }
 
-        // 正确拼接输出路径
+        // 保持原有输出路径规则
         return Paths.get(
                 "E:/distributed-dds-ai-serving-system/distributed_backernd/src/yolo_service",
                 taskId + ".jpg"
         ).toString();
     }
 
-
-    static WorkerResult runBatchedTask(TaskList tasks) {
-        return new WorkerResult();
+    /* ===================== Bytes 辅助 ===================== */
+    private static Bytes emptyBytes() {
+        Bytes b = new Bytes();
+        b.from_array(new byte[0], 0);
+        return b;
+    }
+    private static Bytes toBytes(byte[] arr) {
+        Bytes b = new Bytes();
+        b.from_array(arr, arr.length);
+        return b;
     }
 }

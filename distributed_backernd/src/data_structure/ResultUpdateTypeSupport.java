@@ -6,10 +6,10 @@ import com.zrdds.publication.DataWriter;
 import com.zrdds.subscription.DataReader;
 import java.io.UnsupportedEncodingException;
 
-public class SingleTaskTypeSupport extends TypeSupport {
-    private String type_name = "SingleTask";
+public class ResultUpdateTypeSupport extends TypeSupport {
+    private String type_name = "ResultUpdate";
     private static TypeCodeImpl s_typeCode = null;
-    private static SingleTaskTypeSupport m_instance = new SingleTaskTypeSupport();
+    private static ResultUpdateTypeSupport m_instance = new ResultUpdateTypeSupport();
 
     private final byte[] tmp_byte_obj = new byte[1];
     private final char[] tmp_char_obj = new char[1];
@@ -21,13 +21,13 @@ public class SingleTaskTypeSupport extends TypeSupport {
     private final boolean[] tmp_boolean_obj = new boolean[1];
 
     
-    private SingleTaskTypeSupport(){}
+    private ResultUpdateTypeSupport(){}
 
     
     public static TypeSupport get_instance() { return m_instance; }
 
     public Object create_sampleI() {
-        SingleTask sample = new SingleTask();
+        ResultUpdate sample = new ResultUpdate();
         return sample;
     }
 
@@ -36,9 +36,9 @@ public class SingleTaskTypeSupport extends TypeSupport {
     }
 
     public int copy_sampleI(Object dst,Object src) {
-        SingleTask SingleTaskDst = (SingleTask)dst;
-        SingleTask SingleTaskSrc = (SingleTask)src;
-        SingleTaskDst.copy(SingleTaskSrc);
+        ResultUpdate ResultUpdateDst = (ResultUpdate)dst;
+        ResultUpdate ResultUpdateSrc = (ResultUpdate)src;
+        ResultUpdateDst.copy(ResultUpdateSrc);
         return 1;
     }
 
@@ -47,24 +47,12 @@ public class SingleTaskTypeSupport extends TypeSupport {
             System.out.println("NULL");
             return -1;
         }
-        SingleTask sample = (SingleTask)_sample;
+        ResultUpdate sample = (ResultUpdate)_sample;
         if (sample.request_id != null){
             System.out.println("sample.request_id:" + sample.request_id);
         }
         else{
             System.out.println("sample.request_id: null");
-        }
-        if (sample.task_id != null){
-            System.out.println("sample.task_id:" + sample.task_id);
-        }
-        else{
-            System.out.println("sample.task_id: null");
-        }
-        if (sample.model_id != null){
-            System.out.println("sample.model_id:" + sample.model_id);
-        }
-        else{
-            System.out.println("sample.model_id: null");
         }
         if (sample.client_id != null){
             System.out.println("sample.client_id:" + sample.client_id);
@@ -72,10 +60,10 @@ public class SingleTaskTypeSupport extends TypeSupport {
         else{
             System.out.println("sample.client_id: null");
         }
-        int payloadTmpLen = sample.payload.length();
-        System.out.println("sample.payload.length():" +payloadTmpLen);
-        for (int i = 0; i < payloadTmpLen; ++i){
-            System.out.println("sample.payload.get_at(" + i + "):" + sample.payload.get_at(i));
+        int itemsTmpLen = sample.items.length();
+        System.out.println("sample.items.length():" +itemsTmpLen);
+        for (int i = 0; i < itemsTmpLen; ++i){
+            data_structure.ResultItemTypeSupport.get_instance().print_sample(sample.items.get_at(i));
         }
         return 0;
     }
@@ -85,11 +73,11 @@ public class SingleTaskTypeSupport extends TypeSupport {
     }
 
     public int get_max_sizeI(){
-        return 1299;
+        return 199423;
     }
 
     public int get_max_key_sizeI(){
-        return 1299;
+        return 199423;
     }
 
     public boolean has_keyI(){
@@ -100,9 +88,9 @@ public class SingleTaskTypeSupport extends TypeSupport {
         return "-1";
     }
 
-    public DataReader create_data_reader() {return new SingleTaskDataReader();}
+    public DataReader create_data_reader() {return new ResultUpdateDataReader();}
 
-    public DataWriter create_data_writer() {return new SingleTaskDataWriter();}
+    public DataWriter create_data_writer() {return new ResultUpdateDataWriter();}
 
     public TypeCode get_inner_typecode(){
         TypeCode userTypeCode = get_typecode();
@@ -112,39 +100,28 @@ public class SingleTaskTypeSupport extends TypeSupport {
 
     public int get_sizeI(Object _sample,long cdr, int offset) throws UnsupportedEncodingException {
         int initialAlignment = offset;
-        SingleTask sample = (SingleTask)_sample;
+        ResultUpdate sample = (ResultUpdate)_sample;
         offset += CDRSerializer.get_string_size(sample.request_id == null ? 0 : sample.request_id.getBytes().length, offset);
-
-        offset += CDRSerializer.get_string_size(sample.task_id == null ? 0 : sample.task_id.getBytes().length, offset);
-
-        offset += CDRSerializer.get_string_size(sample.model_id == null ? 0 : sample.model_id.getBytes().length, offset);
 
         offset += CDRSerializer.get_string_size(sample.client_id == null ? 0 : sample.client_id.getBytes().length, offset);
 
         offset += CDRSerializer.get_untype_size(4, offset);
-        int payloadLen = sample.payload.length();
-        if (payloadLen != 0){
-            offset += 1 * payloadLen;
+        int itemsLen = sample.items.length();
+        if (itemsLen != 0){
+            for (int i = 0; i < itemsLen; ++i){
+                data_structure.ResultItem curEle = sample.items.get_at(i);
+                offset += data_structure.ResultItemTypeSupport.get_instance().get_sizeI(curEle, cdr, offset);
+            }
         }
 
         return offset - initialAlignment;
     }
 
     public int serializeI(Object _sample ,long cdr) {
-         SingleTask sample = (SingleTask) _sample;
+         ResultUpdate sample = (ResultUpdate) _sample;
 
         if (!CDRSerializer.put_string(cdr, sample.request_id, sample.request_id == null ? 0 : sample.request_id.length())){
             System.out.println("serialize sample.request_id failed.");
-            return -2;
-        }
-
-        if (!CDRSerializer.put_string(cdr, sample.task_id, sample.task_id == null ? 0 : sample.task_id.length())){
-            System.out.println("serialize sample.task_id failed.");
-            return -2;
-        }
-
-        if (!CDRSerializer.put_string(cdr, sample.model_id, sample.model_id == null ? 0 : sample.model_id.length())){
-            System.out.println("serialize sample.model_id failed.");
             return -2;
         }
 
@@ -153,13 +130,13 @@ public class SingleTaskTypeSupport extends TypeSupport {
             return -2;
         }
 
-        if (!CDRSerializer.put_int(cdr, sample.payload.length())){
-            System.out.println("serialize length of sample.payload failed.");
+        if (!CDRSerializer.put_int(cdr, sample.items.length())){
+            System.out.println("serialize length of sample.items failed.");
             return -2;
         }
-        if (sample.payload.length() != 0){
-            if (!CDRSerializer.put_byte_array(cdr, sample.payload.get_contiguous_buffer(), sample.payload.length())){
-                System.out.println("serialize sample.payload failed.");
+        for (int i = 0; i < sample.items.length(); ++i){
+            if (data_structure.ResultItemTypeSupport.get_instance().serializeI(sample.items.get_at(i),cdr) < 0){
+                System.out.println("serialize sample.itemsfailed.");
                 return -2;
             }
         }
@@ -168,22 +145,10 @@ public class SingleTaskTypeSupport extends TypeSupport {
     }
 
     synchronized public int deserializeI(Object _sample, long cdr){
-        SingleTask sample = (SingleTask) _sample;
+        ResultUpdate sample = (ResultUpdate) _sample;
         sample.request_id = CDRDeserializer.get_string(cdr);
         if(sample.request_id ==null){
             System.out.println("deserialize member sample.request_id failed.");
-            return -3;
-        }
-
-        sample.task_id = CDRDeserializer.get_string(cdr);
-        if(sample.task_id ==null){
-            System.out.println("deserialize member sample.task_id failed.");
-            return -3;
-        }
-
-        sample.model_id = CDRDeserializer.get_string(cdr);
-        if(sample.model_id ==null){
-            System.out.println("deserialize member sample.model_id failed.");
             return -3;
         }
 
@@ -194,16 +159,20 @@ public class SingleTaskTypeSupport extends TypeSupport {
         }
 
         if (!CDRDeserializer.get_int_array(cdr, tmp_int_obj, 1)){
-            System.out.println("deserialize length of sample.payload failed.");
+            System.out.println("deserialize length of sample.items failed.");
             return -2;
         }
-        if (!sample.payload.ensure_length(tmp_int_obj[0], tmp_int_obj[0])){
-            System.out.println("Set maxiumum member sample.payload failed.");
+        if (!sample.items.ensure_length(tmp_int_obj[0], tmp_int_obj[0])){
+            System.out.println("Set maxiumum member sample.items failed.");
             return -3;
         }
-        if (!CDRDeserializer.get_byte_array(cdr, sample.payload.get_contiguous_buffer(), sample.payload.length())){
-            System.out.println("deserialize sample.payload failed.");
-            return -2;
+        data_structure.ResultItem tmpitems = new data_structure.ResultItem();
+        for (int i = 0; i < sample.items.length(); ++i){
+            if (data_structure.ResultItemTypeSupport.get_instance().deserializeI(tmpitems, cdr) < 0){
+                System.out.println("deserialize sample.items failed.");
+                return -2;
+            }
+            sample.items.set_at(i, tmpitems);
         }
 
         return 0;
@@ -211,18 +180,18 @@ public class SingleTaskTypeSupport extends TypeSupport {
 
     public int get_key_sizeI(Object _sample,long cdr,int offset)throws UnsupportedEncodingException {
         int initialAlignment = offset;
-        SingleTask sample = (SingleTask)_sample;
+        ResultUpdate sample = (ResultUpdate)_sample;
         offset += get_sizeI(sample, cdr, offset);
         return offset - initialAlignment;
     }
 
     public int serialize_keyI(Object _sample, long cdr){
-        SingleTask sample = (SingleTask)_sample;
+        ResultUpdate sample = (ResultUpdate)_sample;
         return 0;
     }
 
     public int deserialize_keyI(Object _sample, long cdr) {
-        SingleTask sample = (SingleTask)_sample;
+        ResultUpdate sample = (ResultUpdate)_sample;
         return 0;
     }
 
@@ -232,9 +201,9 @@ public class SingleTaskTypeSupport extends TypeSupport {
         }
         TypeCodeFactory factory = TypeCodeFactory.get_instance();
 
-        s_typeCode = factory.create_struct_TC("data_structure.SingleTask");
+        s_typeCode = factory.create_struct_TC("data_structure.ResultUpdate");
         if (s_typeCode == null){
-            System.out.println("create struct SingleTask typecode failed.");
+            System.out.println("create struct ResultUpdate typecode failed.");
             return s_typeCode;
         }
         int ret = 0;
@@ -265,58 +234,14 @@ public class SingleTaskTypeSupport extends TypeSupport {
 
         memberTc = factory.create_string_TC(255);
         if (memberTc == null){
-            System.out.println("Get Member task_id TypeCode failed.");
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
-        ret = s_typeCode.add_member_to_struct(
-            1,
-            1,
-            "task_id",
-            memberTc,
-            false,
-            false);
-        factory.delete_TC(memberTc);
-        if (ret < 0)
-        {
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
-
-        memberTc = factory.create_string_TC(255);
-        if (memberTc == null){
-            System.out.println("Get Member model_id TypeCode failed.");
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
-        ret = s_typeCode.add_member_to_struct(
-            2,
-            2,
-            "model_id",
-            memberTc,
-            false,
-            false);
-        factory.delete_TC(memberTc);
-        if (ret < 0)
-        {
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
-
-        memberTc = factory.create_string_TC(255);
-        if (memberTc == null){
             System.out.println("Get Member client_id TypeCode failed.");
             factory.delete_TC(s_typeCode);
             s_typeCode = null;
             return null;
         }
         ret = s_typeCode.add_member_to_struct(
-            3,
-            3,
+            1,
+            1,
             "client_id",
             memberTc,
             false,
@@ -329,21 +254,21 @@ public class SingleTaskTypeSupport extends TypeSupport {
             return null;
         }
 
-        memberTc = factory.get_primitive_TC(TypeCodeKind.DDS_TK_UCHAR);
+        memberTc = (TypeCodeImpl)data_structure.ResultItemTypeSupport.get_instance().get_typecode();
         if (memberTc != null)
         {
             memberTc = factory.create_sequence_TC(255, memberTc);
         }
         if (memberTc == null){
-            System.out.println("Get Member payload TypeCode failed.");
+            System.out.println("Get Member items TypeCode failed.");
             factory.delete_TC(s_typeCode);
             s_typeCode = null;
             return null;
         }
         ret = s_typeCode.add_member_to_struct(
-            4,
-            4,
-            "payload",
+            2,
+            2,
+            "items",
             memberTc,
             false,
             false);

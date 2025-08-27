@@ -69,7 +69,7 @@ public class DDSSendService {
 
             // 创建Topic
             topic = participant.create_topic(
-                    "InferenceRequestTopic",
+                    "inference/request",
                     typeSupport.get_type_name(),
                     DomainParticipant.TOPIC_QOS_DEFAULT,
                     null,

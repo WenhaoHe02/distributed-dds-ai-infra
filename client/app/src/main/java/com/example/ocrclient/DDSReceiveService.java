@@ -37,7 +37,7 @@ import java.util.List;
 public class DDSReceiveService {
     private static final String TAG = "DataReceiveByListener";
     private static final int DOMAIN_ID = 100;
-    private static final String TOPIC_NAME = "inference/aggregated";
+    private static final String TOPIC_NAME = "inference/aggregated_result";
 
     private DomainParticipant participant;
     private Subscriber subscriber;

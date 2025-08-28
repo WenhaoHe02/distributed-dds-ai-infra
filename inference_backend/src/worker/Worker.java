@@ -117,7 +117,7 @@ public class Worker {
                 inflight.incrementAndGet();
                 WorkerResult wr;
                 try {
-                    wr = runner.runBatchedTask(tl); // 用实例方法
+                    wr = ModelRunner.runBatchedTask(tl); // 用实例方法
                 } catch (Throwable ex){
                     wr = synthesizeErrorResult(tl, ex);
                 }
@@ -159,7 +159,7 @@ public class Worker {
 
     public static void main(String[] args) throws Exception {
         String workerId = sysOrEnv("worker.id", "WORKER_ID", "worker-1");
-        String modelId  = sysOrEnv("worker.model", "WORKER_MODEL", "model-ocr");
+        String modelId  = sysOrEnv("worker.model", "WORKER_MODEL", "model_0");
 
         DomainParticipant dp = null;
         Publisher pub = null;

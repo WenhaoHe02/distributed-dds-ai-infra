@@ -54,13 +54,11 @@ public class InferenceRequestTypeSupport extends TypeSupport {
         else{
             System.out.println("sample.request_id: null");
         }
-        int input_blobTmpLen = sample.input_blob.length();
-        System.out.println("sample.input_blob.length():" +input_blobTmpLen);
-        for (int i = 0; i < input_blobTmpLen; ++i){
-            data_structure.SingleTaskTypeSupport.get_instance().print_sample(sample.input_blob.get_at(i));
+        int tasksTmpLen = sample.tasks.length();
+        System.out.println("sample.tasks.length():" +tasksTmpLen);
+        for (int i = 0; i < tasksTmpLen; ++i){
+            data_structure.SingleTaskTypeSupport.get_instance().print_sample(sample.tasks.get_at(i));
         }
-        System.out.println("sample.timeout_ms:" + sample.timeout_ms);
-        data_structure.KVListTypeSupport.get_instance().print_sample(sample.info);
         return 0;
     }
 
@@ -69,11 +67,11 @@ public class InferenceRequestTypeSupport extends TypeSupport {
     }
 
     public int get_max_sizeI(){
-        return 464372;
+        return 331763;
     }
 
     public int get_max_key_sizeI(){
-        return 464372;
+        return 331763;
     }
 
     public boolean has_keyI(){
@@ -100,17 +98,13 @@ public class InferenceRequestTypeSupport extends TypeSupport {
         offset += CDRSerializer.get_string_size(sample.request_id == null ? 0 : sample.request_id.getBytes().length, offset);
 
         offset += CDRSerializer.get_untype_size(4, offset);
-        int input_blobLen = sample.input_blob.length();
-        if (input_blobLen != 0){
-            for (int i = 0; i < input_blobLen; ++i){
-                data_structure.SingleTask curEle = sample.input_blob.get_at(i);
+        int tasksLen = sample.tasks.length();
+        if (tasksLen != 0){
+            for (int i = 0; i < tasksLen; ++i){
+                data_structure.SingleTask curEle = sample.tasks.get_at(i);
                 offset += data_structure.SingleTaskTypeSupport.get_instance().get_sizeI(curEle, cdr, offset);
             }
         }
-
-        offset += CDRSerializer.get_untype_size(4, offset);
-
-        offset += data_structure.KVListTypeSupport.get_instance().get_sizeI(sample.info, cdr, offset);
 
         return offset - initialAlignment;
     }
@@ -123,25 +117,15 @@ public class InferenceRequestTypeSupport extends TypeSupport {
             return -2;
         }
 
-        if (!CDRSerializer.put_int(cdr, sample.input_blob.length())){
-            System.out.println("serialize length of sample.input_blob failed.");
+        if (!CDRSerializer.put_int(cdr, sample.tasks.length())){
+            System.out.println("serialize length of sample.tasks failed.");
             return -2;
         }
-        for (int i = 0; i < sample.input_blob.length(); ++i){
-            if (data_structure.SingleTaskTypeSupport.get_instance().serializeI(sample.input_blob.get_at(i),cdr) < 0){
-                System.out.println("serialize sample.input_blobfailed.");
+        for (int i = 0; i < sample.tasks.length(); ++i){
+            if (data_structure.SingleTaskTypeSupport.get_instance().serializeI(sample.tasks.get_at(i),cdr) < 0){
+                System.out.println("serialize sample.tasksfailed.");
                 return -2;
             }
-        }
-
-        if (!CDRSerializer.put_int(cdr, sample.timeout_ms)){
-            System.out.println("serialize sample.timeout_ms failed.");
-            return -2;
-        }
-
-        if (data_structure.KVListTypeSupport.get_instance().serializeI(sample.info,cdr) < 0){
-            System.out.println("serialize sample.infofailed.");
-            return -2;
         }
 
         return 0;
@@ -156,31 +140,20 @@ public class InferenceRequestTypeSupport extends TypeSupport {
         }
 
         if (!CDRDeserializer.get_int_array(cdr, tmp_int_obj, 1)){
-            System.out.println("deserialize length of sample.input_blob failed.");
+            System.out.println("deserialize length of sample.tasks failed.");
             return -2;
         }
-        if (!sample.input_blob.ensure_length(tmp_int_obj[0], tmp_int_obj[0])){
-            System.out.println("Set maxiumum member sample.input_blob failed.");
+        if (!sample.tasks.ensure_length(tmp_int_obj[0], tmp_int_obj[0])){
+            System.out.println("Set maxiumum member sample.tasks failed.");
             return -3;
         }
-        data_structure.SingleTask tmpinput_blob = new data_structure.SingleTask();
-        for (int i = 0; i < sample.input_blob.length(); ++i){
-            if (data_structure.SingleTaskTypeSupport.get_instance().deserializeI(tmpinput_blob, cdr) < 0){
-                System.out.println("deserialize sample.input_blob failed.");
+        data_structure.SingleTask tmptasks = new data_structure.SingleTask();
+        for (int i = 0; i < sample.tasks.length(); ++i){
+            if (data_structure.SingleTaskTypeSupport.get_instance().deserializeI(tmptasks, cdr) < 0){
+                System.out.println("deserialize sample.tasks failed.");
                 return -2;
             }
-            sample.input_blob.set_at(i, tmpinput_blob);
-        }
-
-        if (!CDRDeserializer.get_int_array(cdr, tmp_int_obj, 1)){
-            System.out.println("deserialize sample.timeout_ms failed.");
-            return -2;
-        }
-        sample.timeout_ms= tmp_int_obj[0];
-
-        if (data_structure.KVListTypeSupport.get_instance().deserializeI(sample.info, cdr) < 0){
-            System.out.println("deserialize sample.info failed.");
-            return -2;
+            sample.tasks.set_at(i, tmptasks);
         }
 
         return 0;
@@ -209,7 +182,7 @@ public class InferenceRequestTypeSupport extends TypeSupport {
         }
         TypeCodeFactory factory = TypeCodeFactory.get_instance();
 
-        s_typeCode = factory.create_struct_TC("ai.InferenceRequest");
+        s_typeCode = factory.create_struct_TC("data_structure.InferenceRequest");
         if (s_typeCode == null){
             System.out.println("create struct InferenceRequest typecode failed.");
             return s_typeCode;
@@ -240,13 +213,13 @@ public class InferenceRequestTypeSupport extends TypeSupport {
             return null;
         }
 
-        memberTc = (TypeCodeImpl) data_structure.SingleTaskTypeSupport.get_instance().get_typecode();
+        memberTc = (TypeCodeImpl)data_structure.SingleTaskTypeSupport.get_instance().get_typecode();
         if (memberTc != null)
         {
             memberTc = factory.create_sequence_TC(255, memberTc);
         }
         if (memberTc == null){
-            System.out.println("Get Member input_blob TypeCode failed.");
+            System.out.println("Get Member tasks TypeCode failed.");
             factory.delete_TC(s_typeCode);
             s_typeCode = null;
             return null;
@@ -254,53 +227,11 @@ public class InferenceRequestTypeSupport extends TypeSupport {
         ret = s_typeCode.add_member_to_struct(
             1,
             1,
-            "input_blob",
+            "tasks",
             memberTc,
             false,
             false);
         factory.delete_TC(memberTc);
-        if (ret < 0)
-        {
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
-
-        memberTc = factory.get_primitive_TC(TypeCodeKind.DDS_TK_INT);
-        if (memberTc == null){
-            System.out.println("Get Member timeout_ms TypeCode failed.");
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
-        ret = s_typeCode.add_member_to_struct(
-            2,
-            2,
-            "timeout_ms",
-            memberTc,
-            false,
-            false);
-        if (ret < 0)
-        {
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
-
-        memberTc = (TypeCodeImpl) data_structure.KVListTypeSupport.get_instance().get_typecode();
-        if (memberTc == null){
-            System.out.println("Get Member info TypeCode failed.");
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
-        ret = s_typeCode.add_member_to_struct(
-            3,
-            3,
-            "info",
-            memberTc,
-            false,
-            false);
         if (ret < 0)
         {
             factory.delete_TC(s_typeCode);

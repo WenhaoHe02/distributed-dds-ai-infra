@@ -48,19 +48,29 @@ public class TaskListTypeSupport extends TypeSupport {
             return -1;
         }
         TaskList sample = (TaskList)_sample;
+        if (sample.batch_id != null){
+            System.out.println("sample.batch_id:" + sample.batch_id);
+        }
+        else{
+            System.out.println("sample.batch_id: null");
+        }
+        if (sample.model_id != null){
+            System.out.println("sample.model_id:" + sample.model_id);
+        }
+        else{
+            System.out.println("sample.model_id: null");
+        }
+        if (sample.assigned_worker_id != null){
+            System.out.println("sample.assigned_worker_id:" + sample.assigned_worker_id);
+        }
+        else{
+            System.out.println("sample.assigned_worker_id: null");
+        }
         int tasksTmpLen = sample.tasks.length();
         System.out.println("sample.tasks.length():" +tasksTmpLen);
         for (int i = 0; i < tasksTmpLen; ++i){
-            data_structure.SingleTaskTypeSupport.get_instance().print_sample(sample.tasks.get_at(i));
+            data_structure.TaskTypeSupport.get_instance().print_sample(sample.tasks.get_at(i));
         }
-        System.out.println("sample.task_num:" + sample.task_num);
-        if (sample.worker_id != null){
-            System.out.println("sample.worker_id:" + sample.worker_id);
-        }
-        else{
-            System.out.println("sample.worker_id: null");
-        }
-        data_structure.KVListTypeSupport.get_instance().print_sample(sample.meta);
         return 0;
     }
 
@@ -69,11 +79,11 @@ public class TaskListTypeSupport extends TypeSupport {
     }
 
     public int get_max_sizeI(){
-        return 464372;
+        return 265983;
     }
 
     public int get_max_key_sizeI(){
-        return 464372;
+        return 265983;
     }
 
     public boolean has_keyI(){
@@ -97,20 +107,20 @@ public class TaskListTypeSupport extends TypeSupport {
     public int get_sizeI(Object _sample,long cdr, int offset) throws UnsupportedEncodingException {
         int initialAlignment = offset;
         TaskList sample = (TaskList)_sample;
+        offset += CDRSerializer.get_string_size(sample.batch_id == null ? 0 : sample.batch_id.getBytes().length, offset);
+
+        offset += CDRSerializer.get_string_size(sample.model_id == null ? 0 : sample.model_id.getBytes().length, offset);
+
+        offset += CDRSerializer.get_string_size(sample.assigned_worker_id == null ? 0 : sample.assigned_worker_id.getBytes().length, offset);
+
         offset += CDRSerializer.get_untype_size(4, offset);
         int tasksLen = sample.tasks.length();
         if (tasksLen != 0){
             for (int i = 0; i < tasksLen; ++i){
-                data_structure.SingleTask curEle = sample.tasks.get_at(i);
-                offset += data_structure.SingleTaskTypeSupport.get_instance().get_sizeI(curEle, cdr, offset);
+                data_structure.Task curEle = sample.tasks.get_at(i);
+                offset += data_structure.TaskTypeSupport.get_instance().get_sizeI(curEle, cdr, offset);
             }
         }
-
-        offset += CDRSerializer.get_untype_size(4, offset);
-
-        offset += CDRSerializer.get_string_size(sample.worker_id == null ? 0 : sample.worker_id.getBytes().length, offset);
-
-        offset += data_structure.KVListTypeSupport.get_instance().get_sizeI(sample.meta, cdr, offset);
 
         return offset - initialAlignment;
     }
@@ -118,30 +128,30 @@ public class TaskListTypeSupport extends TypeSupport {
     public int serializeI(Object _sample ,long cdr) {
          TaskList sample = (TaskList) _sample;
 
+        if (!CDRSerializer.put_string(cdr, sample.batch_id, sample.batch_id == null ? 0 : sample.batch_id.length())){
+            System.out.println("serialize sample.batch_id failed.");
+            return -2;
+        }
+
+        if (!CDRSerializer.put_string(cdr, sample.model_id, sample.model_id == null ? 0 : sample.model_id.length())){
+            System.out.println("serialize sample.model_id failed.");
+            return -2;
+        }
+
+        if (!CDRSerializer.put_string(cdr, sample.assigned_worker_id, sample.assigned_worker_id == null ? 0 : sample.assigned_worker_id.length())){
+            System.out.println("serialize sample.assigned_worker_id failed.");
+            return -2;
+        }
+
         if (!CDRSerializer.put_int(cdr, sample.tasks.length())){
             System.out.println("serialize length of sample.tasks failed.");
             return -2;
         }
         for (int i = 0; i < sample.tasks.length(); ++i){
-            if (data_structure.SingleTaskTypeSupport.get_instance().serializeI(sample.tasks.get_at(i),cdr) < 0){
+            if (data_structure.TaskTypeSupport.get_instance().serializeI(sample.tasks.get_at(i),cdr) < 0){
                 System.out.println("serialize sample.tasksfailed.");
                 return -2;
             }
-        }
-
-        if (!CDRSerializer.put_int(cdr, sample.task_num)){
-            System.out.println("serialize sample.task_num failed.");
-            return -2;
-        }
-
-        if (!CDRSerializer.put_string(cdr, sample.worker_id, sample.worker_id == null ? 0 : sample.worker_id.length())){
-            System.out.println("serialize sample.worker_id failed.");
-            return -2;
-        }
-
-        if (data_structure.KVListTypeSupport.get_instance().serializeI(sample.meta,cdr) < 0){
-            System.out.println("serialize sample.metafailed.");
-            return -2;
         }
 
         return 0;
@@ -149,6 +159,24 @@ public class TaskListTypeSupport extends TypeSupport {
 
     synchronized public int deserializeI(Object _sample, long cdr){
         TaskList sample = (TaskList) _sample;
+        sample.batch_id = CDRDeserializer.get_string(cdr);
+        if(sample.batch_id ==null){
+            System.out.println("deserialize member sample.batch_id failed.");
+            return -3;
+        }
+
+        sample.model_id = CDRDeserializer.get_string(cdr);
+        if(sample.model_id ==null){
+            System.out.println("deserialize member sample.model_id failed.");
+            return -3;
+        }
+
+        sample.assigned_worker_id = CDRDeserializer.get_string(cdr);
+        if(sample.assigned_worker_id ==null){
+            System.out.println("deserialize member sample.assigned_worker_id failed.");
+            return -3;
+        }
+
         if (!CDRDeserializer.get_int_array(cdr, tmp_int_obj, 1)){
             System.out.println("deserialize length of sample.tasks failed.");
             return -2;
@@ -157,30 +185,13 @@ public class TaskListTypeSupport extends TypeSupport {
             System.out.println("Set maxiumum member sample.tasks failed.");
             return -3;
         }
-        data_structure.SingleTask tmptasks = new data_structure.SingleTask();
+        data_structure.Task tmptasks = new data_structure.Task();
         for (int i = 0; i < sample.tasks.length(); ++i){
-            if (data_structure.SingleTaskTypeSupport.get_instance().deserializeI(tmptasks, cdr) < 0){
+            if (data_structure.TaskTypeSupport.get_instance().deserializeI(tmptasks, cdr) < 0){
                 System.out.println("deserialize sample.tasks failed.");
                 return -2;
             }
             sample.tasks.set_at(i, tmptasks);
-        }
-
-        if (!CDRDeserializer.get_int_array(cdr, tmp_int_obj, 1)){
-            System.out.println("deserialize sample.task_num failed.");
-            return -2;
-        }
-        sample.task_num= tmp_int_obj[0];
-
-        sample.worker_id = CDRDeserializer.get_string(cdr);
-        if(sample.worker_id ==null){
-            System.out.println("deserialize member sample.worker_id failed.");
-            return -3;
-        }
-
-        if (data_structure.KVListTypeSupport.get_instance().deserializeI(sample.meta, cdr) < 0){
-            System.out.println("deserialize sample.meta failed.");
-            return -2;
         }
 
         return 0;
@@ -209,7 +220,7 @@ public class TaskListTypeSupport extends TypeSupport {
         }
         TypeCodeFactory factory = TypeCodeFactory.get_instance();
 
-        s_typeCode = factory.create_struct_TC("ai.TaskList");
+        s_typeCode = factory.create_struct_TC("data_structure.TaskList");
         if (s_typeCode == null){
             System.out.println("create struct TaskList typecode failed.");
             return s_typeCode;
@@ -218,7 +229,73 @@ public class TaskListTypeSupport extends TypeSupport {
         TypeCodeImpl memberTc = new TypeCodeImpl();
         TypeCodeImpl eleTc = new TypeCodeImpl();
 
-        memberTc = (TypeCodeImpl) data_structure.SingleTaskTypeSupport.get_instance().get_typecode();
+        memberTc = factory.create_string_TC(255);
+        if (memberTc == null){
+            System.out.println("Get Member batch_id TypeCode failed.");
+            factory.delete_TC(s_typeCode);
+            s_typeCode = null;
+            return null;
+        }
+        ret = s_typeCode.add_member_to_struct(
+            0,
+            0,
+            "batch_id",
+            memberTc,
+            false,
+            false);
+        factory.delete_TC(memberTc);
+        if (ret < 0)
+        {
+            factory.delete_TC(s_typeCode);
+            s_typeCode = null;
+            return null;
+        }
+
+        memberTc = factory.create_string_TC(255);
+        if (memberTc == null){
+            System.out.println("Get Member model_id TypeCode failed.");
+            factory.delete_TC(s_typeCode);
+            s_typeCode = null;
+            return null;
+        }
+        ret = s_typeCode.add_member_to_struct(
+            1,
+            1,
+            "model_id",
+            memberTc,
+            false,
+            false);
+        factory.delete_TC(memberTc);
+        if (ret < 0)
+        {
+            factory.delete_TC(s_typeCode);
+            s_typeCode = null;
+            return null;
+        }
+
+        memberTc = factory.create_string_TC(255);
+        if (memberTc == null){
+            System.out.println("Get Member assigned_worker_id TypeCode failed.");
+            factory.delete_TC(s_typeCode);
+            s_typeCode = null;
+            return null;
+        }
+        ret = s_typeCode.add_member_to_struct(
+            2,
+            2,
+            "assigned_worker_id",
+            memberTc,
+            false,
+            false);
+        factory.delete_TC(memberTc);
+        if (ret < 0)
+        {
+            factory.delete_TC(s_typeCode);
+            s_typeCode = null;
+            return null;
+        }
+
+        memberTc = (TypeCodeImpl)data_structure.TaskTypeSupport.get_instance().get_typecode();
         if (memberTc != null)
         {
             memberTc = factory.create_sequence_TC(255, memberTc);
@@ -230,77 +307,13 @@ public class TaskListTypeSupport extends TypeSupport {
             return null;
         }
         ret = s_typeCode.add_member_to_struct(
-            0,
-            0,
+            3,
+            3,
             "tasks",
             memberTc,
             false,
             false);
         factory.delete_TC(memberTc);
-        if (ret < 0)
-        {
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
-
-        memberTc = factory.get_primitive_TC(TypeCodeKind.DDS_TK_INT);
-        if (memberTc == null){
-            System.out.println("Get Member task_num TypeCode failed.");
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
-        ret = s_typeCode.add_member_to_struct(
-            1,
-            1,
-            "task_num",
-            memberTc,
-            false,
-            false);
-        if (ret < 0)
-        {
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
-
-        memberTc = factory.create_string_TC(255);
-        if (memberTc == null){
-            System.out.println("Get Member worker_id TypeCode failed.");
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
-        ret = s_typeCode.add_member_to_struct(
-            2,
-            2,
-            "worker_id",
-            memberTc,
-            false,
-            false);
-        factory.delete_TC(memberTc);
-        if (ret < 0)
-        {
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
-
-        memberTc = (TypeCodeImpl) data_structure.KVListTypeSupport.get_instance().get_typecode();
-        if (memberTc == null){
-            System.out.println("Get Member meta TypeCode failed.");
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
-        ret = s_typeCode.add_member_to_struct(
-            3,
-            3,
-            "meta",
-            memberTc,
-            false,
-            false);
         if (ret < 0)
         {
             factory.delete_TC(s_typeCode);

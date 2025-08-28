@@ -9,8 +9,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import com.example.ocrclient.ai.AggregatedResult;
-import com.example.ocrclient.ai.SingleResult;
 import com.example.ocrclient.util.ImageConversionUtil;
 import com.example.ocrclient.util.ResultSortUtil;
 

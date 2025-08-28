@@ -5,9 +5,10 @@ import android.net.Uri;
 import android.provider.Settings;
 import android.util.Log;
 
-import com.example.ocrclient.ai.InferenceRequest;
-import com.example.ocrclient.ai.SingleTask;
-import com.example.ocrclient.ai.SingleTaskSeq;
+import com.example.ocrclient.data_structure.*;
+import com.example.ocrclient.data_structure.InferenceRequest;
+import com.example.ocrclient.data_structure.SingleTask;
+import com.example.ocrclient.data_structure.SingleTaskSeq;
 import com.example.ocrclient.util.ImageUtils;
 
 import java.io.File;

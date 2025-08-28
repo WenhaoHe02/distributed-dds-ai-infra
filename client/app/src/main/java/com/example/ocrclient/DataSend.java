@@ -23,6 +23,8 @@ public class DataSend {
     private final Context context;
     private final String clientId;
     private DDSSendService ddsService;
+    private static final String MODEL_ID_1 = "model_0";
+    private static final String MODEL_ID_2 = "model_0";
 
     public DataSend(Context context) {
         this.context = context;
@@ -67,7 +69,7 @@ public class DataSend {
         for (int i = 0; i < ocrUris.size(); i++) {
             SingleTask task = new SingleTask();
             task.request_id = request.request_id;
-            task.model_id = "model_0";
+            task.model_id = MODEL_ID_1;
             task.client_id = clientId;
             task.task_id = String.valueOf(i + 1); // 从1开始自增
 
@@ -85,7 +87,7 @@ public class DataSend {
         for (int i = 0; i < detectUris.size(); i++) {
             SingleTask task = new SingleTask();
             task.request_id = request.request_id;
-            task.model_id = "model_0";
+            task.model_id = MODEL_ID_2;
             task.client_id = clientId;
             task.task_id = String.valueOf(ocrUris.size() + i + 1); // 继续从OCR任务之后自增
 
@@ -154,6 +156,20 @@ public class DataSend {
 
             // 创建InferenceRequest对象
             InferenceRequest inferenceRequest = createInferenceRequest(ocrUris, detectUris);
+
+            // 将请求ID和客户端ID添加到ResultDataManager中，以便验证返回的数据
+            ResultDataManager resultDataManager = ResultDataManager.getInstance();
+            resultDataManager.addSentRequest(inferenceRequest.request_id, clientId);
+
+            // 创建并注册RequestState对象
+            RequestState requestState = new RequestState(inferenceRequest.request_id);
+            // 设置预期任务数
+            requestState.setExpectedTaskCount(ocrUris.size() + detectUris.size());
+            // 将RequestState添加到ResultDataManager中
+            resultDataManager.registerRequestState(requestState);
+
+            Log.d(TAG, "已注册RequestState，预期任务数: " + (ocrUris.size() + detectUris.size()));
+
             Log.d(TAG, "InferenceRequest创建完成");
 
             // 使用DDS服务发送InferenceRequest对象

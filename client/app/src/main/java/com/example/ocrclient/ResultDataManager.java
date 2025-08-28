@@ -1,5 +1,7 @@
 package com.example.ocrclient;
 
+import android.util.Log;
+
 import com.example.ocrclient.data_structure.ResultItem;
 import com.example.ocrclient.data_structure.ResultUpdate;
 import com.example.ocrclient.internal.RequestState;
@@ -15,13 +17,16 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class ResultDataManager {
     private static ResultDataManager instance;
+    // 存储已发送的请求的状态
     private final Map<String, RequestState> requestStates = new ConcurrentHashMap<>();
-    private final List<ResultDataListener> listeners = new CopyOnWriteArrayList<>();
     // 存储已发送的请求ID和客户端ID的映射关系
     private final Map<String, String> sentRequests = new ConcurrentHashMap<>();
+    
+    private static final String TAG = "ResultDataManager";
 
     private ResultDataManager() {}
 
+    // 单例模式管理
     public static synchronized ResultDataManager getInstance() {
         if (instance == null) {
             instance = new ResultDataManager();
@@ -37,46 +42,30 @@ public class ResultDataManager {
         String requestId = resultUpdate.request_id;
         String clientId = resultUpdate.client_id;
         
+        Log.d(TAG, "收到ResultUpdate，requestId: " + requestId + ", clientId: " + clientId);
+        
         // 验证消息是否属于自己
         if (!isRequestValid(requestId, clientId)) {
+            Log.d(TAG, "请求验证失败，requestId: " + requestId);
             return;
         }
+        
+        Log.d(TAG, "请求验证成功，requestId: " + requestId);
         
         // 获取或创建请求状态
         RequestState requestState = requestStates.computeIfAbsent(requestId, 
             id -> new RequestState(id));
         
+        Log.d(TAG, "获取到RequestState，当前结果数: " + requestState.getReceivedResultCount());
+        
         // 合并新结果
         for (int i = 0; i < resultUpdate.items.length(); i++) {
             ResultItem item = resultUpdate.items.get_at(i);
+            Log.d(TAG, "添加结果项，taskId: " + item.task_id);
             requestState.addResultItem(item);
         }
         
-        // 通知监听器
-        notifyProgressUpdate(requestId, requestState);
-        
-        // 检查是否完成
-        if (requestState.isCompleted()) {
-            notifyRequestCompleted(requestId, requestState);
-        }
-    }
-    
-    /**
-     * 注册结果数据监听器
-     * @param listener 监听器
-     */
-    public void addListener(ResultDataListener listener) {
-        if (!listeners.contains(listener)) {
-            listeners.add(listener);
-        }
-    }
-    
-    /**
-     * 移除结果数据监听器
-     * @param listener 监听器
-     */
-    public void removeListener(ResultDataListener listener) {
-        listeners.remove(listener);
+        Log.d(TAG, "添加结果后，当前结果数: " + requestState.getReceivedResultCount());
     }
     
     /**
@@ -85,6 +74,10 @@ public class ResultDataManager {
      * @return 请求状态
      */
     public RequestState getRequestState(String requestId) {
+        Log.d(TAG, "获取RequestState，requestId: " + requestId + ", 是否存在: " + requestStates.containsKey(requestId));
+        if (requestStates.containsKey(requestId)) {
+            Log.d(TAG, "RequestState结果数: " + requestStates.get(requestId).getReceivedResultCount());
+        }
         return requestStates.get(requestId);
     }
     
@@ -94,6 +87,7 @@ public class ResultDataManager {
      */
     public void removeRequestState(String requestId) {
         requestStates.remove(requestId);
+        Log.d(TAG, "移除RequestState，requestId: " + requestId);
     }
     
     /**
@@ -103,6 +97,7 @@ public class ResultDataManager {
      */
     public void addSentRequest(String requestId, String clientId) {
         sentRequests.put(requestId, clientId);
+        Log.d(TAG, "添加已发送请求，requestId: " + requestId + ", clientId: " + clientId);
     }
     
     /**
@@ -111,6 +106,20 @@ public class ResultDataManager {
      */
     public void registerRequestState(RequestState requestState) {
         requestStates.put(requestState.getRequestId(), requestState);
+        Log.d(TAG, "注册RequestState，requestId: " + requestState.getRequestId() + 
+            ", 预期任务数: " + requestState.getExpectedTaskCount());
+    }
+    
+    /**
+     * 清理已完成或超时的请求
+     * @param requestId 请求ID
+     */
+    public void cleanupRequest(String requestId) {
+        // 清除请求状态列表中匹配的项
+        requestStates.remove(requestId);
+        // 清除requestId和clientId映射表中匹配的项
+        sentRequests.remove(requestId);
+        Log.d(TAG, "清理请求，requestId: " + requestId);
     }
     
     /**
@@ -120,65 +129,25 @@ public class ResultDataManager {
      * @return 是否有效
      */
     private boolean isRequestValid(String requestId, String receivedClientId) {
-        return sentRequests.containsKey(requestId) && sentRequests.get(requestId).equals(receivedClientId);
+        boolean isValid = sentRequests.containsKey(requestId) && sentRequests.get(requestId).equals(receivedClientId);
+        Log.d(TAG, "验证请求有效性，requestId: " + requestId + 
+            ", receivedClientId: " + receivedClientId + 
+            ", 本地clientId: " + sentRequests.get(requestId) + 
+            ", 是否有效: " + isValid);
+        return isValid;
     }
     
     /**
-     * 通知进度更新
+     * 检查请求是否已完成或超时
      * @param requestId 请求ID
-     * @param state 请求状态
+     * @return 是否已完成或超时
      */
-    private void notifyProgressUpdate(String requestId, RequestState state) {
-        for (ResultDataListener listener : listeners) {
-            listener.onProgressUpdate(requestId, state);
+    public boolean isRequestFinished(String requestId) {
+        RequestState requestState = requestStates.get(requestId);
+        if (requestState == null) {
+            // 如果请求状态不存在，可能已被清理，视为已完成
+            return true;
         }
-    }
-    
-    /**
-     * 通知请求完成
-     * @param requestId 请求ID
-     * @param state 请求状态
-     */
-    private void notifyRequestCompleted(String requestId, RequestState state) {
-        for (ResultDataListener listener : listeners) {
-            listener.onRequestCompleted(requestId, state);
-        }
-    }
-    
-    /**
-     * 通知请求超时
-     * @param requestId 请求ID
-     * @param state 请求状态
-     */
-    public void notifyRequestTimeout(String requestId, RequestState state) {
-        for (ResultDataListener listener : listeners) {
-            listener.onRequestTimeout(requestId, state);
-        }
-    }
-    
-    /**
-     * 请求状态接口
-     */
-    public interface ResultDataListener {
-        /**
-         * 进度更新回调
-         * @param requestId 请求ID
-         * @param state 请求状态
-         */
-        void onProgressUpdate(String requestId, RequestState state);
-        
-        /**
-         * 请求完成回调
-         * @param requestId 请求ID
-         * @param state 请求状态
-         */
-        void onRequestCompleted(String requestId, RequestState state);
-        
-        /**
-         * 请求超时回调
-         * @param requestId 请求ID
-         * @param state 请求状态
-         */
-        void onRequestTimeout(String requestId, RequestState state);
+        return requestState.isCompleted() || requestState.isTimeout();
     }
 }

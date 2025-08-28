@@ -256,11 +256,10 @@ class MainActivity : AppCompatActivity() {
         Thread {
             try {
                 Log.d(TAG, "在后台线程中发送图片")
-                // 使用数据发送服务发送所有图片
+                // 构造发送的请求 InferenceRequest
                 val request = dataSend.createInferenceRequest(ocrUris, detectUris)
-//                // 保存请求ID和客户端ID到映射中
-//                sentRequests[request.request_id] = clientId
-                // 同时添加到ResultDataManager中用于验证
+
+                // 在ResultDataManager中添加请求ID和客户端ID的映射
                 ResultDataManager.getInstance().addSentRequest(request.request_id, clientId)
 
                 // 创建并注册RequestState对象
@@ -273,6 +272,7 @@ class MainActivity : AppCompatActivity() {
                 ResultDataManager.getInstance().registerRequestState(requestState)
 
                 Log.d(TAG, "已添加请求ID和客户端ID到映射: ${request.request_id} -> $clientId")
+                Log.d(TAG, "已注册RequestState，预期任务数: ${ocrUris.size + detectUris.size}")
                 val success = ddsSendService.sendInferenceRequest(request)
 
                 runOnUiThread {

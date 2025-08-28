@@ -39,7 +39,7 @@ import java.util.TimerTask;
 public class DDSReceiveService {
     private static final String TAG = "DataReceiveByListener";
     private static final int DOMAIN_ID = 100;
-    private static final String TOPIC_NAME = "inference/aggregated_result";
+    private static final String TOPIC_NAME = "inference/result_update";
 
     private DomainParticipant participant;
     private Subscriber subscriber;
@@ -192,7 +192,7 @@ public class DDSReceiveService {
     }
 
     // 处理接收到的数据
-    private void readData(DataReader reader) {
+    public void readData(DataReader reader) {
         Log.i(TAG,"开始处理数据");
         try {
             ResultUpdateDataReader dr = (ResultUpdateDataReader) reader;
@@ -212,13 +212,7 @@ public class DDSReceiveService {
 
                     ResultUpdate result = dataSeq.get_at(i);
 
-                    Log.i(TAG, "📨 收到新消息: "
-                            + "client_id=" + result.client_id
-                            + ", request_id=" + result.request_id
-                            + ", items_count=" + result.items.length());
-                    
                     // 直接传递给ResultDataManager处理，验证逻辑已在其中实现
-                    Log.i(TAG, "将ResultUpdate传递给ResultDataManager处理");
                     ResultDataManager.getInstance().handleResultUpdate(result);
                 }
                 dr.return_loan(dataSeq, infoSeq);

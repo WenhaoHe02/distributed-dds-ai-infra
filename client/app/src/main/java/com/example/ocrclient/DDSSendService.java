@@ -2,14 +2,15 @@ package com.example.ocrclient;
 
 import android.util.Log;
 
-import com.example.ocrclient.ai.InferenceRequest;
-import com.example.ocrclient.ai.InferenceRequestDataWriter;
-import com.example.ocrclient.ai.InferenceRequestTypeSupport;
+import com.example.ocrclient.data_structure.InferenceRequest;
+import com.example.ocrclient.data_structure.InferenceRequestDataWriter;
+import com.example.ocrclient.data_structure.InferenceRequestTypeSupport;
 import com.zrdds.domain.DomainParticipant;
 import com.zrdds.domain.DomainParticipantFactory;
 import com.zrdds.domain.DomainParticipantFactoryQos;
 import com.zrdds.infrastructure.InstanceHandle_t;
 import com.zrdds.infrastructure.Property_t;
+import com.zrdds.infrastructure.PublicationMatchedStatus;
 import com.zrdds.infrastructure.ReturnCode_t;
 import com.zrdds.infrastructure.StatusKind;
 import com.zrdds.publication.Publisher;
@@ -18,6 +19,8 @@ import com.zrdds.topic.TypeSupport;
 
 public class DDSSendService {
     private static final String TAG = "DDSSendService";
+    private static final Integer DOMAIN_ID = 100;
+    private static final String TOPIC_NAME = "inference/request";
     private DomainParticipant participant;
     private Publisher publisher;
     private InferenceRequestDataWriter inferenceRequestWriter;
@@ -46,7 +49,7 @@ public class DDSSendService {
             // 创建DomainParticipant
             participant = factory
                     .create_participant(
-                            100,
+                            DOMAIN_ID,
                             DomainParticipantFactory.PARTICIPANT_QOS_DEFAULT,
                             null,
                             StatusKind.STATUS_MASK_NONE
@@ -69,7 +72,7 @@ public class DDSSendService {
 
             // 创建Topic
             topic = participant.create_topic(
-                    "inference/request",
+                    TOPIC_NAME,
                     typeSupport.get_type_name(),
                     DomainParticipant.TOPIC_QOS_DEFAULT,
                     null,
@@ -126,12 +129,39 @@ public class DDSSendService {
      */
     public boolean sendInferenceRequest(InferenceRequest inferenceRequest) {
         try {
+
             Log.d(TAG, "开始发送InferenceRequest数据");
             
             if (inferenceRequestWriter == null) {
                 Log.e(TAG, "DataWriter未初始化");
                 return false;
             }
+//
+//            // 创建 writer 成功后：
+//            PublicationMatchedStatus st = new PublicationMatchedStatus();
+//
+//            new Thread(() -> {
+//                try {
+//                    while (true) {
+//                        ReturnCode_t rc = inferenceRequestWriter.get_publication_matched_status(st);
+//                        if (rc != ReturnCode_t.RETCODE_OK) {
+//                            Log.e(TAG, "get_publication_matched_status rc=" + rc);
+//                            break;
+//                        }
+//                        Log.d(TAG, "PUB matched: current=" + st.current_count +
+//                                " total=" + st.total_count +
+//                                " Δ=" + st.current_count_change +
+//                                " lastSub=" + (st.last_subscription_handle != null ?
+//                                st.last_subscription_handle.value : 0));
+//
+//                        if (st.current_count > 0) {
+//                            Log.d(TAG, "已匹配到 Reader，可以安全发送数据");
+//                            break;
+//                        }
+//                        Thread.sleep(200); // 200ms 间隔轮询
+//                    }
+//                } catch (InterruptedException ignored) {}
+//            }).start();
 
             if (inferenceRequest == null) {
                 Log.e(TAG, "InferenceRequest为空");
@@ -139,7 +169,7 @@ public class DDSSendService {
             }
 
             Log.d(TAG, "请求ID: " + inferenceRequest.request_id);
-            Log.d(TAG, "任务数量: " + inferenceRequest.input_blob.length());
+            Log.d(TAG, "任务数量: " + inferenceRequest.tasks.length());
 
             ReturnCode_t result = inferenceRequestWriter.write(inferenceRequest, InstanceHandle_t.HANDLE_NIL_NATIVE);
             boolean success = result.equals(ReturnCode_t.RETCODE_OK);

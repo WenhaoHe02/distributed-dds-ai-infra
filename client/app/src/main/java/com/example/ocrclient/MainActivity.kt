@@ -12,8 +12,10 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.example.ocrclient.databinding.ActivityMainBinding
+import com.example.ocrclient.internal.RequestState
 import com.example.ocrclient.util.ImageUtils
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * MainActivity是应用的主界面Activity
@@ -22,6 +24,9 @@ import java.util.UUID
 class MainActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "MainActivity"
+        const val EXTRA_OCR_URIS = "ocr_uris"
+        const val EXTRA_DETECT_URIS = "detect_uris"
+        const val EXTRA_REQUEST_ID = "request_id"
     }
 
     private lateinit var binding: ActivityMainBinding
@@ -33,6 +38,11 @@ class MainActivity : AppCompatActivity() {
     // DDS服务
     private lateinit var ddsSendService: DDSSendService
     private lateinit var dataSend: DataSend
+
+    private lateinit var ddsReceiveService: DDSReceiveService
+    
+    // 存储已发送的请求ID和客户端ID的映射关系
+    private val sentRequests: MutableMap<String, String> = ConcurrentHashMap()
     
     // 客户端ID，基于设备Android ID生成
     private val clientId: String by lazy {
@@ -74,13 +84,6 @@ class MainActivity : AppCompatActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        //创建消息接收
-        val a = DDSReceiveService()
-        a.work()
-        //logcat日志
-        Log.d("MainActivity", "消息接收开始")
-
-
         super.onCreate(savedInstanceState)
         Log.d(TAG, "MainActivity onCreate")
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -88,6 +91,12 @@ class MainActivity : AppCompatActivity() {
         
         // 初始化所有服务
         initializeServices()
+
+        //创建消息接收
+        ddsReceiveService = DDSReceiveService()
+        // 不再需要设置MainActivity引用
+        ddsReceiveService.work()
+        Log.d("MainActivity", "消息接收开始")
 
         // OCR按钮点击事件
         binding.btnPickOcr.setOnClickListener {
@@ -243,22 +252,42 @@ class MainActivity : AppCompatActivity() {
     private fun uploadAllImages() {
         Log.d(TAG, "开始上传所有图片")
         setLoading(true)
-        binding.tvResult.text = "上传中..."
 
         Thread {
             try {
                 Log.d(TAG, "在后台线程中发送图片")
-                // 使用数据发送服务发送所有图片
-                val success = dataSend.sendAllImages(ocrUris, detectUris)
+                // 构造发送的请求 InferenceRequest
+                val request = dataSend.createInferenceRequest(ocrUris, detectUris)
+
+                // 在ResultDataManager中添加请求ID和客户端ID的映射
+                ResultDataManager.getInstance().addSentRequest(request.request_id, clientId)
+
+                // 创建并注册RequestState对象
+                val requestState = RequestState(request.request_id)
+
+                // 设置预期任务数
+                requestState.setExpectedTaskCount((ocrUris.size + detectUris.size).toLong())
+
+                // 将RequestState添加到ResultDataManager中
+                ResultDataManager.getInstance().registerRequestState(requestState)
+
+                Log.d(TAG, "已添加请求ID和客户端ID到映射: ${request.request_id} -> $clientId")
+                Log.d(TAG, "已注册RequestState，预期任务数: ${ocrUris.size + detectUris.size}")
+                val success = ddsSendService.sendInferenceRequest(request)
 
                 runOnUiThread {
                     setLoading(false)
                     if (success) {
-                        binding.tvResult.text = "已通过DDS发送请求"
-                        Log.d(TAG, "图片发送成功")
-                        Toast.makeText(this, "请求发送成功", Toast.LENGTH_SHORT).show()
+                        // 跳转到结果页面
+                        val intent = Intent(this, ResultActivity::class.java).apply {
+                            // 传递图片URI列表
+                            putStringArrayListExtra(EXTRA_OCR_URIS, ArrayList(ocrUris.map { it.toString() }))
+                            putStringArrayListExtra(EXTRA_DETECT_URIS, ArrayList(detectUris.map { it.toString() }))
+                            putExtra(EXTRA_REQUEST_ID, request.request_id)
+                        }
+                        startActivity(intent)
+                        Log.d(TAG, "图片发送成功，跳转到结果页面")
                     } else {
-                        binding.tvResult.text = "发送请求失败"
                         Log.e(TAG, "图片发送失败")
                         Toast.makeText(this, "请求发送失败，请查看日志了解详情", Toast.LENGTH_LONG).show()
                     }
@@ -267,7 +296,6 @@ class MainActivity : AppCompatActivity() {
                 Log.e(TAG, "上传图片时发生异常", e)
                 runOnUiThread {
                     setLoading(false)
-                    binding.tvResult.text = "发送失败：${e.message}"
                     Toast.makeText(this, "发送失败：${e.message}", Toast.LENGTH_LONG).show()
                 }
             }

@@ -2,9 +2,12 @@ package com.example.ocrclient;
 
 import android.util.Log;
 
-import com.example.ocrclient.ai.AggregatedResultDataReader;
-import com.example.ocrclient.ai.AggregatedResultSeq;
-import com.example.ocrclient.ai.AggregatedResultTypeSupport;
+import com.example.ocrclient.data_structure.ResultItem;
+import com.example.ocrclient.data_structure.ResultUpdate;
+import com.example.ocrclient.data_structure.ResultUpdateDataReader;
+import com.example.ocrclient.data_structure.ResultUpdateSeq;
+import com.example.ocrclient.data_structure.ResultUpdateTypeSupport;
+import com.example.ocrclient.util.ResultSortUtil;
 import com.zrdds.domain.DomainParticipant;
 import com.zrdds.domain.DomainParticipantFactory;
 import com.zrdds.domain.DomainParticipantFactoryQos;
@@ -28,10 +31,15 @@ import com.zrdds.subscription.DataReaderListener;
 import com.zrdds.subscription.Subscriber;
 import com.zrdds.topic.Topic;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+
 public class DDSReceiveService {
     private static final String TAG = "DataReceiveByListener";
     private static final int DOMAIN_ID = 100;
-    private static final String TOPIC_NAME = "inference/aggregated";
+    private static final String TOPIC_NAME = "inference/result_update";
 
     private DomainParticipant participant;
     private Subscriber subscriber;
@@ -80,7 +88,7 @@ public class DDSReceiveService {
             Log.i(TAG, "✓ DomainParticipant创建成功，Domain ID: " + DOMAIN_ID);
 
             // 3. 注册数据类型
-            AggregatedResultTypeSupport typeSupport = (AggregatedResultTypeSupport) AggregatedResultTypeSupport.get_instance();
+            ResultUpdateTypeSupport typeSupport = (ResultUpdateTypeSupport) ResultUpdateTypeSupport.get_instance();
             ReturnCode_t rtn = typeSupport.register_type(participant, null);
             if (rtn != ReturnCode_t.RETCODE_OK) {
                 Log.e(TAG, "注册数据类型失败");
@@ -183,11 +191,12 @@ public class DDSReceiveService {
         }
     }
 
-    //TODO: 处理接收到的数据，保证顺序等
-    private void readData(DataReader reader) {
+    // 处理接收到的数据
+    public void readData(DataReader reader) {
+        Log.i(TAG,"开始处理数据");
         try {
-            AggregatedResultDataReader dr = (AggregatedResultDataReader) reader;
-            AggregatedResultSeq dataSeq = new AggregatedResultSeq();
+            ResultUpdateDataReader dr = (ResultUpdateDataReader) reader;
+            ResultUpdateSeq dataSeq = new ResultUpdateSeq();
             SampleInfoSeq infoSeq = new SampleInfoSeq();
 
             ReturnCode_t rtn = dr.take(
@@ -201,7 +210,10 @@ public class DDSReceiveService {
                 for (int i = 0; i < infoSeq.length(); i++) {
                     if (!infoSeq.get_at(i).valid_data) continue;
 
-                    Log.i(TAG, "📨 收到新消息: " + dataSeq.get_at(i).toString());
+                    ResultUpdate result = dataSeq.get_at(i);
+
+                    // 直接传递给ResultDataManager处理，验证逻辑已在其中实现
+                    ResultDataManager.getInstance().handleResultUpdate(result);
                 }
                 dr.return_loan(dataSeq, infoSeq);
             }

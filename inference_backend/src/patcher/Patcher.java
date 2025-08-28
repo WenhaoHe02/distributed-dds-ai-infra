@@ -1,23 +1,21 @@
 package patcher;
 
+import com.zrdds.infrastructure.*;
 import data_structure.*; // InferenceRequest / OpenBatch / Claim / Grant / TaskList
 
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
-import com.zrdds.infrastructure.StatusKind;
 import com.zrdds.simpleinterface.DDSIF;
 import com.zrdds.domain.DomainParticipant;
 import com.zrdds.domain.DomainParticipantFactory;
 import com.zrdds.subscription.DataReader;
 import com.zrdds.subscription.SimpleDataReaderListener;
-import com.zrdds.infrastructure.InstanceHandle_t;
-import com.zrdds.infrastructure.ReturnCode_t;
-import com.zrdds.infrastructure.SampleInfo;
 import com.zrdds.topic.Topic;
 import com.zrdds.publication.Publisher;
 import com.zrdds.subscription.Subscriber;
+import com.zrdds.subscription.DataReaderQos;
 
 /**
  * Patcher —— 方案B的协调层（announce → claim → grant → assigned TaskList）
@@ -300,24 +298,46 @@ public class Patcher {
             // InferenceRequest → onInferenceRequest
             reqReader.set_listener(new SimpleDataReaderListener<InferenceRequest, InferenceRequestSeq, InferenceRequestDataReader>() {
                 @Override
-                public void on_process_sample(DataReader reader, InferenceRequest sample, SampleInfo info) {
-                    if (sample == null) return;
-                    try { fPatcher.onInferenceRequest(sample); } catch (Throwable t) { t.printStackTrace(); }
-                }
-                @Override
-                public void on_data_arrived(DataReader reader, Object sample, SampleInfo info) { /* no-op */ }
-            }, StatusKind.DATA_AVAILABLE_STATUS);
+                public void on_data_arrived(DataReader dataReader, Object o, SampleInfo sampleInfo) {
 
+                }
+
+                @Override
+                public void on_process_sample(DataReader reader, InferenceRequest sample, SampleInfo info) {
+                    if (sample == null || info == null || !info.valid_data) return;
+                    try {
+                        System.out.println("[Patcher] got InferenceRequest: request_id=" + sample.request_id
+                                + " tasks=" + (sample.tasks==null?0:sample.tasks.length()));
+                        fPatcher.onInferenceRequest(sample);
+                    } catch (Throwable t) {
+                        t.printStackTrace();
+                    }
+                }
+            }, StatusKind.DATA_AVAILABLE_STATUS /* 或 STATUS_MASK_ALL 更稳 */);
+
+
+            // Claim → onClaim
             // Claim → onClaim
             claimReader.set_listener(new SimpleDataReaderListener<Claim, ClaimSeq, ClaimDataReader>() {
                 @Override
-                public void on_process_sample(DataReader reader, Claim sample, SampleInfo info) {
-                    if (sample == null) return;
-                    try { fPatcher.onClaim(sample); } catch (Throwable t) { t.printStackTrace(); }
+                public void on_data_arrived(DataReader dataReader, Object o, SampleInfo sampleInfo) {
+
                 }
+
                 @Override
-                public void on_data_arrived(DataReader reader, Object sample, SampleInfo info) { /* no-op */ }
-            }, StatusKind.DATA_AVAILABLE_STATUS);
+                public void on_process_sample(DataReader reader, Claim sample, SampleInfo info) {
+                    if (sample == null || info == null || !info.valid_data) return;
+                    try {
+                        System.out.println("[Patcher] got Claim: batch_id=" + sample.batch_id
+                                + " worker_id=" + sample.worker_id + " qlen=" + sample.queue_length);
+                        fPatcher.onClaim(sample);
+                    } catch (Throwable t) {
+                        t.printStackTrace();
+                    }
+                }
+            }, StatusKind.DATA_AVAILABLE_STATUS /* 或 STATUS_MASK_ALL */);
+
+
 
             System.out.println("==================================================");
             System.out.println("Patcher started.");
@@ -325,6 +345,27 @@ public class Patcher {
             System.out.println("Pub: " + TOPIC_OPEN_BATCH + ", " + TOPIC_GRANT + ", " + TOPIC_TASK_LIST);
             System.out.println("Press ENTER to exit...");
             System.out.println("==================================================");
+//            SubscriptionMatchedStatus st = new  SubscriptionMatchedStatus();
+//                try {
+//                    while (true) {
+//                        ReturnCode_t rc = reqReader.get_subscription_matched_status(st);
+//                        if (rc != ReturnCode_t.RETCODE_OK) {
+//                            System.out.println("get_publication_matched_status rc=" + rc);
+//                            break;
+//                        }
+//                        System.out.println("PUB matched: current=" + st.current_count +
+//                                " total=" + st.total_count +
+//                                " Δ=" + st.current_count_change +
+//                                " lastSub=" + (st.last_publication_handle != null ?
+//                                st.last_publication_handle.value : 0));
+//
+//                        if (st.current_count > 0) {
+//                            System.out.println("已匹配到 Reader，可以安全发送数据");
+//                            break;
+//                        }
+//                        Thread.sleep(200); // 200ms 间隔轮询
+//                    }
+//                } catch (InterruptedException ignored) {}
 
             System.in.read();
 

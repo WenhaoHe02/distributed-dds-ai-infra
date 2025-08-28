@@ -2,11 +2,11 @@ package com.example.ocrclient;
 
 import android.util.Log;
 
-import com.example.ocrclient.ai.AggregatedResult;
-import com.example.ocrclient.ai.AggregatedResultDataReader;
-import com.example.ocrclient.ai.AggregatedResultSeq;
-import com.example.ocrclient.ai.AggregatedResultTypeSupport;
-import com.example.ocrclient.ai.SingleResult;
+import com.example.ocrclient.data_structure.ResultItem;
+import com.example.ocrclient.data_structure.ResultUpdate;
+import com.example.ocrclient.data_structure.ResultUpdateDataReader;
+import com.example.ocrclient.data_structure.ResultUpdateSeq;
+import com.example.ocrclient.data_structure.ResultUpdateTypeSupport;
 import com.example.ocrclient.util.ResultSortUtil;
 import com.zrdds.domain.DomainParticipant;
 import com.zrdds.domain.DomainParticipantFactory;
@@ -33,6 +33,8 @@ import com.zrdds.topic.Topic;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class DDSReceiveService {
     private static final String TAG = "DataReceiveByListener";
@@ -43,12 +45,6 @@ public class DDSReceiveService {
     private Subscriber subscriber;
     private Topic topic;
     private DataReader dataReader;
-    private MainActivity mainActivity; // 添加MainActivity引用
-
-    // 添加设置MainActivity的方法
-    public void setMainActivity(MainActivity activity) {
-        this.mainActivity = activity;
-    }
 
     public void work() {
         loadLibrary();
@@ -92,7 +88,7 @@ public class DDSReceiveService {
             Log.i(TAG, "✓ DomainParticipant创建成功，Domain ID: " + DOMAIN_ID);
 
             // 3. 注册数据类型
-            AggregatedResultTypeSupport typeSupport = (AggregatedResultTypeSupport) AggregatedResultTypeSupport.get_instance();
+            ResultUpdateTypeSupport typeSupport = (ResultUpdateTypeSupport) ResultUpdateTypeSupport.get_instance();
             ReturnCode_t rtn = typeSupport.register_type(participant, null);
             if (rtn != ReturnCode_t.RETCODE_OK) {
                 Log.e(TAG, "注册数据类型失败");
@@ -195,12 +191,12 @@ public class DDSReceiveService {
         }
     }
 
-    //TODO: 处理接收到的数据，保证顺序等
+    // 处理接收到的数据
     private void readData(DataReader reader) {
         Log.i(TAG,"开始处理数据");
         try {
-            AggregatedResultDataReader dr = (AggregatedResultDataReader) reader;
-            AggregatedResultSeq dataSeq = new AggregatedResultSeq();
+            ResultUpdateDataReader dr = (ResultUpdateDataReader) reader;
+            ResultUpdateSeq dataSeq = new ResultUpdateSeq();
             SampleInfoSeq infoSeq = new SampleInfoSeq();
 
             ReturnCode_t rtn = dr.take(
@@ -214,20 +210,16 @@ public class DDSReceiveService {
                 for (int i = 0; i < infoSeq.length(); i++) {
                     if (!infoSeq.get_at(i).valid_data) continue;
 
-                    AggregatedResult result = dataSeq.get_at(i);
+                    ResultUpdate result = dataSeq.get_at(i);
 
                     Log.i(TAG, "📨 收到新消息: "
                             + "client_id=" + result.client_id
                             + ", request_id=" + result.request_id
-                            + ", status=" + result.status
-                            + ", error=" + result.error_message);
+                            + ", items_count=" + result.items.length());
                     
-                    if (mainActivity != null && mainActivity.isRequestValid(result.request_id, result.client_id)) {
-                        Log.i(TAG, "将AggregatedResult传递给MainActivity处理");
-                        mainActivity.handleAggregatedResult(result);
-                    } else {
-                        Log.i(TAG, "忽略非本客户端的响应消息: " + result.request_id);
-                    }
+                    // 直接传递给ResultDataManager处理，验证逻辑已在其中实现
+                    Log.i(TAG, "将ResultUpdate传递给ResultDataManager处理");
+                    ResultDataManager.getInstance().handleResultUpdate(result);
                 }
                 dr.return_loan(dataSeq, infoSeq);
             }

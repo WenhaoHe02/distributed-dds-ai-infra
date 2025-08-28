@@ -9,6 +9,7 @@ import com.example.ocrclient.data_structure.*;
 import com.example.ocrclient.data_structure.InferenceRequest;
 import com.example.ocrclient.data_structure.SingleTask;
 import com.example.ocrclient.data_structure.SingleTaskSeq;
+import com.example.ocrclient.internal.RequestState;
 import com.example.ocrclient.util.ImageUtils;
 
 import java.io.File;
@@ -66,7 +67,7 @@ public class DataSend {
         for (int i = 0; i < ocrUris.size(); i++) {
             SingleTask task = new SingleTask();
             task.request_id = request.request_id;
-            task.model_id = "ocr_model";
+            task.model_id = "model_0";
             task.client_id = clientId;
             task.task_id = String.valueOf(i + 1); // 从1开始自增
 
@@ -84,7 +85,7 @@ public class DataSend {
         for (int i = 0; i < detectUris.size(); i++) {
             SingleTask task = new SingleTask();
             task.request_id = request.request_id;
-            task.model_id = "detect_model";
+            task.model_id = "model_0";
             task.client_id = clientId;
             task.task_id = String.valueOf(ocrUris.size() + i + 1); // 继续从OCR任务之后自增
 

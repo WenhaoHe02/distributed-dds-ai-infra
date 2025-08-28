@@ -1,7 +1,6 @@
 package com.example.ocrclient
 
 import android.content.Intent
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
@@ -13,11 +12,9 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.example.ocrclient.databinding.ActivityMainBinding
-import com.example.ocrclient.util.ImageConversionUtil
+import com.example.ocrclient.internal.RequestState
 import com.example.ocrclient.util.ImageUtils
 import java.util.UUID
-import java.util.Collections
-import java.util.HashSet
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -27,6 +24,9 @@ import java.util.concurrent.ConcurrentHashMap
 class MainActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "MainActivity"
+        const val EXTRA_OCR_URIS = "ocr_uris"
+        const val EXTRA_DETECT_URIS = "detect_uris"
+        const val EXTRA_REQUEST_ID = "request_id"
     }
 
     private lateinit var binding: ActivityMainBinding
@@ -38,9 +38,8 @@ class MainActivity : AppCompatActivity() {
     // DDS服务
     private lateinit var ddsSendService: DDSSendService
     private lateinit var dataSend: DataSend
-    
-    // 结果处理器
-    private lateinit var resultHandler: ResultHandler
+
+    private lateinit var ddsReceiveService: DDSReceiveService
     
     // 存储已发送的请求ID和客户端ID的映射关系
     private val sentRequests: MutableMap<String, String> = ConcurrentHashMap()
@@ -85,24 +84,19 @@ class MainActivity : AppCompatActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        //创建消息接收
-        val a = DDSReceiveService()
-        a.setMainActivity(this) // 传递MainActivity引用给DDSReceiveService
-        a.work()
-        //logcat日志
-        Log.d("MainActivity", "消息接收开始")
-
-
         super.onCreate(savedInstanceState)
         Log.d(TAG, "MainActivity onCreate")
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         
-        // 初始化结果处理器
-        resultHandler = ResultHandler(this, binding.imageContainerResult)
-        
         // 初始化所有服务
         initializeServices()
+
+        //创建消息接收
+        ddsReceiveService = DDSReceiveService()
+        // 不再需要设置MainActivity引用
+        ddsReceiveService.work()
+        Log.d("MainActivity", "消息接收开始")
 
         // OCR按钮点击事件
         binding.btnPickOcr.setOnClickListener {
@@ -258,26 +252,42 @@ class MainActivity : AppCompatActivity() {
     private fun uploadAllImages() {
         Log.d(TAG, "开始上传所有图片")
         setLoading(true)
-        binding.tvResult.text = "上传中..."
 
         Thread {
             try {
                 Log.d(TAG, "在后台线程中发送图片")
                 // 使用数据发送服务发送所有图片
                 val request = dataSend.createInferenceRequest(ocrUris, detectUris)
-                // 保存请求ID和客户端ID到映射中
-                sentRequests[request.request_id] = clientId
+//                // 保存请求ID和客户端ID到映射中
+//                sentRequests[request.request_id] = clientId
+                // 同时添加到ResultDataManager中用于验证
+                ResultDataManager.getInstance().addSentRequest(request.request_id, clientId)
+
+                // 创建并注册RequestState对象
+                val requestState = RequestState(request.request_id)
+
+                // 设置预期任务数
+                requestState.setExpectedTaskCount((ocrUris.size + detectUris.size).toLong())
+
+                // 将RequestState添加到ResultDataManager中
+                ResultDataManager.getInstance().registerRequestState(requestState)
+
                 Log.d(TAG, "已添加请求ID和客户端ID到映射: ${request.request_id} -> $clientId")
                 val success = ddsSendService.sendInferenceRequest(request)
 
                 runOnUiThread {
                     setLoading(false)
                     if (success) {
-                        binding.tvResult.text = "已通过DDS发送请求"
-                        Log.d(TAG, "图片发送成功")
-                        Toast.makeText(this, "请求发送成功", Toast.LENGTH_SHORT).show()
+                        // 跳转到结果页面
+                        val intent = Intent(this, ResultActivity::class.java).apply {
+                            // 传递图片URI列表
+                            putStringArrayListExtra(EXTRA_OCR_URIS, ArrayList(ocrUris.map { it.toString() }))
+                            putStringArrayListExtra(EXTRA_DETECT_URIS, ArrayList(detectUris.map { it.toString() }))
+                            putExtra(EXTRA_REQUEST_ID, request.request_id)
+                        }
+                        startActivity(intent)
+                        Log.d(TAG, "图片发送成功，跳转到结果页面")
                     } else {
-                        binding.tvResult.text = "发送请求失败"
                         Log.e(TAG, "图片发送失败")
                         Toast.makeText(this, "请求发送失败，请查看日志了解详情", Toast.LENGTH_LONG).show()
                     }
@@ -286,53 +296,9 @@ class MainActivity : AppCompatActivity() {
                 Log.e(TAG, "上传图片时发生异常", e)
                 runOnUiThread {
                     setLoading(false)
-                    binding.tvResult.text = "发送失败：${e.message}"
                     Toast.makeText(this, "发送失败：${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
         }.start()
-    }
-    
-    /**
-     * 处理接收到的响应结果
-     */
-    fun handleReceivedResult(resultInfo: String) {
-        runOnUiThread {
-            // 在结果文本框中追加新收到的结果
-            val currentText = binding.tvResult.text.toString()
-            binding.tvResult.text = if (currentText.isNotEmpty()) {
-                "$currentText\n$resultInfo"
-            } else {
-                resultInfo
-            }
-            Log.d(TAG, "已更新结果显示: $resultInfo")
-        }
-    }
-    
-    /**
-     * 处理AggregatedResult数据
-     */
-    fun handleAggregatedResult(result: com.example.ocrclient.ai.AggregatedResult) {
-        val resultInfo = resultHandler.handleAggregatedResult(result)
-        handleReceivedResult(resultInfo)
-    }
-    
-    /**
-     * 显示结果图像（已废弃，保留以兼容旧接口）
-     */
-    fun displayResultImages(imageBytesList: List<ByteArray>) {
-        // 此方法已废弃，功能已整合到ResultHandler中
-    }
-    
-    /**
-     * 检查请求ID是否在已发送列表中，并且客户端ID是否匹配
-     */
-    fun isRequestValid(requestId: String, receivedClientId: String): Boolean {
-        val isValid = sentRequests.containsKey(requestId) && sentRequests[requestId] == receivedClientId
-        // 如果验证通过，从sentRequests中移除该请求，避免内存泄漏
-        if (isValid) {
-            sentRequests.remove(requestId)
-        }
-        return isValid
     }
 }

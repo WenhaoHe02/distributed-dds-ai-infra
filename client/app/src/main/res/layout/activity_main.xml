@@ -133,46 +133,5 @@
             app:layout_constraintEnd_toEndOf="parent"
             android:layout_marginTop="16dp" />
 
-        <TextView
-            android:id="@+id/tvResult"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:text="识别结果将显示在这里"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/progress"
-            android:layout_marginTop="16dp" />
-
-        <!-- 结果图像显示区域 -->
-        <TextView
-            android:id="@+id/tvResultImagesTitle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:text="结果图像"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginTop="16dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/tvResult" />
-
-        <HorizontalScrollView
-            android:id="@+id/horizontalScrollViewResultImages"
-            android:layout_width="0dp"
-            android:layout_height="150dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/tvResultImagesTitle"
-            android:layout_marginTop="8dp"
-            android:background="#EEEEEE">
-
-            <LinearLayout
-                android:id="@+id/imageContainerResult"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:orientation="horizontal"
-                android:padding="4dp" />
-        </HorizontalScrollView>
-
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

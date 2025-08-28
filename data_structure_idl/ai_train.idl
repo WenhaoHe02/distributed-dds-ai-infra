@@ -1,0 +1,29 @@
+// ai_train.idl  —— 最小可用，适合 Java 代码生成
+module ai_train {
+  typedef unsigned long  RoundId;
+  typedef unsigned long  ClientId;
+  typedef sequence<octet> Bytes;   // 承载 float32 参数的原始字节
+
+  // 控制端 -> 客户端
+  struct TrainCmd {
+    RoundId       round_id;
+    unsigned long subset_size;
+    unsigned long epochs;
+    double        lr;
+    unsigned long seed;
+  };
+
+  // 客户端 -> 控制端
+  struct ClientUpdate {
+    ClientId            client_id;     // 显式带上，便于去重/排查
+    RoundId             round_id;
+    unsigned long long  num_samples;   // 若各端样本数恒等，也可改成 unsigned long
+    Bytes               data;          // 扁平化参数字节（float32）
+  };
+
+  // 控制端 -> 客户端
+  struct ModelBlob {
+    RoundId  round_id;
+    Bytes    data;
+  };
+};

@@ -2,9 +2,9 @@ package com.example.ocrclient;
 
 import android.util.Log;
 
-import com.example.ocrclient.ai.InferenceRequest;
-import com.example.ocrclient.ai.InferenceRequestDataWriter;
-import com.example.ocrclient.ai.InferenceRequestTypeSupport;
+import com.example.ocrclient.data_structure.InferenceRequest;
+import com.example.ocrclient.data_structure.InferenceRequestDataWriter;
+import com.example.ocrclient.data_structure.InferenceRequestTypeSupport;
 import com.zrdds.domain.DomainParticipant;
 import com.zrdds.domain.DomainParticipantFactory;
 import com.zrdds.domain.DomainParticipantFactoryQos;
@@ -139,7 +139,7 @@ public class DDSSendService {
             }
 
             Log.d(TAG, "请求ID: " + inferenceRequest.request_id);
-            Log.d(TAG, "任务数量: " + inferenceRequest.input_blob.length());
+            Log.d(TAG, "任务数量: " + inferenceRequest.tasks.length());
 
             ReturnCode_t result = inferenceRequestWriter.write(inferenceRequest, InstanceHandle_t.HANDLE_NIL_NATIVE);
             boolean success = result.equals(ReturnCode_t.RETCODE_OK);

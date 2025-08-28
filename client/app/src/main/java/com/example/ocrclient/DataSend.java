@@ -39,27 +39,27 @@ public class DataSend {
 
     /**
      * 创建InferenceRequest对象，用于打包发送到服务端的数据
-     * @param ocrUris OCR任务图片URI列表
+     *
+     * @param ocrUris    OCR任务图片URI列表
      * @param detectUris 检测任务图片URI列表
      * @return InferenceRequest对象
      */
     public InferenceRequest createInferenceRequest(List<Uri> ocrUris, List<Uri> detectUris) {
         Log.d(TAG, "开始创建InferenceRequest对象");
         Log.d(TAG, "OCR任务数量: " + ocrUris.size() + ", 检测任务数量: " + detectUris.size());
-        
+
         InferenceRequest request = new InferenceRequest();
         // 获取Android ID
         String androidId = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
         // 结合UUID和Android ID生成唯一的请求ID（会有一点长）
         request.request_id = UUID.randomUUID() + "_" + androidId;
-        request.timeout_ms = 30000; // 30秒超时
 
         Log.d(TAG, "请求ID: " + request.request_id);
 
         // 创建任务序列
         SingleTaskSeq taskSeq = new SingleTaskSeq();
         taskSeq.ensure_length(ocrUris.size() + detectUris.size(), ocrUris.size() + detectUris.size());
-        
+
         Log.d(TAG, "任务序列长度已设置为: " + (ocrUris.size() + detectUris.size()));
 
         // 处理OCR图片任务
@@ -72,8 +72,8 @@ public class DataSend {
 
             // 将图片转换为字节数组并存储到input_blob中
             byte[] imageBytes = uriToByteArray(ocrUris.get(i));
-            task.input_blob.from_array(imageBytes, imageBytes.length);
-            
+            task.payload.from_array(imageBytes, imageBytes.length);
+
             Log.d(TAG, "OCR任务 " + i + " 创建完成，任务ID: " + task.task_id + "，图片大小: " + imageBytes.length + " 字节");
 
             // 添加到任务序列中
@@ -90,21 +90,22 @@ public class DataSend {
 
             // 将图片转换为字节数组并存储到input_blob中
             byte[] imageBytes = uriToByteArray(detectUris.get(i));
-            task.input_blob.from_array(imageBytes, imageBytes.length);
-            
+            task.payload.from_array(imageBytes, imageBytes.length);
+
             Log.d(TAG, "检测任务 " + i + " 创建完成，任务ID: " + task.task_id + "，图片大小: " + imageBytes.length + " 字节");
 
             // 添加到任务序列中
             taskSeq.set_at(ocrUris.size() + i, task);
         }
 
-        request.input_blob = taskSeq;
+        request.tasks = taskSeq;
         Log.d(TAG, "InferenceRequest对象创建完成");
         return request;
     }
 
     /**
      * 将图片URI转换为字节数组
+     *
      * @param uri 图片URI
      * @return 图片字节数组
      */
@@ -127,6 +128,7 @@ public class DataSend {
 
     /**
      * 读取文件内容为字节数组
+     *
      * @param file 文件
      * @return 文件内容字节数组
      * @throws IOException IO异常
@@ -148,7 +150,7 @@ public class DataSend {
         try {
             Log.d(TAG, "开始发送所有图片请求");
             Log.d(TAG, "OCR图片数量: " + ocrUris.size() + "，检测图片数量: " + detectUris.size());
-            
+
             // 创建InferenceRequest对象
             InferenceRequest inferenceRequest = createInferenceRequest(ocrUris, detectUris);
             Log.d(TAG, "InferenceRequest创建完成");

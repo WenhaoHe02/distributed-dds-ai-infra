@@ -1,91 +1,96 @@
-// ai.idl
-// DDS IDL for inference serving (final version)
+// ai.idl — Scheme B (announce → claim → grant → assigned TaskList)
+// - Worker 主动认领（Claim），Patcher 公告胜者（Grant）
+// - Patcher 直接发布带 assigned_worker_id 的 TaskList
+// - Worker 通过 worker_id 过滤（CFT 或应用层判断）
+// - 结果直传 Bytes，服务端去重，客户端仅按 TTL 等待
 
-module ai {
+module data_structure {
 
-  // -----------------------------
-  // Common helper types
-  // -----------------------------
+  // ---------- Common ----------
   typedef sequence<octet> Bytes;
 
-  struct KV {
-    string key;
-    string value;
-  };
-  typedef sequence<KV> KVSeq;
-
-  struct KVList {
-    KVSeq value;
-  };
-
-  // -----------------------------
-  // Client -> Dispatcher
-  // -----------------------------
+  // ---------- Client → Patcher ----------
   struct SingleTask {
-    Bytes  input_blob;
-    string request_id;   // correlation: which request this task belongs to
-    string model_id;
-    string client_id;
-    string task_id;      // unique inside the request
+    string request_id;    // 全局请求ID
+    string task_id;       // 请求内唯一条目ID
+    string model_id;      // 目标模型
+    string client_id;     // 回传路由
+    Bytes  payload;       // 输入字节
   };
   typedef sequence<SingleTask> SingleTaskSeq;
 
   struct InferenceRequest {
     string request_id;
-    // NOTE: 按你的最终图命名为 input_blob（虽然它其实是任务列表）
-    SingleTaskSeq input_blob;
-    long timeout_ms;
-    KVList info;
+    SingleTaskSeq tasks;  // 客户端一次提交的任务集合
   };
 
-  // -----------------------------
-  // Dispatcher -> Worker (mixed batch allowed)
-  // -----------------------------
+  // ---------- Patcher 批内载体（轻量） ----------
+  struct Task {
+    string request_id;
+    string task_id;
+    string client_id;
+    Bytes  payload;
+  };
+  typedef sequence<Task> TaskSeq;
+
+  // ---------- Announce / Claim / Grant ----------
+  // Patcher 公告：有批可领（仅元信息，不含 payload）
+  struct OpenBatch {
+    string batch_id;       // "b-<ts>-<seq>"
+    string model_id;
+    long   size;           // 批内任务条数
+    long   create_ts_ms;   // 批创建时间戳
+  };
+
+  // Worker 竞争认领
+  struct Claim {
+    string batch_id;
+    string worker_id;      // 申领者
+    long   queue_length;         
+  };
+
+  // Patcher 宣告胜者（仅一人胜出）
+  struct Grant {
+    string batch_id;
+    string winner_worker_id;
+  };
+
+  // ---------- Patcher → Worker（指派后的独占批） ----------
   struct TaskList {
-    SingleTaskSeq tasks;
-    long task_num;
-    string worker_id;
-    KVList meta;
+    string batch_id;
+    string model_id;
+    string assigned_worker_id; // 仅该 worker 消费
+    TaskSeq tasks;
   };
 
-  // -----------------------------
-  // Worker -> Aggregator
-  // -----------------------------
-  struct SingleResult {
-    SingleTask task;     // 结果与任务一一对应
-    string status;       // e.g. "OK"/"TIMEOUT"/"ERROR"
-    string output_type;  // e.g. "TENSOR"/"JSON"/"BYTES"
-    long   latency_ms;
-    Bytes  output_blob;
+  // ---------- Worker → Spliter ----------
+  struct WorkerTaskResult {
+    string request_id;
+    string task_id;
+    string client_id;      // 透传回 Spliter 用于路由
+    string status;         // "OK" | "ERROR_*"
+    Bytes  output_blob;    // 结果字节
   };
-  typedef sequence<SingleResult> SingleResultSeq;
+  typedef sequence<WorkerTaskResult> WorkerTaskResultSeq;
 
   struct WorkerResult {
-    SingleResultSeq results;
-    long result_num;
-  };
-
-  // -----------------------------
-  // Worker -> Dispatcher (heartbeat / capacity)
-  // -----------------------------
-  struct NodeStatus {
-    string worker_id;
+    string batch_id;
     string model_id;
-    string host;
-    long   queue_depth;
-    long   est_capacity;
-    string health;
-    long   heartbeat_ms;
+    string worker_id;      // 实际处理该批的 worker
+    WorkerTaskResultSeq results;
   };
 
-  // -----------------------------
-  // Aggregator -> Client
-  // -----------------------------
-  struct AggregatedResult {
-    SingleResultSeq results;
-    string client_id;
+  // ---------- Spliter → Client（纯流式增量；服务端去重） ----------
+  struct ResultItem {
+    string task_id;        
+    string status;
+    Bytes  output_blob;
+  };
+  typedef sequence<ResultItem> ResultItemSeq;
+
+  struct ResultUpdate {
     string request_id;
-    string status;         // overall: "OK"/"PARTIAL"/"FAILED"
-    string error_message;
+    string client_id;      // 路由到目标客户端
+    ResultItemSeq items;   // 本次新增/到达的结果条目
   };
 };

@@ -74,6 +74,13 @@ class MainActivity : AppCompatActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        //创建消息接收
+        val a = DDSReceiveService()
+        a.work()
+        //logcat日志
+        Log.d("MainActivity", "消息接收开始")
+
+
         super.onCreate(savedInstanceState)
         Log.d(TAG, "MainActivity onCreate")
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -243,7 +250,7 @@ class MainActivity : AppCompatActivity() {
                 Log.d(TAG, "在后台线程中发送图片")
                 // 使用数据发送服务发送所有图片
                 val success = dataSend.sendAllImages(ocrUris, detectUris)
-                
+
                 runOnUiThread {
                     setLoading(false)
                     if (success) {

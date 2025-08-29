@@ -1,11 +1,23 @@
-********************  2025-08-29 14:48:54:285  ********************
+********************  2025-08-29 16:00:16:691  ********************
 Current ZRDDS version(2.4.4-r2761701) for SEU was compiled at Aug 22 2025 16:10:46
 *******************************************************************
-********************  2025-08-29 14:49:10:590  ********************
-LOGINFO: LEVEL(ERROR) NO(0) TOPIC(UNKNOWN)
-FUNC: MessageBlock.cpp:MessageBlockWriteData(LINE: 99)
-assert MessageBlockTotalSpace(256) < length(4799528) failed.
-MessageBlock m_base(232c39b8), m_wrPtr(24), m_cont(00000000)
-00 01 00 00 01 00 00 00 01 00 00 00 88 13 00 00 
-00 00 00 00 28 3c 49 00 
+********************  2025-08-29 16:01:04:797  ********************
+LOGINFO: LEVEL(WARNING)
+FUNC: ZRSpdp.cpp:ZRSpdpSortConnections(LINE: 1313)
+local((d1e8fea9)(44990000)(00000000)) can not find available tcp/ip locators for remote((011014ac)(949a0000)(00000000)(000001c1)) in (1 0) netRet(0)
+*******************************************************************
+********************  2025-08-29 16:01:04:797  ********************
+LOGINFO: LEVEL(WARNING)
+FUNC: ZRSpdp.cpp:ZRSpdpSortLocatorList(LINE: 1464)
+local ((d1e8fea9)(44990000)(00000000)) sort connection for remote((011014ac)(949a0000)(00000000)(000001c1)) locators(UDPv4//ac.14.10.01//57410 UDPv4//c0.a8.56.17//57410) failed(-1)
+*******************************************************************
+********************  2025-08-29 16:01:05:807  ********************
+LOGINFO: LEVEL(WARNING)
+FUNC: ZRSpdp.cpp:ZRSpdpSortConnections(LINE: 1313)
+local((d1e8fea9)(44990000)(00000000)) can not find available tcp/ip locators for remote((011014ac)(949a0000)(00000000)(000001c1)) in (1 0) netRet(0)
+*******************************************************************
+********************  2025-08-29 16:01:05:807  ********************
+LOGINFO: LEVEL(WARNING)
+FUNC: ZRSpdp.cpp:ZRSpdpSortLocatorList(LINE: 1464)
+local ((d1e8fea9)(44990000)(00000000)) sort connection for remote((011014ac)(949a0000)(00000000)(000001c1)) locators(UDPv4//ac.14.10.01//57411 UDPv4//c0.a8.56.17//57411) failed(-1)
 *******************************************************************

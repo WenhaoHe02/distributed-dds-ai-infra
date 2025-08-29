@@ -64,11 +64,11 @@ public class ClientUpdateTypeSupport extends TypeSupport {
     }
 
     public int get_max_sizeI(){
-        return 275;
+        return 0xffffffff;
     }
 
     public int get_max_key_sizeI(){
-        return 275;
+        return 0xffffffff;
     }
 
     public boolean has_keyI(){
@@ -273,7 +273,7 @@ public class ClientUpdateTypeSupport extends TypeSupport {
         memberTc = factory.get_primitive_TC(TypeCodeKind.DDS_TK_UCHAR);
         if (memberTc != null)
         {
-            memberTc = factory.create_sequence_TC(255, memberTc);
+            memberTc = factory.create_sequence_TC(0xffffffff, memberTc);
         }
         if (memberTc == null){
             System.out.println("Get Member data TypeCode failed.");

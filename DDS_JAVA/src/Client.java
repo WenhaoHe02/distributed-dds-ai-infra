@@ -25,8 +25,8 @@ public class Client {
     private static final int    CLIENT_ID   = 1;
     private static final String PYTHON_EXE  = System.getenv().getOrDefault("PYTHON_EXE", "python");
     // 改成你的实际脚本路径：
-    private static final String TRAINER_PY  = "E:/distributed-dds-ai-serving-system/distributed_training/train/dist_train.py";
-    private static final String DATA_DIR    = "E:/distributed-dds-ai-serving-system/data";
+    private static final String TRAINER_PY  = "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/distributed_training/train/dist_train.py";
+    private static final String DATA_DIR    = "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/data";
     private static final int    BATCH_SIZE  = 128;
     // ====================================
 
@@ -137,7 +137,7 @@ public class Client {
         Path outBin = Files.createTempFile("upd_", ".bin");
 
         List<String> cmd = new ArrayList<>();
-        cmd.add("C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe");
+        cmd.add("C:/Program Files/Python311/python.exe");
         cmd.add(TRAINER_PY);
         cmd.add("--client_id");   cmd.add(String.valueOf(clientId));
         cmd.add("--seed");        cmd.add(String.valueOf(seed));

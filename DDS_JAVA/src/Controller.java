@@ -7,6 +7,10 @@ import com.zrdds.topic.*;
 
 import  ai_train.*;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -125,7 +129,7 @@ public class Controller {
         }
 
         // 2) 等待客户端返回 ClientUpdate
-        List<ai_train.ClientUpdate> collected = waitForClientUpdates(roundId, 3, 60_000); // 假设3个客户端，60s超时
+        List<ai_train.ClientUpdate> collected = waitForClientUpdates(roundId, 1, 100_000); // 假设3个客户端，60s超时
         if (collected.isEmpty()) {
             System.err.println("[Controller] No client updates received for round " + roundId);
             return;
@@ -167,17 +171,75 @@ public class Controller {
         return resultList;
     }
 
-    // 简单参数聚合（逐字节平均）
+    // 调用 Python 脚本 aggregator.py 进行参数聚合
     private byte[] aggregateParameters(List<ai_train.ClientUpdate> updates) {
-        if (updates.isEmpty()) return new byte[0];
-        int len = updates.get(0).data.length();
-        byte[] result = new byte[len];
-        for (ai_train.ClientUpdate cu : updates) {
-            for (int i = 0; i < len; i++) {
-                result[i] += cu.data.get_at(i) / updates.size();
+        try {
+            // 1) 把 updates 转成 JSON
+            StringBuilder sbJson = new StringBuilder();
+            sbJson.append("[");
+            for (int idx = 0; idx < updates.size(); idx++) {
+                ai_train.ClientUpdate cu = updates.get(idx);
+                sbJson.append("{");
+                sbJson.append("\"client_id\":").append(cu.client_id).append(",");
+                sbJson.append("\"round_id\":").append(cu.round_id).append(",");
+                sbJson.append("\"num_samples\":").append(cu.num_samples).append(",");
+
+                // 把 byte[] 转 float[]
+                sbJson.append("\"weights\":[");
+                for (int i = 0; i < cu.data.length(); i++) {
+                    // 这里假设 ClientUpdate.data 里保存的就是 float32 bytes
+                    // 如果你传的是 torch 参数向量，可能需要在 Python 脚本里重新解释为 float32
+                    int val = cu.data.get_at(i);
+                    sbJson.append(val);
+                    if (i != cu.data.length() - 1) sbJson.append(",");
+                }
+                sbJson.append("]}");
+                if (idx != updates.size() - 1) sbJson.append(",");
             }
+            sbJson.append("]");
+
+            // 2) 调用 Python 脚本
+            ProcessBuilder pb = new ProcessBuilder("python", "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/distributed_training/train/aggregator.py");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+
+            try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(p.getOutputStream()))) {
+                writer.write(sbJson.toString());
+                writer.flush();
+            }
+
+            // 3) 读取 Python 输出
+            StringBuilder outBuf = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    outBuf.append(line);
+                }
+            }
+
+            p.waitFor();
+
+            // 4) 解析结果 JSON，取 weights
+            String resultJson = outBuf.toString();
+            // 简单解析：找到 "weights": [...]
+            int start = resultJson.indexOf("[", resultJson.indexOf("\"weights\""));
+            int end = resultJson.indexOf("]", start);
+            String weightsStr = resultJson.substring(start + 1, end);
+            String[] parts = weightsStr.split(",");
+
+            byte[] aggregated = new byte[parts.length];
+            for (int i = 0; i < parts.length; i++) {
+                float f = Float.parseFloat(parts[i].trim());
+                int intVal = (int) f; // 简单转回 byte，如果要精确保留 float32，需要用 ByteBuffer
+                aggregated[i] = (byte) intVal;
+            }
+
+            return aggregated;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new byte[0];
         }
-        return result;
     }
 
     private void evaluateModel(byte[] modelData) {

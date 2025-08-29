@@ -11,10 +11,16 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
+import java.io.FileWriter;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 /**
  * Controller：控制端调度训练、收集客户端参数、聚合模型、评估
  */
@@ -129,7 +135,7 @@ public class Controller {
         }
 
         // 2) 等待客户端返回 ClientUpdate
-        List<ai_train.ClientUpdate> collected = waitForClientUpdates(roundId, 1, 100_000); // 假设3个客户端，60s超时
+        List<ai_train.ClientUpdate> collected = waitForClientUpdates(roundId, 2, 100_000); // 假设3个客户端，60s超时
         if (collected.isEmpty()) {
             System.err.println("[Controller] No client updates received for round " + roundId);
             return;
@@ -174,7 +180,7 @@ public class Controller {
     // 调用 Python 脚本 aggregator.py 进行参数聚合
     private byte[] aggregateParameters(List<ai_train.ClientUpdate> updates) {
         try {
-            // 1) 把 updates 转成 JSON
+            // 1) 构建 JSON，传 Base64 编码后的 bytes
             StringBuilder sbJson = new StringBuilder();
             sbJson.append("[");
             for (int idx = 0; idx < updates.size(); idx++) {
@@ -184,27 +190,35 @@ public class Controller {
                 sbJson.append("\"round_id\":").append(cu.round_id).append(",");
                 sbJson.append("\"num_samples\":").append(cu.num_samples).append(",");
 
-                // 把 byte[] 转 float[]
-                sbJson.append("\"weights\":[");
-                for (int i = 0; i < cu.data.length(); i++) {
-                    // 这里假设 ClientUpdate.data 里保存的就是 float32 bytes
-                    // 如果你传的是 torch 参数向量，可能需要在 Python 脚本里重新解释为 float32
-                    int val = cu.data.get_at(i);
-                    sbJson.append(val);
-                    if (i != cu.data.length() - 1) sbJson.append(",");
-                }
-                sbJson.append("]}");
+                String b64 = Base64.getEncoder().encodeToString(cu.data.get_contiguous_buffer());
+                sbJson.append("\"weights_b64\":\"").append(b64).append("\"");
+
+                sbJson.append("}");
                 if (idx != updates.size() - 1) sbJson.append(",");
             }
             sbJson.append("]");
 
             // 2) 调用 Python 脚本
-            ProcessBuilder pb = new ProcessBuilder("python", "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/distributed_training/train/aggregator.py");
+            ProcessBuilder pb = new ProcessBuilder(
+                    "python",
+                    "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/distributed_training/train/aggregator.py"
+            );
             pb.redirectErrorStream(true);
             Process p = pb.start();
 
+            // 保存到 txt 文件
+            String pythonInput = sbJson.toString();
+
+            /*
+            try (BufferedWriter fileWriter = new BufferedWriter(new FileWriter("python_input.txt"))) {
+                fileWriter.write(pythonInput);
+            }
+            */
+
+            // 继续写入 Python 进程
             try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(p.getOutputStream()))) {
-                writer.write(sbJson.toString());
+                writer.write(pythonInput);
+                //System.out.println(pythonInput);
                 writer.flush();
             }
 
@@ -219,28 +233,42 @@ public class Controller {
 
             p.waitFor();
 
-            // 4) 解析结果 JSON，取 weights
             String resultJson = outBuf.toString();
-            // 简单解析：找到 "weights": [...]
-            int start = resultJson.indexOf("[", resultJson.indexOf("\"weights\""));
-            int end = resultJson.indexOf("]", start);
-            String weightsStr = resultJson.substring(start + 1, end);
-            String[] parts = weightsStr.split(",");
+            //System.out.println("result: " + resultJson);
 
-            byte[] aggregated = new byte[parts.length];
-            for (int i = 0; i < parts.length; i++) {
-                float f = Float.parseFloat(parts[i].trim());
-                int intVal = (int) f; // 简单转回 byte，如果要精确保留 float32，需要用 ByteBuffer
-                aggregated[i] = (byte) intVal;
+            try (BufferedWriter fileWriter = new BufferedWriter(new FileWriter("resultJson.txt"))) {
+                fileWriter.write(resultJson);
             }
 
-            return aggregated;
+
+
+            // 4) 用 JSON 解析
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(resultJson);
+            String aggB64 = root.get("weights_b64").asText();
+
+            return Base64.getDecoder().decode(aggB64);
+
+//            // 4) 解析 Python 返回的 JSON，提取 Base64 编码的聚合权重
+//            int start = resultJson.indexOf("\"weights_b64\":\"") + 15;
+//            int end = resultJson.indexOf("\"", start);
+//
+//            System.out.println("start: " + start + ", end: " + end);
+//            String aggB64 = resultJson.substring(start, end);
+//
+//            try (BufferedWriter fileWriter = new BufferedWriter(new FileWriter("aggB64.txt"))) {
+//                fileWriter.write(aggB64);
+//            }
+//
+//            // Base64 -> byte[]
+//            return Base64.getDecoder().decode(aggB64);
 
         } catch (Exception e) {
             e.printStackTrace();
             return new byte[0];
         }
     }
+
 
     private void evaluateModel(byte[] modelData) {
         System.out.println("[Controller] Evaluating model, size=" + modelData.length);

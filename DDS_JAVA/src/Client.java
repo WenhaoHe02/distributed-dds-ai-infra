@@ -137,7 +137,7 @@ public class Client {
         Path outBin = Files.createTempFile("upd_", ".bin");
 
         List<String> cmd = new ArrayList<>();
-        cmd.add(PYTHON_EXE);
+        cmd.add("C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe");
         cmd.add(TRAINER_PY);
         cmd.add("--client_id");   cmd.add(String.valueOf(clientId));
         cmd.add("--seed");        cmd.add(String.valueOf(seed));
@@ -196,7 +196,7 @@ public class Client {
     // byte[] -> ai_train.Bytes（继承 ByteSeq：用 from_array/length）
     private static Bytes toBytes(byte[] raw) {
         Bytes out = new Bytes();
-        if (raw != null) out.from_array(raw, raw.length);
+        if (raw != null) out.loan_contiguous(raw, raw.length, raw.length);
         return out;
     }
     private static int bytesLen(Bytes b) { return (b == null) ? 0 : b.length(); }

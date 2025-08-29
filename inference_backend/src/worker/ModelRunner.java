@@ -76,8 +76,8 @@ public class ModelRunner  {
     static String runModel(String inputPath, String taskId) {
         try {
             ProcessBuilder pb = new ProcessBuilder(
-                    "C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe",  // 保持原有路径
-                    "E:/distributed-dds-ai-serving-system/distributed_backernd/src/yolo_service/pred.py",
+                    findPythonExecutable(),  // 使用动态查找的 Python 路径
+                    findPythonScriptPath(),  // 使用动态查找的脚本路径
                     "--path", inputPath,
                     "--task_id", taskId
             );
@@ -99,9 +99,67 @@ public class ModelRunner  {
 
         // 保持原有输出路径规则
         return Paths.get(
-                "E:/distributed-dds-ai-serving-system/distributed_backernd/src/yolo_service",
+                findPythonScriptDirectory(),
                 taskId + ".jpg"
         ).toString();
+    }
+
+    /**
+     * 查找本机 Python 可执行文件路径
+     */
+    private static String findPythonExecutable() {
+        // 尝试使用 "python" 命令
+        try {
+            Process process = new ProcessBuilder("python", "--version").start();
+            int exitCode = process.waitFor();
+            if (exitCode == 0) {
+                return "python";
+            }
+        } catch (Exception e) {
+            // 忽略异常，尝试其他方式
+        }
+
+        // 尝试使用 "python3" 命令
+        try {
+            Process process = new ProcessBuilder("python3", "--version").start();
+            int exitCode = process.waitFor();
+            if (exitCode == 0) {
+                return "python3";
+            }
+        } catch (Exception e) {
+            // 忽略异常
+        }
+
+        // 如果上述方式都不行，返回默认路径（原来的路径）
+        return "C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe";
+    }
+
+    /**
+     * 查找 Python 脚本路径
+     */
+    private static String findPythonScriptPath() {
+        // 使用相对于类路径的路径
+        Path scriptPath = Paths.get("src", "yolo_service", "pred.py");
+        if (Files.exists(scriptPath)) {
+            return scriptPath.toString();
+        }
+
+        // 如果上面的路径不存在，尝试使用绝对路径
+        scriptPath = Paths.get(System.getProperty("user.dir"), "src", "yolo_service", "pred.py");
+        return scriptPath.toString();
+    }
+
+    /**
+     * 查找 Python 脚本所在目录
+     */
+    private static String findPythonScriptDirectory() {
+        Path scriptDir = Paths.get("src", "yolo_service");
+        if (Files.exists(scriptDir)) {
+            return scriptDir.toString();
+        }
+
+        scriptDir = Paths.get(System.getProperty("user.dir"), "src", "yolo_service");
+        return scriptDir.toString();
     }
 
     /* ===================== Bytes 辅助 ===================== */

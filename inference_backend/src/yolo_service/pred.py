@@ -36,7 +36,9 @@ def main():
     parser.add_argument("--task_id", type=str, required=True)
     args = parser.parse_args()
 
-    model = YOLO("../yolo_parameter/best.pt")
+    # 使用动态路径查找模型文件
+    model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "yolo_parameter", "best.pt")
+    model = YOLO(model_path)
     task_id = args.task_id
     if is_base64(args.path):
 
@@ -56,7 +58,7 @@ def main():
 
     # 输出与保存结果
     save_path = os.path.join(
-        "E:/distributed-dds-ai-serving-system/distributed_backernd/src/yolo_service",
+        os.path.dirname(os.path.abspath(__file__)),
         f"{task_id}.jpg"
     )
     for result in results:

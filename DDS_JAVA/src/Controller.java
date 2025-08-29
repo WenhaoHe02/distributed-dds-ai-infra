@@ -58,7 +58,8 @@ public class Controller {
     public static void main(String[] args) throws Exception {
         Controller ctrl = new Controller();
         ctrl.init();
-        ctrl.runTrainingRound(5000, 1, 0.01, 12345); // 示例：subset=5000, epochs=5, lr=0.01, seed=12345
+
+        ctrl.runTrainingRound(5000, 5, 0.01, 12345); // 示例：subset=5000, epochs=5, lr=0.01, seed=12345
         DDSIF.Finalize();
     }
 
@@ -183,6 +184,5 @@ public class Controller {
         System.out.println("[Controller] Evaluating model, size=" + modelData.length);
         // TODO: 测试集推理，记录时间和识别率
     }
-
 
 }

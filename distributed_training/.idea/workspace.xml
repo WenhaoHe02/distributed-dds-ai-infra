@@ -5,13 +5,39 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f6a0850f-319c-4790-9fdf-ad6675662b1e" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/distributed_training.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/distributed_training.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/centric.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/client.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/Controller.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Client.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Client.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Controller.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Controller.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/Bytes.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ClientUpdate.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ClientUpdateDataReader.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ClientUpdateDataWriter.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ClientUpdateSeq.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ClientUpdateTypeSupport.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ModelBlob.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ModelBlobDataReader.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ModelBlobDataWriter.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ModelBlobSeq.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ModelBlobTypeSupport.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/TrainCmd.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/TrainCmdDataReader.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/TrainCmdDataWriter.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/TrainCmdSeq.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/TrainCmdTypeSupport.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_structure_cpp/CMakeLists.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_structure_cpp/ai_train.hpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_structure_cpp/ai_train.i" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_structure_cpp/ai_trainCdrAux.hpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_structure_cpp/ai_trainCdrAux.ipp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_structure_cpp/ai_trainPubSubTypes.cxx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_structure_cpp/ai_trainPubSubTypes.hpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_structure_cpp/ai_trainPubSubTypes.i" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_structure_cpp/ai_trainTypeObjectSupport.cxx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_structure_cpp/ai_trainTypeObjectSupport.hpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/train/dist_train.py" beforeDir="false" afterPath="$PROJECT_DIR$/train/dist_train.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../inference_backend/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../inference_backend/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -26,14 +52,14 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "D:/pythonProject/venv/Scripts",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/pythonProject/venv/Scripts&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
-}]]></component>
+}</component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="应用程序级" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="默认任务">

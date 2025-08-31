@@ -6,10 +6,10 @@ import com.zrdds.publication.DataWriter;
 import com.zrdds.subscription.DataReader;
 import java.io.UnsupportedEncodingException;
 
-public class ClientUpdateTypeSupport extends TypeSupport {
-    private String type_name = "ClientUpdate";
+public class ModelBlobTypeSupport extends TypeSupport {
+    private String type_name = "ModelBlob";
     private static TypeCodeImpl s_typeCode = null;
-    private static ClientUpdateTypeSupport m_instance = new ClientUpdateTypeSupport();
+    private static ModelBlobTypeSupport m_instance = new ModelBlobTypeSupport();
 
     private final byte[] tmp_byte_obj = new byte[1];
     private final char[] tmp_char_obj = new char[1];
@@ -21,13 +21,13 @@ public class ClientUpdateTypeSupport extends TypeSupport {
     private final boolean[] tmp_boolean_obj = new boolean[1];
 
     
-    private ClientUpdateTypeSupport(){}
+    private ModelBlobTypeSupport(){}
 
     
     public static TypeSupport get_instance() { return m_instance; }
 
     public Object create_sampleI() {
-        ClientUpdate sample = new ClientUpdate();
+        ModelBlob sample = new ModelBlob();
         return sample;
     }
 
@@ -36,9 +36,9 @@ public class ClientUpdateTypeSupport extends TypeSupport {
     }
 
     public int copy_sampleI(Object dst,Object src) {
-        ClientUpdate ClientUpdateDst = (ClientUpdate)dst;
-        ClientUpdate ClientUpdateSrc = (ClientUpdate)src;
-        ClientUpdateDst.copy(ClientUpdateSrc);
+        ModelBlob ModelBlobDst = (ModelBlob)dst;
+        ModelBlob ModelBlobSrc = (ModelBlob)src;
+        ModelBlobDst.copy(ModelBlobSrc);
         return 1;
     }
 
@@ -47,10 +47,8 @@ public class ClientUpdateTypeSupport extends TypeSupport {
             System.out.println("NULL");
             return -1;
         }
-        ClientUpdate sample = (ClientUpdate)_sample;
-        System.out.println("sample.client_id:" + sample.client_id);
+        ModelBlob sample = (ModelBlob)_sample;
         System.out.println("sample.round_id:" + sample.round_id);
-        System.out.println("sample.num_samples:" + sample.num_samples);
         int dataTmpLen = sample.data.length();
         System.out.println("sample.data.length():" +dataTmpLen);
         for (int i = 0; i < dataTmpLen; ++i){
@@ -64,11 +62,11 @@ public class ClientUpdateTypeSupport extends TypeSupport {
     }
 
     public int get_max_sizeI(){
-        return 275;
+        return 0xffffffff;
     }
 
     public int get_max_key_sizeI(){
-        return 275;
+        return 0xffffffff;
     }
 
     public boolean has_keyI(){
@@ -79,9 +77,9 @@ public class ClientUpdateTypeSupport extends TypeSupport {
         return "-1";
     }
 
-    public DataReader create_data_reader() {return new ClientUpdateDataReader();}
+    public DataReader create_data_reader() {return new ModelBlobDataReader();}
 
-    public DataWriter create_data_writer() {return new ClientUpdateDataWriter();}
+    public DataWriter create_data_writer() {return new ModelBlobDataWriter();}
 
     public TypeCode get_inner_typecode(){
         TypeCode userTypeCode = get_typecode();
@@ -91,12 +89,8 @@ public class ClientUpdateTypeSupport extends TypeSupport {
 
     public int get_sizeI(Object _sample,long cdr, int offset) throws UnsupportedEncodingException {
         int initialAlignment = offset;
-        ClientUpdate sample = (ClientUpdate)_sample;
+        ModelBlob sample = (ModelBlob)_sample;
         offset += CDRSerializer.get_untype_size(4, offset);
-
-        offset += CDRSerializer.get_untype_size(4, offset);
-
-        offset += CDRSerializer.get_untype_size(8, offset);
 
         offset += CDRSerializer.get_untype_size(4, offset);
         int dataLen = sample.data.length();
@@ -108,20 +102,10 @@ public class ClientUpdateTypeSupport extends TypeSupport {
     }
 
     public int serializeI(Object _sample ,long cdr) {
-         ClientUpdate sample = (ClientUpdate) _sample;
-
-        if (!CDRSerializer.put_int(cdr, sample.client_id)){
-            System.out.println("serialize sample.client_id failed.");
-            return -2;
-        }
+         ModelBlob sample = (ModelBlob) _sample;
 
         if (!CDRSerializer.put_int(cdr, sample.round_id)){
             System.out.println("serialize sample.round_id failed.");
-            return -2;
-        }
-
-        if (!CDRSerializer.put_long(cdr, sample.num_samples)){
-            System.out.println("serialize sample.num_samples failed.");
             return -2;
         }
 
@@ -140,24 +124,12 @@ public class ClientUpdateTypeSupport extends TypeSupport {
     }
 
     synchronized public int deserializeI(Object _sample, long cdr){
-        ClientUpdate sample = (ClientUpdate) _sample;
-        if (!CDRDeserializer.get_int_array(cdr, tmp_int_obj, 1)){
-            System.out.println("deserialize sample.client_id failed.");
-            return -2;
-        }
-        sample.client_id= tmp_int_obj[0];
-
+        ModelBlob sample = (ModelBlob) _sample;
         if (!CDRDeserializer.get_int_array(cdr, tmp_int_obj, 1)){
             System.out.println("deserialize sample.round_id failed.");
             return -2;
         }
         sample.round_id= tmp_int_obj[0];
-
-        if (!CDRDeserializer.get_long_array(cdr, tmp_long_obj, 1)){
-            System.out.println("deserialize sample.num_samples failed.");
-            return -2;
-        }
-        sample.num_samples= tmp_long_obj[0];
 
         if (!CDRDeserializer.get_int_array(cdr, tmp_int_obj, 1)){
             System.out.println("deserialize length of sample.data failed.");
@@ -177,18 +149,18 @@ public class ClientUpdateTypeSupport extends TypeSupport {
 
     public int get_key_sizeI(Object _sample,long cdr,int offset)throws UnsupportedEncodingException {
         int initialAlignment = offset;
-        ClientUpdate sample = (ClientUpdate)_sample;
+        ModelBlob sample = (ModelBlob)_sample;
         offset += get_sizeI(sample, cdr, offset);
         return offset - initialAlignment;
     }
 
     public int serialize_keyI(Object _sample, long cdr){
-        ClientUpdate sample = (ClientUpdate)_sample;
+        ModelBlob sample = (ModelBlob)_sample;
         return 0;
     }
 
     public int deserialize_keyI(Object _sample, long cdr) {
-        ClientUpdate sample = (ClientUpdate)_sample;
+        ModelBlob sample = (ModelBlob)_sample;
         return 0;
     }
 
@@ -198,35 +170,14 @@ public class ClientUpdateTypeSupport extends TypeSupport {
         }
         TypeCodeFactory factory = TypeCodeFactory.get_instance();
 
-        s_typeCode = factory.create_struct_TC("ai_train.ClientUpdate");
+        s_typeCode = factory.create_struct_TC("ai_train.ModelBlob");
         if (s_typeCode == null){
-            System.out.println("create struct ClientUpdate typecode failed.");
+            System.out.println("create struct ModelBlob typecode failed.");
             return s_typeCode;
         }
         int ret = 0;
         TypeCodeImpl memberTc = new TypeCodeImpl();
         TypeCodeImpl eleTc = new TypeCodeImpl();
-
-        memberTc = factory.get_primitive_TC(TypeCodeKind.DDS_TK_UINT);
-        if (memberTc == null){
-            System.out.println("Get Member client_id TypeCode failed.");
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
-        ret = s_typeCode.add_member_to_struct(
-            0,
-            0,
-            "client_id",
-            memberTc,
-            false,
-            false);
-        if (ret < 0)
-        {
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
 
         memberTc = factory.get_primitive_TC(TypeCodeKind.DDS_TK_UINT);
         if (memberTc == null){
@@ -236,30 +187,9 @@ public class ClientUpdateTypeSupport extends TypeSupport {
             return null;
         }
         ret = s_typeCode.add_member_to_struct(
-            1,
-            1,
+            0,
+            0,
             "round_id",
-            memberTc,
-            false,
-            false);
-        if (ret < 0)
-        {
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
-
-        memberTc = factory.get_primitive_TC(TypeCodeKind.DDS_TK_ULONGLONG);
-        if (memberTc == null){
-            System.out.println("Get Member num_samples TypeCode failed.");
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
-        ret = s_typeCode.add_member_to_struct(
-            2,
-            2,
-            "num_samples",
             memberTc,
             false,
             false);
@@ -273,7 +203,7 @@ public class ClientUpdateTypeSupport extends TypeSupport {
         memberTc = factory.get_primitive_TC(TypeCodeKind.DDS_TK_UCHAR);
         if (memberTc != null)
         {
-            memberTc = factory.create_sequence_TC(255, memberTc);
+            memberTc = factory.create_sequence_TC(0xffffffff, memberTc);
         }
         if (memberTc == null){
             System.out.println("Get Member data TypeCode failed.");
@@ -282,8 +212,8 @@ public class ClientUpdateTypeSupport extends TypeSupport {
             return null;
         }
         ret = s_typeCode.add_member_to_struct(
-            3,
-            3,
+            1,
+            1,
             "data",
             memberTc,
             false,

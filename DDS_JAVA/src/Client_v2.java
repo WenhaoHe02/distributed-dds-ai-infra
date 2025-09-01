@@ -1,17 +1,14 @@
 import ai_train.*;  // TrainCmd, ClientUpdate, ModelBlob, Bytes, ...
 
+import ai_train.Bytes;
 import com.zrdds.domain.DomainParticipant;
 import com.zrdds.domain.DomainParticipantFactory;
-import com.zrdds.infrastructure.InstanceHandle_t;
-import com.zrdds.infrastructure.SampleInfo;
-import com.zrdds.infrastructure.StatusKind;
+import com.zrdds.infrastructure.*;
 import com.zrdds.publication.Publisher;
 import com.zrdds.subscription.DataReader;
 import com.zrdds.subscription.SimpleDataReaderListener;
 import com.zrdds.subscription.Subscriber;
 import com.zrdds.topic.Topic;
-import com.zrdds.infrastructure.ReliabilityQosPolicyKind;
-import com.zrdds.infrastructure.HistoryQosPolicyKind;
 import com.zrdds.publication.DataWriterQos;
 import com.zrdds.subscription.DataReaderQos;
 import org.json.JSONObject;
@@ -134,7 +131,12 @@ public class Client_v2 {
         wq.history.depth    = 32;
         updWriter = (ClientUpdateDataWriter) pub.create_datawriter(
                 tUpd, wq, null, StatusKind.STATUS_MASK_NONE);
-
+        try {
+            boolean mw = waitWriterMatched(updWriter, 1, 5000);
+            System.out.println("[Client_v2] updWriter initially matched=" + mw);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        }
         DataReaderQos rq = new DataReaderQos();
         sub.get_default_datareader_qos(rq);
         rq.reliability.kind = ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS;
@@ -143,10 +145,20 @@ public class Client_v2 {
 
         cmdReader = (TrainCmdDataReader) sub.create_datareader(
                 tCmd, rq, null, StatusKind.STATUS_MASK_NONE);
-
+        try {
+            boolean mr = waitReaderMatched(cmdReader, 1, 5000);
+            System.out.println("[Client_v2] cmdReader matched=" + mr);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        }
         modelReader = (ModelBlobDataReader) sub.create_datareader(
                 tModel, rq, null, StatusKind.STATUS_MASK_NONE);
-
+        try {
+            boolean mr2 = waitReaderMatched(modelReader, 1, 2000);
+            System.out.println("[Client_v2] modelReader matched=" + mr2 + " (first boot may be false)");
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        }
         // 监听 TrainCmd
         cmdReader.set_listener(new SimpleDataReaderListener<TrainCmd, TrainCmdSeq, TrainCmdDataReader>() {
             @Override public void on_data_arrived(DataReader r, Object o, SampleInfo info) {}
@@ -319,4 +331,72 @@ public class Client_v2 {
         final byte[] bytes;
         TrainResult(int n, byte[] b) { numSamples = n; bytes = b; }
     }
+
+    private static boolean waitWriterMatched(ClientUpdateDataWriter writer, int minMatches, long timeoutMs)
+            throws InterruptedException {
+        long start = System.currentTimeMillis();
+        PublicationMatchedStatus st = new PublicationMatchedStatus();
+        int last = -1;
+        while (System.currentTimeMillis() - start < timeoutMs) {
+            ReturnCode_t rc = writer.get_publication_matched_status(st);
+            if (rc != ReturnCode_t.RETCODE_OK) {
+                System.err.println("[Client_v2] get_publication_matched_status rc=" + rc);
+                return false;
+            }
+            if (st.current_count != last) {
+                System.out.println("[Client_v2] updWriter matched: current=" + st.current_count
+                        + " total=" + st.total_count
+                        + " change=" + st.current_count_change);
+                last = st.current_count;
+            }
+            if (st.current_count >= minMatches) return true;
+            Thread.sleep(100);
+        }
+        return false;
+    }
+
+    /** 等待 DataReader 至少匹配到 minMatches 个 DataWriter，并打印状态 */
+    private static boolean waitReaderMatched(DataReader reader, int minMatches, long timeoutMs)
+            throws InterruptedException {
+        long start = System.currentTimeMillis();
+        SubscriptionMatchedStatus st = new SubscriptionMatchedStatus();
+        int last = -1;
+        while (System.currentTimeMillis() - start < timeoutMs) {
+            ReturnCode_t rc = reader.get_subscription_matched_status(st);
+            if (rc != ReturnCode_t.RETCODE_OK) {
+                System.err.println("[Client_v2] get_subscription_matched_status rc=" + rc);
+                return false;
+            }
+            if (st.current_count != last) {
+                System.out.println("[Client_v2] reader matched: current=" + st.current_count
+                        + " total=" + st.total_count
+                        + " change=" + st.current_count_change);
+                last = st.current_count;
+            }
+            if (st.current_count >= minMatches) return true;
+            Thread.sleep(100);
+        }
+        return false;
+    }
+
+    /** 调试：判断负载魔数 */
+    private static String magicOf(byte[] b) {
+        if (b == null) return "null";
+        if (b.length < 4) return "short(" + b.length + ")";
+        int b0 = b[0] & 0xFF, b1 = b[1] & 0xFF, b2 = b[2] & 0xFF, b3 = b[3] & 0xFF;
+        if (b0=='S' && b1=='8' && b2==0 && b3==1) return "S8/v1";
+        if (b0=='Q' && b1=='8' && b2==0 && b3==1) return "Q8/v1";
+        if (b.length % 4 == 0) return "FP32(?)";
+        return String.format("??(%02X %02X %02X %02X)", b0,b1,b2,b3);
+    }
+
+    /** 可选：看前 8 字节十六进制 */
+    private static String hexHead(byte[] b) {
+        if (b == null) return "null";
+        int n = Math.min(8, b.length);
+        StringBuilder sb = new StringBuilder();
+        for (int i=0;i<n;i++) sb.append(String.format("%02X ", b[i]));
+        return sb.toString().trim();
+    }
+
 }

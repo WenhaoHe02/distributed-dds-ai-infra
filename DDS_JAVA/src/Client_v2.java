@@ -293,6 +293,8 @@ public class Client_v2 {
 
         int numSamples = parseNumSamplesFromJson(sb.toString());
         byte[] bytes   = Files.readAllBytes(outBin);
+
+        // 清理输出文件
         try { Files.deleteIfExists(outBin); } catch (Exception ignore) {}
 
         return new TrainResult(numSamples, bytes);

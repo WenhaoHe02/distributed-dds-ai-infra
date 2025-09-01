@@ -10,9 +10,11 @@ import com.zrdds.subscription.DataReader;
 import com.zrdds.subscription.SimpleDataReaderListener;
 import com.zrdds.subscription.Subscriber;
 import com.zrdds.topic.Topic;
-
+import com.zrdds.infrastructure.ReliabilityQosPolicyKind;
+import com.zrdds.infrastructure.HistoryQosPolicyKind;
+import com.zrdds.publication.DataWriterQos;
+import com.zrdds.subscription.DataReaderQos;
 import org.json.JSONObject;
-
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -125,15 +127,25 @@ public class Client_v2 {
 
         pub = dp.create_publisher(DomainParticipant.PUBLISHER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
         sub = dp.create_subscriber(DomainParticipant.SUBSCRIBER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
-
+        DataWriterQos wq = new DataWriterQos();
+        pub.get_default_datawriter_qos(wq);
+        wq.reliability.kind = ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS;
+        wq.history.kind     = HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS;
+        wq.history.depth    = 32;
         updWriter = (ClientUpdateDataWriter) pub.create_datawriter(
-                tUpd, Publisher.DATAWRITER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
+                tUpd, wq, null, StatusKind.STATUS_MASK_NONE);
+
+        DataReaderQos rq = new DataReaderQos();
+        sub.get_default_datareader_qos(rq);
+        rq.reliability.kind = ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS;
+        rq.history.kind     = HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS;
+        rq.history.depth    = 32;
 
         cmdReader = (TrainCmdDataReader) sub.create_datareader(
-                tCmd, Subscriber.DATAREADER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
+                tCmd, rq, null, StatusKind.STATUS_MASK_NONE);
 
         modelReader = (ModelBlobDataReader) sub.create_datareader(
-                tModel, Subscriber.DATAREADER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
+                tModel, rq, null, StatusKind.STATUS_MASK_NONE);
 
         // 监听 TrainCmd
         cmdReader.set_listener(new SimpleDataReaderListener<TrainCmd, TrainCmdSeq, TrainCmdDataReader>() {

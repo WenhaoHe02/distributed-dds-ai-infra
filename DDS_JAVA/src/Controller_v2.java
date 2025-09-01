@@ -5,7 +5,9 @@ import com.zrdds.domain.*;
 import com.zrdds.subscription.*;
 import com.zrdds.publication.*;
 import com.zrdds.topic.*;
-
+import com.zrdds.infrastructure.ReliabilityQosPolicyKind;
+import com.zrdds.infrastructure.HistoryQosPolicyKind;
+import com.zrdds.publication.DataWriterQos;
 import ai_train.*;
 
 import org.json.JSONObject;
@@ -28,15 +30,15 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * 稀疏 INT8 二进制格式（小端）：
  *   magic: 'S','8',0, ver(uint8)=1
- *   dim(int32)                // 全参数向量的维度
- *   k(int32)                  // 稀疏元素数量
- *   scale(float32)            // 量化 scale
- *   indices[int32 * k]        // 位置索引
- *   values[int8  * k]         // 量化后的值
+ *   dim(int32)
+ *   k(int32)
+ *   scale(float32)
+ *   indices[int32 * k]
+ *   values[int8  * k]
  *
- * 兼容 dense INT8（老 Q8 格式）与 FP32 小端字节：
- * - Q8 dense (previous): magic 'Q','8',0, ver=1, chunk(int32), total_len(int64), nChunks(int32), scales(float[nChunks]), qvals(int8[...])
- * - FP32 bytes: 4 * dim 字节
+ * 兼容 dense INT8 与 FP32：
+ * - Q8 dense: 'Q','8',0, ver=1, chunk(int32), total_len(int64), nChunks(int32), scales(float[nChunks]), qvals(int8[...])
+ * - FP32 bytes: 4 * dim
  */
 public class Controller_v2 {
 
@@ -67,6 +69,8 @@ public class Controller_v2 {
     private DataWriter trainCmdWriter;
     private DataWriter modelBlobWriter;
 
+    private DataReader clientUpdateReader;
+
     private AtomicLong roundCounter = new AtomicLong(1);
 
     private static class ClientUpdateListener extends SimpleDataReaderListener<ClientUpdate, ClientUpdateSeq, ClientUpdateDataReader> {
@@ -92,7 +96,6 @@ public class Controller_v2 {
         Controller_v2 ctrl = new Controller_v2();
         ctrl.init();
         int rounds = config.rounds;
-        // 示例触发一轮；可根据需要循环
         for (int i = 0; i < rounds; i++) {
             ctrl.runTrainingRound(5000, 5, 0.01, 12345 + i);
         }
@@ -111,13 +114,59 @@ public class Controller_v2 {
         config.eval_script = jo.getString("eval_script");
         config.data_dir    = jo.getString("data_dir");
         config.batch_size  = jo.optInt("batch_size", 64);
-        config.rounds = jo.optInt("rounds", 1);
+        config.rounds      = jo.optInt("rounds", 1);
         System.out.println("[Controller_v2] cfg: domain=" + config.domain_id
                 + " expected_clients=" + config.expected_clients
                 + " timeout_ms=" + config.timeout_ms);
     }
 
-    private void init() {
+    /** 等待 DataReader 至少匹配到 minMatches 个 DataWriter，并打印状态 */
+    private static boolean waitReaderMatched(DataReader reader, int minMatches, long timeoutMs) throws InterruptedException {
+        long start = System.currentTimeMillis();
+        SubscriptionMatchedStatus st = new SubscriptionMatchedStatus();
+        int last = -1;
+        while (System.currentTimeMillis() - start < timeoutMs) {
+            ReturnCode_t rc = reader.get_subscription_matched_status(st);
+            if (rc != ReturnCode_t.RETCODE_OK) {
+                System.err.println("[Controller_v2] get_subscription_matched_status rc=" + rc);
+                return false;
+            }
+            if (st.current_count != last) {
+                System.out.println("[Controller_v2] Reader matched: current=" + st.current_count
+                        + " total=" + st.total_count
+                        + " change=" + st.current_count_change);
+                last = st.current_count;
+            }
+            if (st.current_count >= minMatches) return true;
+            Thread.sleep(100);
+        }
+        return false;
+    }
+
+    /** 等待 DataWriter 至少匹配到 minMatches 个 DataReader，并打印状态 */
+    private static boolean waitWriterMatched(DataWriter writer, int minMatches, long timeoutMs) throws InterruptedException {
+        long start = System.currentTimeMillis();
+        PublicationMatchedStatus st = new PublicationMatchedStatus();
+        int last = -1;
+        while (System.currentTimeMillis() - start < timeoutMs) {
+            ReturnCode_t rc = writer.get_publication_matched_status(st);
+            if (rc != ReturnCode_t.RETCODE_OK) {
+                System.err.println("[Controller_v2] get_publication_matched_status rc=" + rc);
+                return false;
+            }
+            if (st.current_count != last) {
+                System.out.println("[Controller_v2] Writer matched: current=" + st.current_count
+                        + " total=" + st.total_count
+                        + " change=" + st.current_count_change);
+                last = st.current_count;
+            }
+            if (st.current_count >= minMatches) return true;
+            Thread.sleep(100);
+        }
+        return false;
+    }
+
+    private void init() throws InterruptedException {
         DomainParticipantFactory dpf = DomainParticipantFactory.get_instance();
         dp = dpf.create_participant(config.domain_id, DomainParticipantFactory.PARTICIPANT_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
         if (dp == null) throw new RuntimeException("create participant failed");
@@ -135,12 +184,42 @@ public class Controller_v2 {
 
         publisher  = dp.create_publisher(DomainParticipant.PUBLISHER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
         subscriber = dp.create_subscriber(DomainParticipant.SUBSCRIBER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
+        DataWriterQos wq = new DataWriterQos();
+        publisher.get_default_datawriter_qos(wq);
+        wq.reliability.kind = ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS;
+        wq.history.kind     = HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS;
+        wq.history.depth    = 32;
 
-        trainCmdWriter  = publisher.create_datawriter(trainCmdTopic, Publisher.DATAWRITER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
-        modelBlobWriter = publisher.create_datawriter(modelBlobTopic, Publisher.DATAWRITER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
+        // Writers
+        trainCmdWriter  = publisher.create_datawriter(trainCmdTopic, wq, null, StatusKind.STATUS_MASK_NONE);
+        if (trainCmdWriter == null) throw new RuntimeException("create TrainCmd writer failed");
+        System.out.println("[Controller_v2] TrainCmd writer created");
+        boolean w1 = waitWriterMatched(trainCmdWriter, 1, 5000);
+        System.out.println("[Controller_v2] TrainCmd writer matched=" + w1);
 
-        subscriber.create_datareader(clientUpdateTopic, Subscriber.DATAREADER_QOS_DEFAULT,
-                new ClientUpdateListener(), StatusKind.DATA_AVAILABLE_STATUS);
+        modelBlobWriter = publisher.create_datawriter(modelBlobTopic, wq, null, StatusKind.STATUS_MASK_NONE);
+        if (modelBlobWriter == null) throw new RuntimeException("create ModelBlob writer failed");
+        System.out.println("[Controller_v2] ModelBlob writer created");
+        boolean w2 = waitWriterMatched(modelBlobWriter, 1, 5000);
+        System.out.println("[Controller_v2] ModelBlob writer matched=" + w2);
+
+        DataReaderQos rq = new DataReaderQos();
+        subscriber.get_default_datareader_qos(rq);
+        rq.reliability.kind = ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS;
+        rq.history.kind     = HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS;
+        rq.history.depth    = 32;
+
+        // Reader
+        clientUpdateReader = subscriber.create_datareader(
+                clientUpdateTopic,
+                rq,
+                new ClientUpdateListener(),
+                StatusKind.DATA_AVAILABLE_STATUS
+        );
+        if (clientUpdateReader == null) throw new RuntimeException("create ClientUpdate reader failed");
+        System.out.println("[Controller_v2] ClientUpdate reader created");
+        boolean r1 = waitReaderMatched(clientUpdateReader, 1, 5000);
+        System.out.println("[Controller_v2] ClientUpdate reader matched=" + r1);
     }
 
     // 发起训练一轮
@@ -148,6 +227,10 @@ public class Controller_v2 {
         int roundId = (int) roundCounter.getAndIncrement();
         System.out.println("[Controller_v2] start round " + roundId);
         long tStart = System.currentTimeMillis();
+
+        // 再次确认 TrainCmd writer 已有订阅者（跨机时发现可能更慢）
+        boolean ready = waitWriterMatched(trainCmdWriter, 1, 3000);
+        System.out.println("[Controller_v2] Before send TrainCmd matched=" + ready);
 
         TrainCmd cmd = new TrainCmd();
         cmd.round_id    = roundId;
@@ -160,6 +243,8 @@ public class Controller_v2 {
         if (rc != ReturnCode_t.RETCODE_OK) {
             System.err.println("[Controller_v2] write TrainCmd failed: " + rc);
             return;
+        } else {
+            System.out.println("[Controller_v2] TrainCmd written OK (round=" + roundId + ")");
         }
 
         List<ClientUpdate> collected = waitForClientUpdates(roundId, config.expected_clients, config.timeout_ms);
@@ -211,7 +296,7 @@ public class Controller_v2 {
         return (list == null) ? Collections.emptyList() : new ArrayList<>(list);
     }
 
-    // 自动识别 + 解码（S8 稀疏 / Q8 稠密 / FP32）
+    // 自动识别 + 解码（S8/Q8/FP32）
     private static float[] aggregateFedAvgAuto(List<ClientUpdate> updates) {
         if (updates.isEmpty()) return new float[0];
 
@@ -266,7 +351,6 @@ public class Controller_v2 {
         float scale = bb.getFloat();
         float[] out = new float[dim];
 
-        // indices then int8 values
         int[] idx = new int[k];
         for (int i=0;i<k;i++) idx[i] = bb.getInt();
         for (int i=0;i<k;i++) {
@@ -278,7 +362,7 @@ public class Controller_v2 {
         return out;
     }
 
-    // ====== 识别/解码：Q8 稠密（兼容老格式）======
+    // ====== 识别/解码：Q8 稠密 ======
     private static boolean isQ8Dense(byte[] data) {
         return data.length >= 4 && data[0]=='Q' && data[1]=='8' && data[2]==0 && (data[3]&0xFF)==1;
     }
@@ -381,4 +465,3 @@ public class Controller_v2 {
         return -1.0;
     }
 }
-

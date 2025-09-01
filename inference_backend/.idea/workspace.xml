@@ -6,7 +6,23 @@
   <component name="ChangeListManager">
     <list default="true" id="59eb5836-2ac1-464a-b7e0-a355d86499ba" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Controller_v2.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Controller_v2.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Client_v2.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Client_v2.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/Bytes.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ClientUpdate.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ClientUpdateDataReader.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ClientUpdateDataWriter.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ClientUpdateSeq.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ClientUpdateTypeSupport.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ModelBlob.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ModelBlobDataReader.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ModelBlobDataWriter.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ModelBlobSeq.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ModelBlobTypeSupport.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/TrainCmd.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/TrainCmdDataReader.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/TrainCmdDataWriter.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/TrainCmdSeq.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/TrainCmdTypeSupport.java" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v2_hwh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v2_hwh.conf.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../data/client_0_state/momentum.npy" beforeDir="false" afterPath="$PROJECT_DIR$/../data/client_0_state/momentum.npy" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../data/client_0_state/residual.npy" beforeDir="false" afterPath="$PROJECT_DIR$/../data/client_0_state/residual.npy" afterDir="false" />
@@ -153,7 +169,7 @@
       <workItem from="1756686999334" duration="175000" />
       <workItem from="1756687324642" duration="2986000" />
       <workItem from="1756692326703" duration="13000" />
-      <workItem from="1756692457362" duration="3765000" />
+      <workItem from="1756692457362" duration="4614000" />
     </task>
     <servers />
   </component>

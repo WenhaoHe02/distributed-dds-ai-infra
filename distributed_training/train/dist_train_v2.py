@@ -47,6 +47,45 @@ from torch.nn.utils import parameters_to_vector, vector_to_parameters
 from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 
+def load_init_model(path: str, model: nn.Module):
+    """Load model parameters from bin file (fp32, Q8 dense, or S8 sparse)."""
+    if not os.path.exists(path):
+        print(f"[PY] init_model {path} not found, skipping")
+        return
+
+    with open(path, "rb") as f:
+        magic = f.read(3)   # first 3 bytes
+        f.seek(0)
+
+        if magic.startswith(b'Q8'):
+            # dense int8
+            header = f.read(4+1+4+8+4)
+            _, ver, chunk, total, nChunks = struct.unpack('<3sBiqi', header)
+            scales = np.frombuffer(f.read(nChunks*4), dtype=np.float32)
+            qvals  = np.frombuffer(f.read(total), dtype=np.int8)
+            vec = np.empty(total, dtype=np.float32)
+            for i in range(nChunks):
+                s, e = i*chunk, min((i+1)*chunk, total)
+                vec[s:e] = qvals[s:e].astype(np.float32) * scales[i]
+        elif magic.startswith(b'S8'):
+            # sparse int8
+            header = f.read(4+1+4+4+4)
+            _, ver, dim, k, scale = struct.unpack('<3sBii f', header)
+            idxs = np.frombuffer(f.read(k*4), dtype=np.int32)
+            vals = np.frombuffer(f.read(k), dtype=np.int8).astype(np.float32) * scale
+            vec = np.zeros(dim, dtype=np.float32)
+            vec[idxs] = vals
+        else:
+            # assume raw fp32
+            vec = np.frombuffer(f.read(), dtype='<f4')
+
+    # assign into model
+    try:
+        vector_to_parameters(torch.from_numpy(vec.copy()).float(), model.parameters())
+        print(f"[PY] init_model loaded from {path}, {vec.size} floats")
+    except Exception as e:
+        print(f"[PY] Failed to load init_model: {e}")
+
 
 # ------------------------------
 # Model (same as earlier Net)
@@ -334,6 +373,11 @@ def train_one_client(args) -> Tuple[int, dict]:
     # model / optimizer
     device = torch.device("cpu")
     model = Net().to(device)
+
+    # 如果提供了 init_model 就加载
+    if args.init_model:
+        load_init_model(args.init_model, model)
+
     opt = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
 
     # train
@@ -409,6 +453,9 @@ def main():
     ap.add_argument("--dgc_warmup_rounds",  type=int,   default=0)
     ap.add_argument("--round",              type=int,   default=0)  # pass from Java for warmup schedule
     ap.add_argument("--state_dir",          type=str,   default="E:\distributed-dds-ai-serving-system\distributed_training\train\log") # residual/momentum persistence
+
+    ap.add_argument("--init_model", type=str, default=None,
+                    help="Path to initial model weights (fp32/Q8/S8)")
 
     args = ap.parse_args()
 

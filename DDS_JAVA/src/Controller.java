@@ -7,6 +7,9 @@ import com.zrdds.topic.*;
 
 import  ai_train.*;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import org.json.JSONObject;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -16,14 +19,20 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class Controller {
 
-    private static final int DOMAIN_ID = 200;
-    private static final String FACTORY_PROFILE     = "non_rio";
-    private static final String PARTICIPANT_PROFILE = "tcp_dp";
 
-    private static final String CLIENT_UPDATE_READER_QOS = "non_zerocopy_reliable";
-    private static final String TRAIN_CMD_WRITER_QOS     = "non_zerocopy_reliable";
-    private static final String MODEL_BLOB_WRITER_QOS    = "non_zerocopy_reliable";
 
+    // 新增 Config 类
+    static class Config {
+        public int domain_id;
+        public int expected_clients;
+        public long timeout_ms;
+        public long subset_size;
+        public int epochs;
+        public double lr;
+        public int seed;
+    }
+
+    private static Controller.Config cfg;
     private static final String TOPIC_TRAIN_CMD     = "train/train_cmd";
     private static final String TOPIC_CLIENT_UPDATE = "train/client_update";
     private static final String TOPIC_MODEL_BLOB    = "train/model_blob";
@@ -56,10 +65,29 @@ public class Controller {
     }
 
     public static void main(String[] args) throws Exception {
+
+        if (args.length != 1) {
+            System.err.println("Usage: java Controller <config.json>");
+            System.exit(1);
+        }
+
+        // 1) 读取 JSON 配置
+        String jsonText = Files.readString(Paths.get(args[0]));
+        JSONObject jo = new JSONObject(jsonText);
+        cfg = new Config();
+        cfg.domain_id        = jo.getInt("domain_id");
+        cfg.expected_clients = jo.getInt("expected_clients");
+        cfg.timeout_ms       = jo.getLong("timeout_ms");
+        cfg.subset_size      = jo.getLong("subset_size");
+        cfg.epochs           = jo.getInt("epochs");
+        cfg.lr               = jo.getDouble("lr");
+        cfg.seed             = jo.getInt("seed");
+
         Controller ctrl = new Controller();
         ctrl.init();
 
-        ctrl.runTrainingRound(5000, 5, 0.01, 12345); // 示例：subset=5000, epochs=5, lr=0.01, seed=12345
+        // 2) 使用 JSON 配置运行训练轮
+        ctrl.runTrainingRound(cfg.subset_size, cfg.epochs, cfg.lr, cfg.seed);
         DDSIF.Finalize();
     }
 
@@ -67,7 +95,7 @@ public class Controller {
 
         DomainParticipantFactory dpf = DomainParticipantFactory.get_instance();
         if (dpf == null) throw new RuntimeException("DDSIF.init failed");
-        dp = dpf.create_participant(DOMAIN_ID, DomainParticipantFactory.PARTICIPANT_QOS_DEFAULT,
+        dp = dpf.create_participant(cfg.domain_id, DomainParticipantFactory.PARTICIPANT_QOS_DEFAULT,
                 null, StatusKind.STATUS_MASK_NONE);
         if (dp == null) throw new RuntimeException("create participant failed");
 
@@ -127,7 +155,8 @@ public class Controller {
         }
 
         // 2) 等待客户端返回 ClientUpdate
-        List<ai_train.ClientUpdate> collected = waitForClientUpdates(roundId, 3, 60_00000); // 假设3个客户端，60s超时
+        List<ai_train.ClientUpdate> collected = waitForClientUpdates(roundId, cfg.expected_clients, cfg.timeout_ms);
+
         if (collected.isEmpty()) {
             System.err.println("[Controller] No client updates received for round " + roundId);
             return;

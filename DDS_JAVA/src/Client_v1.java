@@ -18,18 +18,28 @@ import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Client {
+public class Client_v1 {
 
-    // ====== 硬编码配置（按需修改） ======
+    // ====== 可调配置 ======
     private static final int    DOMAIN_ID   = 200;
-    private static final int    CLIENT_ID   = 1;
+    private static final int    CLIENT_ID   = 0;
+
+    // 优先用环境变量 PYTHON_EXE；没有就退回 "python"
     private static final String PYTHON_EXE  = System.getenv().getOrDefault("PYTHON_EXE", "python");
-    // 改成你的实际脚本路径：
-    private static final String TRAINER_PY  = "E:/distributed-dds-ai-serving-system/distributed_training/train/dist_train.py";
+
+    // 改为你的实际脚本与数据目录
+    private static final String TRAINER_PY  = "E:/distributed-dds-ai-serving-system/distributed_training/train/dist_train_v1.py";
     private static final String DATA_DIR    = "E:/distributed-dds-ai-serving-system/data";
+
     private static final int    BATCH_SIZE  = 32;
 
-    // ====================================
+    // <<< 新增：用于给 Python 传 --num_clients >>>
+    private static final int    NUM_CLIENTS = 2;
+
+    // <<< 新增：INT8 量化分块大小，对应 Python 的 --chunk >>>
+    private static final int    INT8_CHUNK  = 1024;
+
+    // ======================
 
     private DomainParticipant dp;
     private Publisher pub;
@@ -95,7 +105,7 @@ public class Client {
                 System.out.println("[JavaDDS] Using PYTHON_EXE: " + PYTHON_EXE);
 
                 try {
-                    // 调 Python（入参走命令行），输出：二进制写文件；元信息（JSON）写 stdout
+                    // 调 Python：stdout 打 JSON（含 num_samples、bytes_packed...）；二进制写临时文件并读回
                     TrainResult tr = runPythonTraining(CLIENT_ID, seed, subsetSize, epochs, lr, BATCH_SIZE, DATA_DIR);
 
                     // 组装并发送 ClientUpdate
@@ -132,28 +142,33 @@ public class Client {
         System.out.println("[JavaDDS] shutdown.");
     }
 
-    // === 调 Python：入参命令行；stdout 打 JSON（含 num_samples）；二进制写临时文件并读回 ===
+    // === 调 Python：入参命令行；stdout 打 JSON；二进制写临时文件并读回 ===
     private TrainResult runPythonTraining(int clientId, int seed, int subset, int epochs, double lr,
                                           int batchSize, String dataDir) throws Exception {
         Path outBin = Files.createTempFile("upd_", ".bin");
 
         List<String> cmd = new ArrayList<>();
-        cmd.add("C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe");
+        cmd.add(PYTHON_EXE);                       // <<< 改：不再硬编码 Python 路径
         cmd.add(TRAINER_PY);
-        cmd.add("--client_id");   cmd.add(String.valueOf(clientId));
-        cmd.add("--seed");        cmd.add(String.valueOf(seed));
-        cmd.add("--subset");      cmd.add(String.valueOf(subset));
-        cmd.add("--epochs");      cmd.add(String.valueOf(epochs));
-        cmd.add("--lr");          cmd.add(Double.toString(lr));
-        cmd.add("--batch_size");  cmd.add(String.valueOf(batchSize));
-        cmd.add("--data_dir");    cmd.add(dataDir);
-        cmd.add("--out");         cmd.add(outBin.toString());     // ← Python 写这个文件
+        cmd.add("--client_id");    cmd.add(String.valueOf(clientId));
+        cmd.add("--num_clients");  cmd.add(String.valueOf(NUM_CLIENTS));   // <<< 新增
+        cmd.add("--seed");         cmd.add(String.valueOf(seed));
+        if (subset > 0) {                           // <<< 只有 >0 才传，避免传 0 造成空数据
+            cmd.add("--subset");   cmd.add(String.valueOf(subset));
+        }
+        cmd.add("--epochs");       cmd.add(String.valueOf(epochs));
+        cmd.add("--lr");           cmd.add(Double.toString(lr));
+        cmd.add("--batch_size");   cmd.add(String.valueOf(batchSize));
+        cmd.add("--data_dir");     cmd.add(dataDir);
+        cmd.add("--compress");     cmd.add("int8");                   // <<< 新增：开启 INT8 打包
+        cmd.add("--chunk");        cmd.add(String.valueOf(INT8_CHUNK)); // <<< 新增：分块大小
+        cmd.add("--out");          cmd.add(outBin.toString());        // Python 写这个文件
 
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(true); // 合并 stderr，方便看日志
         Process p = pb.start();
 
-        // 读 stdout（Python 会打印 {"num_samples":..., "bytes":...}）
+        // 读 stdout（Python 会打印一行 JSON）
         StringBuilder sb = new StringBuilder();
         try (BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
             String line;
@@ -194,7 +209,7 @@ public class Client {
         return 0; // 兜底
     }
 
-    // byte[] -> ai_train.Bytes（继承 ByteSeq：用 from_array/length）
+    // byte[] -> ai_train.Bytes
     private static Bytes toBytes(byte[] raw) {
         Bytes out = new Bytes();
         if (raw != null) out.loan_contiguous(raw, raw.length, raw.length);

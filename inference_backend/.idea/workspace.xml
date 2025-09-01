@@ -5,12 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="59eb5836-2ac1-464a-b7e0-a355d86499ba" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../distributed_training/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../distributed_training/.idea/distributed_training.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/.idea/distributed_training.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../distributed_training/centric.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../distributed_training/client.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../distributed_training/controller/Controller.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../distributed_training/main.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Client.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Client.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Controller.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Controller.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/worker/ModelRunner.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/ModelRunner.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/yolo_service/pred.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/yolo_service/pred.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -39,25 +41,26 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;E:/distributed-dds-ai-serving-system/distributed_training&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Libraries&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "git-widget-placeholder": "main",
+    "jdk.selected.JAVA_MODULE": "17",
+    "last_opened_file_path": "E:/distributed-dds-ai-serving-system/inference_backend/inference_backend.iml",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="E:\distributed-dds-ai-serving-system\distributed_backernd\src" />
@@ -83,8 +86,9 @@
       </method>
     </configuration>
     <configuration name="Spliter" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="ALTERNATIVE_JRE_PATH" value="17" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
       <option name="MAIN_CLASS_NAME" value="spliter.Spliter" />
-      <module name="inference_backend" />
       <extension name="coverage">
         <pattern>
           <option name="PATTERN" value="spliter.*" />
@@ -145,7 +149,11 @@
       <workItem from="1756361276218" duration="2378000" />
       <workItem from="1756365924703" duration="4177000" />
       <workItem from="1756428870558" duration="1943000" />
-      <workItem from="1756448618202" duration="650000" />
+      <workItem from="1756448618202" duration="651000" />
+      <workItem from="1756453163569" duration="95000" />
+      <workItem from="1756686972705" duration="20000" />
+      <workItem from="1756686999334" duration="175000" />
+      <workItem from="1756687324642" duration="1276000" />
     </task>
     <servers />
   </component>

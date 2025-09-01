@@ -9,35 +9,11 @@
       <change beforePath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Client.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Client.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Controller.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Controller.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/Bytes.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ClientUpdate.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ClientUpdateDataReader.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ClientUpdateDataWriter.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ClientUpdateSeq.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ClientUpdateTypeSupport.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ModelBlob.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ModelBlobDataReader.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ModelBlobDataWriter.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ModelBlobSeq.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/ModelBlobTypeSupport.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/TrainCmd.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/TrainCmdDataReader.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/TrainCmdDataWriter.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/TrainCmdSeq.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/ai_train/TrainCmdTypeSupport.java" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data_structure_cpp/CMakeLists.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data_structure_cpp/ai_train.hpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data_structure_cpp/ai_train.i" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data_structure_cpp/ai_trainCdrAux.hpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data_structure_cpp/ai_trainCdrAux.ipp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data_structure_cpp/ai_trainPubSubTypes.cxx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data_structure_cpp/ai_trainPubSubTypes.hpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data_structure_cpp/ai_trainPubSubTypes.i" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data_structure_cpp/ai_trainTypeObjectSupport.cxx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data_structure_cpp/ai_trainTypeObjectSupport.hpp" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/train/dist_train.py" beforeDir="false" afterPath="$PROJECT_DIR$/train/dist_train.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../inference_backend/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../inference_backend/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../inference_backend/src/worker/ModelRunner.java" beforeDir="false" afterPath="$PROJECT_DIR$/../inference_backend/src/worker/ModelRunner.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../inference_backend/src/yolo_service/pred.py" beforeDir="false" afterPath="$PROJECT_DIR$/../inference_backend/src/yolo_service/pred.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

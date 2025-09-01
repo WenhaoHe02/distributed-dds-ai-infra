@@ -22,12 +22,12 @@ public class Client {
 
     // ====== 硬编码配置（按需修改） ======
     private static final int    DOMAIN_ID   = 200;
-    private static final int    CLIENT_ID   = 1;
+    private static final int    CLIENT_ID   = 0;
     private static final String PYTHON_EXE  = System.getenv().getOrDefault("PYTHON_EXE", "python");
     // 改成你的实际脚本路径：
     private static final String TRAINER_PY  = "E:/distributed-dds-ai-serving-system/distributed_training/train/dist_train.py";
     private static final String DATA_DIR    = "E:/distributed-dds-ai-serving-system/data";
-    private static final int    BATCH_SIZE  = 128;
+    private static final int    BATCH_SIZE  = 32;
     // ====================================
 
     private DomainParticipant dp;

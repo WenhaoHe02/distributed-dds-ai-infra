@@ -121,11 +121,13 @@ public class Controller {
 
         ReturnCode_t rc = ((ai_train.TrainCmdDataWriter)trainCmdWriter).write(cmd, InstanceHandle_t.HANDLE_NIL_NATIVE);
         if (rc != ReturnCode_t.RETCODE_OK) {
+
+
             System.err.println("[Controller] Failed to write TrainCmd: " + rc);
         }
 
         // 2) 等待客户端返回 ClientUpdate
-        List<ai_train.ClientUpdate> collected = waitForClientUpdates(roundId, 3, 60_000); // 假设3个客户端，60s超时
+        List<ai_train.ClientUpdate> collected = waitForClientUpdates(roundId, 3, 60_00000); // 假设3个客户端，60s超时
         if (collected.isEmpty()) {
             System.err.println("[Controller] No client updates received for round " + roundId);
             return;

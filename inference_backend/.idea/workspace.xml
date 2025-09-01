@@ -4,7 +4,17 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="59eb5836-2ac1-464a-b7e0-a355d86499ba" name="Changes" comment="" />
+    <list default="true" id="59eb5836-2ac1-464a-b7e0-a355d86499ba" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Client_v2.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Controller_v2.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../DDS_JAVA/src/client_v2_hwh.conf.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v2_hwh.conf.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../distributed_training/train/dist_train_v2.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/client_hwh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/client_v1_hwh.conf.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/controller_hwh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v1_hwh.conf.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -146,7 +156,7 @@
       <workItem from="1756686999334" duration="175000" />
       <workItem from="1756687324642" duration="2986000" />
       <workItem from="1756692326703" duration="13000" />
-      <workItem from="1756692457362" duration="1536000" />
+      <workItem from="1756692457362" duration="2086000" />
     </task>
     <servers />
   </component>

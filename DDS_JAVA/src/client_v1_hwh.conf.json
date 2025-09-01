@@ -5,5 +5,7 @@
   "python_exe": "C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe",
   "trainer_py": "E:/distributed-dds-ai-serving-system/distributed_training/train/dist_train.py",
   "data_dir": "E:/distributed-dds-ai-serving-system/data",
-  "batch_size": 32
+  "batch_size": 32,
+  "compress": "int8",
+  "trainer_script": "E:\\distributed-dds-ai-serving-system\\distributed_training\\train\\dist_train_v1.py"
 }

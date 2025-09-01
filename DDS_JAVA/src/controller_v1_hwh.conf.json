@@ -1,0 +1,13 @@
+{
+  "domain_id": 200,
+  "expected_clients": 2,
+  "timeout_ms": 60000,
+  "subset_size": 5000,
+  "epochs": 5,
+  "lr": 0.01,
+  "seed": 12345,
+  "python_exe": "C:/Program Files/Python311/python.exe",
+  "eval_script": "E:/distributed-dds-ai-serving-system/distributed_training/train/evaluate.py",
+  "data_dir": "E:/distributed-dds-ai-serving-system/data",
+  "batch_size": 32
+}

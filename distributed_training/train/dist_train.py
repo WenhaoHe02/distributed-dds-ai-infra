@@ -46,7 +46,7 @@ def make_shard_indices(n_total:int, num_clients:int, client_id:int,
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--client_id",   type=int, required=True, help="从 0 开始的客户端编号")
-    ap.add_argument("--num_clients", type=int, required=True, default=2, help="客户端总数")
+    ap.add_argument("--num_clients", type=int, default=2, help="客户端总数")
     ap.add_argument("--seed",        type=int, required=True)
     ap.add_argument("--subset",      type=int, default=None, help="每个 client 取样最大数量（可选）")
     ap.add_argument("--epochs",      type=int, required=True)

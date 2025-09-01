@@ -11,7 +11,10 @@ import com.zrdds.subscription.SimpleDataReaderListener;
 import com.zrdds.subscription.Subscriber;
 import com.zrdds.topic.Topic;
 
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
@@ -20,26 +23,16 @@ import java.util.List;
 
 public class Client_v1 {
 
-    // ====== 可调配置 ======
-    private static final int    DOMAIN_ID   = 200;
-    private static final int    CLIENT_ID   = 0;
-
-    // 优先用环境变量 PYTHON_EXE；没有就退回 "python"
-    private static final String PYTHON_EXE  = System.getenv().getOrDefault("PYTHON_EXE", "python");
-
-    // 改为你的实际脚本与数据目录
-    private static final String TRAINER_PY  = "E:/distributed-dds-ai-serving-system/distributed_training/train/dist_train_v1.py";
-    private static final String DATA_DIR    = "E:/distributed-dds-ai-serving-system/data";
-
-    private static final int    BATCH_SIZE  = 32;
-
-    // <<< 新增：用于给 Python 传 --num_clients >>>
-    private static final int    NUM_CLIENTS = 2;
-
-    // <<< 新增：INT8 量化分块大小，对应 Python 的 --chunk >>>
-    private static final int    INT8_CHUNK  = 1024;
-
-    // ======================
+    // ====== 由配置文件加载的参数（见 loadConfig） ======
+    private static int    DOMAIN_ID;
+    private static int    CLIENT_ID;
+    private static String PYTHON_EXE;
+    private static String TRAINER_PY;
+    private static String DATA_DIR;
+    private static int    BATCH_SIZE;
+    private static int    NUM_CLIENTS;
+    private static int    INT8_CHUNK;
+    private static String COMPRESS; // "int8" 或 "fp32"
 
     private DomainParticipant dp;
     private Publisher pub;
@@ -52,6 +45,56 @@ public class Client_v1 {
 
     private volatile int lastRound = -1;
 
+    // ====== 入口：命令行传入配置文件路径 ======
+    public static void main(String[] args) {
+        if (args.length != 1) {
+            System.err.println("Usage: java Client_v1 <client.conf.json>");
+            return;
+        }
+        try {
+            loadConfig(args[0]);
+            Client_v1 node = new Client_v1();
+            java.util.concurrent.CountDownLatch quit = new java.util.concurrent.CountDownLatch(1);
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                try { node.shutdown(); } finally { quit.countDown(); }
+            }));
+            node.start();
+            try { quit.await(); } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                node.shutdown();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ====== 从 JSON 配置文件读取参数 ======
+    private static void loadConfig(String confPath) throws Exception {
+        String raw = Files.readString(Path.of(confPath), StandardCharsets.UTF_8);
+        JSONObject j = new JSONObject(raw);
+        DOMAIN_ID   = j.getInt("domain_id");
+        CLIENT_ID   = j.getInt("client_id");
+        // python_exe 可为空，支持用环境变量或默认 "python"
+        PYTHON_EXE  = j.optString("python_exe", System.getenv().getOrDefault("PYTHON_EXE", "python"));
+        TRAINER_PY  = j.getString("trainer_script");
+        DATA_DIR    = j.getString("data_dir");
+        BATCH_SIZE  = j.optInt("batch_size", 32);
+        NUM_CLIENTS = j.optInt("num_clients", 1);
+        INT8_CHUNK  = j.optInt("int8_chunk", 1024);
+        COMPRESS    = j.optString("compress", "int8"); // 缺省 int8
+
+        // 基本路径存在性提示（不阻断运行）
+        if (!Files.exists(Path.of(TRAINER_PY))) {
+            System.err.println("[WARN] trainer_script not found: " + TRAINER_PY);
+        }
+        if (!Files.isDirectory(Path.of(DATA_DIR))) {
+            System.err.println("[WARN] data_dir not found: " + DATA_DIR);
+        }
+        System.out.println("[Client_v1] Loaded config: domain=" + DOMAIN_ID + ", client=" + CLIENT_ID +
+                ", num_clients=" + NUM_CLIENTS + ", batch_size=" + BATCH_SIZE + ", compress=" + COMPRESS);
+    }
+
+    // ====== 启动并监听 ======
     public void start() {
         dp = DomainParticipantFactory.get_instance().create_participant(
                 DOMAIN_ID, DomainParticipantFactory.PARTICIPANT_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
@@ -84,7 +127,7 @@ public class Client_v1 {
         modelReader = (ModelBlobDataReader) sub.create_datareader(
                 tModel, Subscriber.DATAREADER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
 
-        // 监听 TrainCmd
+        // 监听 TrainCmd → 触发本地训练 → 回传 ClientUpdate
         cmdReader.set_listener(new SimpleDataReaderListener<TrainCmd, TrainCmdSeq, TrainCmdDataReader>() {
             @Override public void on_data_arrived(DataReader r, Object o, SampleInfo info) {}
 
@@ -105,10 +148,11 @@ public class Client_v1 {
                 System.out.println("[JavaDDS] Using PYTHON_EXE: " + PYTHON_EXE);
 
                 try {
-                    // 调 Python：stdout 打 JSON（含 num_samples、bytes_packed...）；二进制写临时文件并读回
+                    long t0 = System.currentTimeMillis();
                     TrainResult tr = runPythonTraining(CLIENT_ID, seed, subsetSize, epochs, lr, BATCH_SIZE, DATA_DIR);
+                    long t1 = System.currentTimeMillis();
+                    System.out.println("[Client] local train cost: " + (t1 - t0) + " ms");
 
-                    // 组装并发送 ClientUpdate
                     ClientUpdate upd = new ClientUpdate();
                     upd.client_id   = CLIENT_ID;
                     upd.round_id    = cmd.round_id;
@@ -124,7 +168,7 @@ public class Client_v1 {
             }
         }, StatusKind.DATA_AVAILABLE_STATUS);
 
-        // 可选：监听 ModelBlob（如果有下发模型）
+        // 可选：监听 ModelBlob（如果控制端下发聚合模型）
         modelReader.set_listener(new SimpleDataReaderListener<ModelBlob, ModelBlobSeq, ModelBlobDataReader>() {
             @Override public void on_data_arrived(DataReader r, Object o, SampleInfo info) {}
             @Override public void on_process_sample(DataReader r, ModelBlob mb, SampleInfo info) {
@@ -142,43 +186,46 @@ public class Client_v1 {
         System.out.println("[JavaDDS] shutdown.");
     }
 
-    // === 调 Python：入参命令行；stdout 打 JSON；二进制写临时文件并读回 ===
+    // === 调 Python：入参命令行；stdout 打 JSON（含 num_samples）；二进制写临时文件并读回 ===
     private TrainResult runPythonTraining(int clientId, int seed, int subset, int epochs, double lr,
                                           int batchSize, String dataDir) throws Exception {
         Path outBin = Files.createTempFile("upd_", ".bin");
 
         List<String> cmd = new ArrayList<>();
-        cmd.add(PYTHON_EXE);                       // <<< 改：不再硬编码 Python 路径
+        cmd.add(PYTHON_EXE);
         cmd.add(TRAINER_PY);
         cmd.add("--client_id");    cmd.add(String.valueOf(clientId));
-        cmd.add("--num_clients");  cmd.add(String.valueOf(NUM_CLIENTS));   // <<< 新增
+        cmd.add("--num_clients");  cmd.add(String.valueOf(NUM_CLIENTS));
         cmd.add("--seed");         cmd.add(String.valueOf(seed));
-        if (subset > 0) {                           // <<< 只有 >0 才传，避免传 0 造成空数据
-            cmd.add("--subset");   cmd.add(String.valueOf(subset));
-        }
+        if (subset > 0) { cmd.add("--subset"); cmd.add(String.valueOf(subset)); }
         cmd.add("--epochs");       cmd.add(String.valueOf(epochs));
         cmd.add("--lr");           cmd.add(Double.toString(lr));
         cmd.add("--batch_size");   cmd.add(String.valueOf(batchSize));
         cmd.add("--data_dir");     cmd.add(dataDir);
-        cmd.add("--compress");     cmd.add("int8");                   // <<< 新增：开启 INT8 打包
-        cmd.add("--chunk");        cmd.add(String.valueOf(INT8_CHUNK)); // <<< 新增：分块大小
-        cmd.add("--out");          cmd.add(outBin.toString());        // Python 写这个文件
+        // 压缩相关（可选）
+        if ("int8".equalsIgnoreCase(COMPRESS)) {
+            cmd.add("--compress");  cmd.add("int8");
+            cmd.add("--chunk");     cmd.add(String.valueOf(INT8_CHUNK));
+        } else if ("fp32".equalsIgnoreCase(COMPRESS)) {
+            // 不传 compress 参数，按原始 fp32 导出
+        }
+        cmd.add("--out");          cmd.add(outBin.toString());     // ← Python 写这个文件
 
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(true); // 合并 stderr，方便看日志
         Process p = pb.start();
 
-        // 读 stdout（Python 会打印一行 JSON）
+        // 读 stdout（Python 建议打印一行 JSON：{"num_samples":..., "bytes":...}）
         StringBuilder sb = new StringBuilder();
         try (BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
             String line;
             while ((line = br.readLine()) != null) {
-                System.out.println("[PY] " + line); // 打印原始日志
-                sb.append(line);
+                System.out.println("[PY] " + line);
+                sb.append(line).append('\n');
             }
         }
         int code = p.waitFor();
-        if (code != 0) throw new RuntimeException("dist_train.py exit=" + code);
+        if (code != 0) throw new RuntimeException("trainer exit=" + code);
 
         int numSamples = parseNumSamplesFromJson(sb.toString());
 
@@ -188,20 +235,15 @@ public class Client_v1 {
         return new TrainResult(numSamples, bytes);
     }
 
-    // ——— 从一段（可能包含其它日志的）文本里，提取 {"num_samples": N } ———
+    // ——— 从输出文本里提取第一个 JSON 并读取 num_samples ———
     private static int parseNumSamplesFromJson(String text) {
         try {
             int l = text.indexOf('{');
             int r = text.lastIndexOf('}');
             if (l >= 0 && r > l) {
                 String json = text.substring(l, r + 1);
-                int i = json.indexOf("\"num_samples\"");
-                if (i >= 0) {
-                    int c = json.indexOf(':', i);
-                    int d = json.indexOf(',', c);
-                    String s = (d > 0 ? json.substring(c + 1, d) : json.substring(c + 1)).replaceAll("[^0-9]", "");
-                    return Integer.parseInt(s);
-                }
+                JSONObject obj = new JSONObject(json);
+                if (obj.has("num_samples")) return obj.getInt("num_samples");
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -209,7 +251,7 @@ public class Client_v1 {
         return 0; // 兜底
     }
 
-    // byte[] -> ai_train.Bytes
+    // byte[] -> ai_train.Bytes（继承 ByteSeq：loan_contiguous 更高效）
     private static Bytes toBytes(byte[] raw) {
         Bytes out = new Bytes();
         if (raw != null) out.loan_contiguous(raw, raw.length, raw.length);
@@ -221,18 +263,5 @@ public class Client_v1 {
         final int numSamples;
         final byte[] bytes;
         TrainResult(int n, byte[] b) { numSamples = n; bytes = b; }
-    }
-
-    public static void main(String[] args) {
-        Client node = new Client();
-        java.util.concurrent.CountDownLatch quit = new java.util.concurrent.CountDownLatch(1);
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            try { node.shutdown(); } finally { quit.countDown(); }
-        }));
-        node.start();
-        try { quit.await(); } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-            node.shutdown();
-        }
     }
 }

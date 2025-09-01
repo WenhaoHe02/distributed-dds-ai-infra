@@ -5,15 +5,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="59eb5836-2ac1-464a-b7e0-a355d86499ba" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/../DDS_JAVA/.idea/libraries/ZRDDS.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../DDS_JAVA/.idea/libraries/jackson_annotations_2_15_2.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../distributed_training/train/aggregator.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../DDS_JAVA/src/client_hwh.conf.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../DDS_JAVA/src/controller_hwh.conf.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../DDS_JAVA/DDS_JAVA.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/DDS_JAVA.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Client.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Client.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Controller.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Client_v1.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Client_v1.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Controller_v1.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Controller_v1.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../distributed_training/.idea/distributed_training.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/.idea/distributed_training.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../distributed_training/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/train/dist_train.py" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/train/dist_train.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/train/dist_train_v1.py" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/train/dist_train_v1.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/train/evaluate.py" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/train/evaluate.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -42,26 +45,26 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "git-widget-placeholder": "Merging main",
-    "jdk.selected.JAVA_MODULE": "17",
-    "last_opened_file_path": "E:/distributed-dds-ai-serving-system/inference_backend/inference_backend.iml",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.15",
-    "project.structure.side.proportion": "0.2",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;jdk.selected.JAVA_MODULE&quot;: &quot;17&quot;,
+    &quot;last_opened_file_path&quot;: &quot;E:/distributed-dds-ai-serving-system/inference_backend/inference_backend.iml&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="E:\distributed-dds-ai-serving-system\distributed_backernd\src" />
@@ -154,7 +157,9 @@
       <workItem from="1756453163569" duration="95000" />
       <workItem from="1756686972705" duration="20000" />
       <workItem from="1756686999334" duration="175000" />
-      <workItem from="1756687324642" duration="1588000" />
+      <workItem from="1756687324642" duration="2986000" />
+      <workItem from="1756692326703" duration="13000" />
+      <workItem from="1756692457362" duration="1536000" />
     </task>
     <servers />
   </component>

@@ -4,20 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="59eb5836-2ac1-464a-b7e0-a355d86499ba" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/../DDS_JAVA/src/client_hwh.conf.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../DDS_JAVA/src/controller_hwh.conf.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/DDS_JAVA.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/DDS_JAVA.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Client.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Client.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Client_v1.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Client_v1.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Controller_v1.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Controller_v1.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../distributed_training/.idea/distributed_training.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/.idea/distributed_training.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../distributed_training/train/dist_train.py" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/train/dist_train.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../distributed_training/train/dist_train_v1.py" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/train/dist_train_v1.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../distributed_training/train/evaluate.py" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/train/evaluate.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-    </list>
+    <list default="true" id="59eb5836-2ac1-464a-b7e0-a355d86499ba" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

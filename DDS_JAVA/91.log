@@ -1,0 +1,21 @@
+"C:\Program Files\Java\jdk-17\bin\java.exe" "-Djava.library.path=C:\Program Files (x86)\ZRDDS\ZRDDS-2.4.4\lib" -javaagent:C:\Users\32137\AppData\Local\JetBrains\IdeaIC2023.3\testAgent\intellij-coverage-agent-1.0.738.jar=C:\Users\32137\AppData\Local\Temp\coverage41349args "-javaagent:C:\Program Files\JetBrains\IntelliJ IDEA Community Edition 2023.3.4\lib\idea_rt.jar=50544:C:\Program Files\JetBrains\IntelliJ IDEA Community Edition 2023.3.4\bin" -Dfile.encoding=UTF-8 -classpath "D:\Study\SummerSchool\codes\distributed-dds-ai-serving-system\DDS_JAVA\out\production\DDS_JAVA;C:\Program Files (x86)\ZRDDS\ZRDDS-2.4.4\lib\ZRDDS.jar;D:\Study\SummerSchool\codes\distributed-dds-ai-serving-system\DDS_JAVA\lib\jackson-annotations-2.15.2.jar;D:\Study\SummerSchool\codes\distributed-dds-ai-serving-system\DDS_JAVA\lib\jackson-core-2.15.2.jar;D:\Study\SummerSchool\codes\distributed-dds-ai-serving-system\DDS_JAVA\lib\jackson-databind-2.15.2.jar" Controller_v1
+[Controller] Starting round 1
+[Controller] progress: 0/2
+[Controller] Received ClientUpdate from client 1 round=1 bytes=4799528 nsamples=5000
+[Controller] progress: 1/2
+[Controller] Received ClientUpdate from client 1 round=1 bytes=4799528 nsamples=5000
+[Controller] progress: 2/2
+[Controller] Collected 2 client updates.
+[Controller] Published aggregated model for round 1 bytes=4799528
+[e2e time] 74138
+[Controller] Evaluating model, size=4799528
+[PY] D:\Study\SummerSchool\codes\distributed-dds-ai-serving-system\distributed_training\train\evaluate.py:23: UserWarning: The given buffer is not writable, and PyTorch does not support non-writable tensors. This means you can write to the underlying (supposedly non-writable) buffer using the tensor. You may want to copy the buffer to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\utils\tensor_new.cpp:1583.)
+[PY]   vec = torch.frombuffer(weights, dtype=torch.float32)
+[PY] [Evaluate] Accuracy: 0.9724 (9724/10000)
+[Controller] Eval finished: Accuracy = 0.9724, Time = 4109 ms
+JNI Load ZRDDS Library.
+********************  2025-09-01 11:12:09:095  ********************
+Current ZRDDS version(2.4.4-r2761701) for SEU was compiled at Aug 22 2025 16:10:46
+*******************************************************************
+
+Process finished with exit code 0

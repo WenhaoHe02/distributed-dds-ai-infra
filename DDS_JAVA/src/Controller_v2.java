@@ -111,7 +111,7 @@ public class Controller_v2 {
         config.eval_script = jo.getString("eval_script");
         config.data_dir    = jo.getString("data_dir");
         config.batch_size  = jo.optInt("batch_size", 64);
-
+        config.rounds = jo.optInt("rounds", 1);
         System.out.println("[Controller_v2] cfg: domain=" + config.domain_id
                 + " expected_clients=" + config.expected_clients
                 + " timeout_ms=" + config.timeout_ms);

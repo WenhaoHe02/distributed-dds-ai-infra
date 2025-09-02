@@ -247,12 +247,14 @@ public class Controller_v2 {
             System.out.println("[Controller_v2] TrainCmd written OK (round=" + roundId + ")");
         }
 
+
         List<ClientUpdate> collected = waitForClientUpdates(roundId, config.expected_clients, config.timeout_ms);
         if (collected.isEmpty()) {
-            System.err.println("[Controller_v2] no updates collected");
+            System.err.println("[Controller_v2] no updates collected, skipping aggregation for this round");
             return;
         }
-        System.out.println("[Controller_v2] collected " + collected.size() + " updates");
+        System.out.println("[Controller_v2] collected " + collected.size() + " updates (expected " + config.expected_clients + ")");
+
 
         // 聚合（自动识别 S8 / Q8 / FP32）
         float[] aggregated = aggregateFedAvgAuto(collected);
@@ -293,8 +295,18 @@ public class Controller_v2 {
             Thread.sleep(100);
         }
         List<ClientUpdate> list = updatesMap.get(roundId);
-        return (list == null) ? Collections.emptyList() : new ArrayList<>(list);
+        if (list == null || list.isEmpty()) {
+            System.err.println("[Controller_v2] WARNING: No updates received within timeout " + timeoutMs + " ms");
+            return Collections.emptyList();
+        }
+        if (list.size() < expectedClients) {
+            System.err.println("[Controller_v2] WARNING: Timeout reached (" + timeoutMs + " ms), only "
+                    + list.size() + "/" + expectedClients + " clients responded. Proceeding with partial aggregation.");
+        }
+        return new ArrayList<>(list);
     }
+
+
 
     // 自动识别 + 解码（S8/Q8/FP32）
     private static float[] aggregateFedAvgAuto(List<ClientUpdate> updates) {

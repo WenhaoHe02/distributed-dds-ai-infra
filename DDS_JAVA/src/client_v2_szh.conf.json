@@ -7,7 +7,7 @@
   "data_dir": "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/data",
   "batch_size": 32,
 
-  "compress": "int8",
+  "compress": "fp32",
   "int8_chunk": 1024,
   "sparse_k": 0,
   "sparse_ratio": 0.01

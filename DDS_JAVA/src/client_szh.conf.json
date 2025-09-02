@@ -2,10 +2,8 @@
   "domain_id": 200,
   "client_id": 2,
   "num_clients": 2,
-  "batch_size": 32,
+  "batch_size": 64,
   "python_exe": "C:/Program Files/Python311/python.exe",
   "trainer_py": "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/distributed_training/train/dist_train.py",
-  "data_dir": "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/data",
-  "int8_chunk": 1024,
-  "compress": "int8"
+  "data_dir": "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/data"
 }

@@ -87,7 +87,7 @@ public class Client_v2 {
         PYTHON_EXE  = j.optString("python_exe", System.getenv().getOrDefault("PYTHON_EXE", "python"));
         TRAINER_PY  = j.getString("trainer_script");
 
-        COMPRESS     = j.optString("compress", "int8_sparse"); // 默认走 int8 稀疏
+        COMPRESS     = j.optString("compress", "fp32");
         INT8_CHUNK   = j.optInt("int8_chunk", 1024);           // dense int8 兼容项
         SPARSE_K     = j.optInt("sparse_k", 0);
         SPARSE_RATIO = j.optDouble("sparse_ratio", 0.001);     // 0.1%
@@ -255,7 +255,9 @@ public class Client_v2 {
         } else if ("int8".equalsIgnoreCase(COMPRESS)) {
             cmd.add("--compress"); cmd.add("int8");
             cmd.add("--chunk");    cmd.add(String.valueOf(INT8_CHUNK));
-        } // "fp32" 则不传 compress
+        } else {
+            cmd.add("--compress"); cmd.add("fp32");
+        }
 
         // DGC 参数（可按需改为配置读取）
         cmd.add("--dgc_momentum");      cmd.add("0.9");

@@ -4,12 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="59eb5836-2ac1-464a-b7e0-a355d86499ba" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/state_monitor/StateMonitor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v2_szh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v2_szh.conf.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="59eb5836-2ac1-464a-b7e0-a355d86499ba" name="Changes" comment="Worker的State监视器实现">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/Worker.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/Worker.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/yolo_service/benchmark_infer_batch.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/yolo_service/benchmark_infer_batch.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/latency_per_image_vs_batch.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/latency_per_image_vs_batch.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/throughput_vs_batch.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/throughput_vs_batch.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/yolo_batch_bench.csv" beforeDir="false" afterPath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/yolo_batch_bench.csv" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -44,7 +44,8 @@
     "Application.MonitoringDemo (2).executor": "Run",
     "Application.MonitoringDemo.executor": "Run",
     "Application.StateMonitor.executor": "Run",
-    "Application.Worker.executor": "Coverage",
+    "Application.Worker.executor": "Run",
+    "Application.WorkerTestRunner.executor": "Run",
     "Application.simpleInterfaceBytesTypePub.executor": "Run",
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
@@ -53,7 +54,7 @@
     "git-widget-placeholder": "main",
     "jdk.selected.JAVA_MODULE": "17",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/distributed_training",
+    "last_opened_file_path": "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/DDS_JAVA",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -133,9 +134,9 @@
     <recent_temporary>
       <list>
         <item itemvalue="Application.Worker" />
+        <item itemvalue="Application.StateMonitor" />
         <item itemvalue="Application.WorkerTestRunner" />
         <item itemvalue="Application.MonitoringDemo" />
-        <item itemvalue="Application.StateMonitor" />
         <item itemvalue="Application.MonitoringDemo (2)" />
       </list>
     </recent_temporary>
@@ -172,10 +173,23 @@
       <workItem from="1756692457362" duration="5205000" />
       <workItem from="1756773605516" duration="32000" />
     </task>
+    <task id="LOCAL-00001" summary="Worker的State监视器实现">
+      <option name="closed" value="true" />
+      <created>1756785027361</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1756785027361</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Worker的State监视器实现" />
+    <option name="LAST_COMMIT_MESSAGE" value="Worker的State监视器实现" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

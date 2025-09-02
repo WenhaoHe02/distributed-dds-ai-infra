@@ -1,6 +1,6 @@
 {
   "domain_id": 200,
-  "expected_clients": 2,
+  "expected_clients": 1,
   "timeout_ms": 60000,
   "rounds": 5,
   "python_exe": "C:/Program Files/Python311/python.exe",

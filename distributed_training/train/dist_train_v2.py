@@ -46,6 +46,7 @@ import torch.nn.functional as F
 from torch.nn.utils import parameters_to_vector, vector_to_parameters
 from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
+from concurrent.futures import ThreadPoolExecutor
 
 def load_init_model(path: str, model: nn.Module):
     """Load model parameters from bin file (fp32, Q8 dense, or S8 sparse)."""
@@ -251,6 +252,40 @@ def s8_sparse_pack(vals_f32: np.ndarray, dim: int, idx: np.ndarray, out_path: st
         "bytes_fp32": dim*4
     }
 
+def s8_sparse_pack_parallel(vals_f32: np.ndarray, dim: int, idx: np.ndarray, out_path: str, n_threads: int = 4) -> dict:
+
+    maxabs = float(np.max(np.abs(vals_f32))) if vals_f32.size > 0 else 0.0
+    scale = (maxabs / 127.0) if maxabs > 0 else 1e-8
+
+
+    def quantize_block(block):
+        return np.clip(np.round(block / scale), -128, 127).astype(np.int8)
+
+
+    blocks = np.array_split(vals_f32, n_threads)
+    with ThreadPoolExecutor(max_workers=n_threads) as executor:
+        q_blocks = list(executor.map(quantize_block, blocks))
+    q = np.concatenate(q_blocks)
+
+    # 4. 写入文件
+    with open(out_path, "wb") as f:
+        f.write(b'S8\x00')
+        f.write(struct.pack('<B', 1))      # version
+        f.write(struct.pack('<i', dim))
+        f.write(struct.pack('<i', int(idx.size)))
+        f.write(struct.pack('<f', float(scale)))
+        f.write(idx.astype('<i4').tobytes(order='C'))
+        f.write(q.tobytes(order='C'))
+
+    return {
+        "codec": "int8_sparse",
+        "dim": dim,
+        "k": int(idx.size),
+        "scale": float(scale),
+        "bytes_packed": (4+1)+4+4+4 + idx.size*4 + idx.size,
+        "bytes_fp32": dim*4
+    }
+
 
 def dgc_build_and_pack(model: nn.Module,
                        loader: DataLoader,
@@ -318,7 +353,8 @@ def dgc_build_and_pack(model: nn.Module,
     vals = v[idx].astype(np.float32)
 
     # pack as S8 sparse
-    stats = s8_sparse_pack(vals, dim, idx, out_path)
+    #stats = s8_sparse_pack(vals, dim, idx, out_path)
+    stats = s8_sparse_pack_parallel(vals, dim, idx, out_path)
 
     # reconstruct sent part to compute new residual
     maxabs = float(np.max(np.abs(vals))) if vals.size > 0 else 0.0

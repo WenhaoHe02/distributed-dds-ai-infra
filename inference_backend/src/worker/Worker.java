@@ -1,18 +1,17 @@
 package worker;
 
+import com.zrdds.infrastructure.*;
 import com.zrdds.simpleinterface.DDSIF;
-import com.zrdds.infrastructure.StatusKind;
 import com.zrdds.domain.DomainParticipant;
 import com.zrdds.domain.DomainParticipantFactory;
 import com.zrdds.subscription.DataReader;
 import com.zrdds.subscription.SimpleDataReaderListener;
-import com.zrdds.infrastructure.InstanceHandle_t;
-import com.zrdds.infrastructure.ReturnCode_t;
-import com.zrdds.infrastructure.SampleInfo;
 import com.zrdds.topic.Topic;
 import com.zrdds.publication.Publisher;
 import com.zrdds.subscription.Subscriber;
+import com.zrdds.publication.DataWriterQos;
 import data_structure.*; // OpenBatch / Claim / TaskList / WorkerResult / WorkerTaskResult
+import data_structure.Bytes;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -30,9 +29,17 @@ public class Worker {
     private static final String TOPIC_TASK_LIST     = "inference/task_list";
     private static final String TOPIC_WORKER_RESULT = "inference/worker_result";
 
+    private static final String TOPIC_WORKER_HEARTBEAT = "monitor/worker_heartbeat";
+
+
     /* ===================== Wiring contracts ===================== */
     public interface ClaimEmitter { void emit(Claim c); }
     public interface ResultEmitter { void emit(WorkerResult wr); }
+
+    private WorkerResultDataWriter heartbeatWriter;
+    private final AtomicBoolean heartbeatEnabled = new AtomicBoolean(false);
+    private ScheduledExecutorService heartbeatExecutor;
+
 
     /* ===================== Config ===================== */
     public static class Config {
@@ -40,7 +47,21 @@ public class Worker {
         public final String modelId;
         public int maxInflightBatches = 2;
         public int queueCapacity = 64;
-        public Config(String workerId, String modelId){ this.workerId = workerId; this.modelId = modelId; }
+
+        public boolean enableHeartbeat = true;        // 是否启用心跳
+        public int heartbeatIntervalSeconds = 5;
+
+        public Config(String workerId, String modelId) {
+            this.workerId = workerId;
+            this.modelId = modelId;
+        }
+
+        public Config enableHeartbeat(boolean enable, int intervalSeconds) {
+            this.enableHeartbeat = enable;
+            this.heartbeatIntervalSeconds = intervalSeconds;
+            return this;
+        }
+
     }
 
     /* ===================== State ===================== */
@@ -101,10 +122,17 @@ public class Worker {
         consumerThread = new Thread(this::consumeLoop, "worker-consumer-" + cfg.workerId);
         consumerThread.setDaemon(true);
         consumerThread.start();
+
+        // 启动心跳
+        startHeartbeat();
     }
 
     public void stop(){
         running.set(false);
+
+        // 停止心跳
+        stopHeartbeat();
+
         if (consumerThread != null) consumerThread.interrupt();
     }
 
@@ -169,6 +197,7 @@ public class Worker {
         TaskListDataReader taskReader = null;
         ClaimDataWriter claimWriter = null;
         WorkerResultDataWriter resultWriter = null;
+        WorkerResultDataWriter heartbeatWriter = null;
 
         Worker worker = null;
 
@@ -199,7 +228,12 @@ public class Worker {
             Topic resultTopic = dp.create_topic(TOPIC_WORKER_RESULT,
                     WorkerResultTypeSupport.get_instance().get_type_name(),
                     DomainParticipant.TOPIC_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
-            if (openTopic == null || claimTopic == null || taskTopic == null || resultTopic == null) {
+            Topic heartbeatTopic = dp.create_topic(TOPIC_WORKER_HEARTBEAT,
+                    WorkerResultTypeSupport.get_instance().get_type_name(),
+                    DomainParticipant.TOPIC_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
+
+            if (openTopic == null || claimTopic == null || taskTopic == null ||
+                    resultTopic == null || heartbeatTopic == null) {
                 System.err.println("create_topic failed"); return;
             }
 
@@ -211,13 +245,26 @@ public class Worker {
                     claimTopic, Publisher.DATAWRITER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
             resultWriter = (WorkerResultDataWriter) pub.create_datawriter(
                     resultTopic, Publisher.DATAWRITER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
-            if (claimWriter == null || resultWriter == null) { System.err.println("create_datawriter failed"); return; }
+
+            DataWriterQos heartbeatQos = new DataWriterQos();
+            pub.get_default_datawriter_qos(heartbeatQos);
+            heartbeatQos.liveliness.kind = LivelinessQosPolicyKind.MANUAL_BY_TOPIC_LIVELINESS_QOS;
+            heartbeatQos.liveliness.lease_duration.sec = 10; // 10秒租约时间
+            heartbeatQos.liveliness.lease_duration.nanosec = 0;
+
+            heartbeatWriter = (WorkerResultDataWriter) pub.create_datawriter(
+                    heartbeatTopic, heartbeatQos, null, StatusKind.STATUS_MASK_NONE);
+
+            if (claimWriter == null || resultWriter == null || heartbeatWriter == null) {
+                System.err.println("create_datawriter failed"); return;
+            }
 
             // 让被 lambda 捕获的变量是 final
             final ClaimDataWriter claimW = claimWriter;
             final WorkerResultDataWriter resultW = resultWriter;
+            final WorkerResultDataWriter heartbeatW = heartbeatWriter;
 
-            Worker.Config cfg = new Worker.Config(workerId, modelId);
+            Worker.Config cfg = new Config(workerId, modelId).enableHeartbeat(true,5);
             worker = new Worker(
                     cfg,
                     c  -> { ReturnCode_t rc = claimW.write(c, InstanceHandle_t.HANDLE_NIL_NATIVE);
@@ -226,6 +273,8 @@ public class Worker {
                         if (rc != ReturnCode_t.RETCODE_OK) System.err.println("[WorkerMain] result write rc=" + rc); },
                     new ModelRunner()
             );
+
+            worker.setHeartbeatWriter(heartbeatW);
 
             // 供匿名内部类使用的 final 引用
             final Worker fWorker = worker;
@@ -266,6 +315,7 @@ public class Worker {
             System.out.println("Worker started. worker_id=" + workerId + " model_id=" + modelId);
             System.out.println("Sub: " + TOPIC_OPEN_BATCH + ", " + TOPIC_TASK_LIST);
             System.out.println("Pub: " + TOPIC_CLAIM + ", " + TOPIC_WORKER_RESULT);
+            System.out.println("Heartbeat enabled: " + cfg.enableHeartbeat + " (interval: " + cfg.heartbeatIntervalSeconds + "s)");
             System.out.println("Press ENTER to exit...");
             System.out.println("==================================================");
 
@@ -282,5 +332,88 @@ public class Worker {
         String v = System.getProperty(sysKey);
         if (v == null || v.isEmpty()) v = System.getenv(envKey);
         return (v == null || v.isEmpty()) ? defVal : v;
+    }
+
+    /**
+     * 设置心跳Writer（在main函数中调用）
+     */
+    public void setHeartbeatWriter(WorkerResultDataWriter heartbeatWriter) {
+        this.heartbeatWriter = heartbeatWriter;
+    }
+
+    /**
+     * 启动心跳发送
+     */
+    private void startHeartbeat() {
+        if (!cfg.enableHeartbeat || heartbeatWriter == null) {
+            return;
+        }
+
+        heartbeatEnabled.set(true);
+        heartbeatExecutor = Executors.newScheduledThreadPool(1);
+
+        heartbeatExecutor.scheduleAtFixedRate(
+                this::sendHeartbeat,
+                0,  // 初始延迟
+                cfg.heartbeatIntervalSeconds,
+                TimeUnit.SECONDS
+        );
+
+        System.out.println("[Worker] Heartbeat started, interval: " + cfg.heartbeatIntervalSeconds + " seconds");
+    }
+
+    /**
+     * 停止心跳发送
+     */
+    private void stopHeartbeat() {
+        heartbeatEnabled.set(false);
+
+        if (heartbeatExecutor != null) {
+            heartbeatExecutor.shutdown();
+            try {
+                if (!heartbeatExecutor.awaitTermination(3, TimeUnit.SECONDS)) {
+                    heartbeatExecutor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                heartbeatExecutor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+            heartbeatExecutor = null;
+        }
+
+        System.out.println("[Worker] Heartbeat stopped");
+    }
+
+    /**
+     * 发送心跳信号
+     */
+    private void sendHeartbeat() {
+        if (!heartbeatEnabled.get() || heartbeatWriter == null) {
+            return;
+        }
+
+        try {
+            // 创建心跳消息（复用WorkerResult结构）
+            WorkerResult heartbeat = new WorkerResult();
+            heartbeat.worker_id = cfg.workerId;
+            heartbeat.model_id = cfg.modelId;
+            heartbeat.batch_id = "HEARTBEAT_" + System.currentTimeMillis();
+
+            // 发送心跳
+            ReturnCode_t rc = heartbeatWriter.write(heartbeat, InstanceHandle_t.HANDLE_NIL_NATIVE);
+
+            if (rc == ReturnCode_t.RETCODE_OK) {
+                System.out.println("[Worker] Heartbeat sent: " + cfg.workerId);
+
+                // 手动断言liveliness（重要：告诉DDS这个writer还活着）
+                heartbeatWriter.assert_liveliness();
+            } else {
+                System.err.println("[Worker] Failed to send heartbeat, rc=" + rc);
+            }
+
+        } catch (Exception e) {
+            System.err.println("[Worker] Error sending heartbeat: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }

@@ -188,7 +188,7 @@ public class Controller_v2 {
         publisher.get_default_datawriter_qos(wq);
         wq.reliability.kind = ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS;
         wq.history.kind     = HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS;
-        wq.history.depth    = 32;
+        wq.history.depth    = 4;
 
         // Writers
         trainCmdWriter  = publisher.create_datawriter(trainCmdTopic, wq, null, StatusKind.STATUS_MASK_NONE);
@@ -207,7 +207,7 @@ public class Controller_v2 {
         subscriber.get_default_datareader_qos(rq);
         rq.reliability.kind = ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS;
         rq.history.kind     = HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS;
-        rq.history.depth    = 32;
+        rq.history.depth    = 4;
 
         // Reader
         clientUpdateReader = subscriber.create_datareader(

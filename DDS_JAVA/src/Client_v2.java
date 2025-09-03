@@ -128,7 +128,7 @@ public class Client_v2 {
         pub.get_default_datawriter_qos(wq);
         wq.reliability.kind = ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS;
         wq.history.kind     = HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS;
-        wq.history.depth    = 32;
+        wq.history.depth    = 4;
         updWriter = (ClientUpdateDataWriter) pub.create_datawriter(
                 tUpd, wq, null, StatusKind.STATUS_MASK_NONE);
         try {
@@ -141,7 +141,7 @@ public class Client_v2 {
         sub.get_default_datareader_qos(rq);
         rq.reliability.kind = ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS;
         rq.history.kind     = HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS;
-        rq.history.depth    = 32;
+        rq.history.depth    = 4;
 
         cmdReader = (TrainCmdDataReader) sub.create_datareader(
                 tCmd, rq, null, StatusKind.STATUS_MASK_NONE);

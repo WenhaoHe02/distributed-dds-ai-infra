@@ -5,9 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="59eb5836-2ac1-464a-b7e0-a355d86499ba" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/../DDS_JAVA/src/controller_hwh.conf.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/client_szh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/client_szh.conf.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/client_v2_hwh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/client_v2_hwh.conf.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/client_v2_szh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/client_v2_szh.conf.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v2_hwh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v2_hwh.conf.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/.idea/distributed_training.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/.idea/distributed_training.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/data_structure/ai_train.cpp" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/yolo_service/benchmark_infer_batch.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/yolo_service/benchmark_infer_batch.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/latency_per_image_vs_batch.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/latency_per_image_vs_batch.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/throughput_vs_batch.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/throughput_vs_batch.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/yolo_batch_bench.csv" beforeDir="false" afterPath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/yolo_batch_bench.csv" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -152,6 +159,9 @@
       <workItem from="1756692326703" duration="13000" />
       <workItem from="1756692457362" duration="5205000" />
       <workItem from="1756773605516" duration="32000" />
+      <workItem from="1756781004750" duration="623000" />
+      <workItem from="1756798615908" duration="2508000" />
+      <workItem from="1756810975991" duration="14000" />
     </task>
     <servers />
   </component>

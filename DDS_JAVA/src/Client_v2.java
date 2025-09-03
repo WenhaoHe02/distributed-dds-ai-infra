@@ -326,9 +326,10 @@ public class Client_v2 {
         if (b == null) return new byte[0];
         int n = b.length();
         byte[] out = new byte[n];
-        for (int i = 0; i < n; i++) out[i] = b.get_at(i);
+        b.to_array(out, n);
         return out;
     }
+
 
     private static class TrainResult {
         final int numSamples;

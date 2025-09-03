@@ -97,7 +97,7 @@ public class Controller_v2 {
         ctrl.init();
         int rounds = config.rounds;
         for (int i = 0; i < rounds; i++) {
-            ctrl.runTrainingRound(5000, 5, 0.01, 12345 + i);
+            ctrl.runTrainingRound(30000, 5, 0.01, 12345 + i);
         }
 
         DDSIF.Finalize();

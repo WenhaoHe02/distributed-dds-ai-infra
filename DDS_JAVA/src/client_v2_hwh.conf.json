@@ -8,8 +8,8 @@
   "batch_size": 64,
 
   "compress": "int8",
-  "int8_chunk": 1024,
+  "int8_chunk": 2048,
   "sparse_k": 0,
   "sparse_ratio": 0.01
-}
+}s
 

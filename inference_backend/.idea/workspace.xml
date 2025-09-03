@@ -4,12 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
+<<<<<<< HEAD
     <list default="true" id="59eb5836-2ac1-464a-b7e0-a355d86499ba" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/client_v2_hwh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/client_v2_hwh.conf.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/client_v2_szh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/client_v2_szh.conf.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v2_hwh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v2_hwh.conf.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../distributed_training/.idea/distributed_training.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/.idea/distributed_training.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../distributed_training/data_structure/ai_train.cpp" beforeDir="false" />
+=======
+    <list default="true" id="59eb5836-2ac1-464a-b7e0-a355d86499ba" name="Changes" comment="Worker的State监视器实现">
+>>>>>>> b4c1d947f2fa08c2d0797fe8cc0f20a09842bd55
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/yolo_service/benchmark_infer_batch.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/yolo_service/benchmark_infer_batch.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/latency_per_image_vs_batch.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/latency_per_image_vs_batch.png" afterDir="false" />
@@ -43,26 +47,34 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;jdk.selected.JAVA_MODULE&quot;: &quot;17&quot;,
-    &quot;last_opened_file_path&quot;: &quot;E:/distributed-dds-ai-serving-system/inference_backend/inference_backend.iml&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.MonitoringDemo (1).executor": "Run",
+    "Application.MonitoringDemo (2).executor": "Run",
+    "Application.MonitoringDemo.executor": "Run",
+    "Application.StateMonitor.executor": "Run",
+    "Application.Worker.executor": "Run",
+    "Application.WorkerTestRunner.executor": "Run",
+    "Application.simpleInterfaceBytesTypePub.executor": "Run",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "git-widget-placeholder": "main",
+    "jdk.selected.JAVA_MODULE": "17",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/DDS_JAVA",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="E:\distributed-dds-ai-serving-system\distributed_backernd\src" />
@@ -73,27 +85,27 @@
       <recent name="E:\distributed-dds-ai-serving-system\distributed_backernd\src" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.Spliter">
-    <configuration name="Patcher" type="Application" factoryName="Application" temporary="true">
-      <option name="MAIN_CLASS_NAME" value="patcher.Patcher" />
+  <component name="RunManager" selected="Application.Worker">
+    <configuration name="MonitoringDemo (2)" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="MonitoringDemo" />
       <module name="inference_backend" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="patcher.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="Spliter" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="ALTERNATIVE_JRE_PATH" value="17" />
-      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
-      <option name="MAIN_CLASS_NAME" value="spliter.Spliter" />
+    <configuration name="MonitoringDemo" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="MonitoringDemo" />
+      <module name="inference_backend" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="StateMonitor" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="state_monitor.StateMonitor" />
+      <module name="inference_backend" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="spliter.*" />
+          <option name="PATTERN" value="state_monitor.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -104,7 +116,6 @@
     <configuration name="Worker" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="worker.Worker" />
       <module name="inference_backend" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src" />
       <extension name="coverage">
         <pattern>
           <option name="PATTERN" value="worker.*" />
@@ -115,16 +126,27 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="WorkerTestRunner" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="WorkerTestRunner" />
+      <module name="inference_backend" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <list>
-      <item itemvalue="Application.Spliter" />
-      <item itemvalue="Application.Patcher" />
+      <item itemvalue="Application.MonitoringDemo" />
+      <item itemvalue="Application.MonitoringDemo (2)" />
+      <item itemvalue="Application.StateMonitor" />
+      <item itemvalue="Application.WorkerTestRunner" />
       <item itemvalue="Application.Worker" />
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Application.Patcher" />
-        <item itemvalue="Application.Spliter" />
         <item itemvalue="Application.Worker" />
+        <item itemvalue="Application.StateMonitor" />
+        <item itemvalue="Application.WorkerTestRunner" />
+        <item itemvalue="Application.MonitoringDemo" />
+        <item itemvalue="Application.MonitoringDemo (2)" />
       </list>
     </recent_temporary>
   </component>
@@ -163,10 +185,23 @@
       <workItem from="1756798615908" duration="2508000" />
       <workItem from="1756810975991" duration="14000" />
     </task>
+    <task id="LOCAL-00001" summary="Worker的State监视器实现">
+      <option name="closed" value="true" />
+      <created>1756785027361</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1756785027361</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Worker的State监视器实现" />
+    <option name="LAST_COMMIT_MESSAGE" value="Worker的State监视器实现" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -177,5 +212,10 @@
         </breakpoint>
       </breakpoints>
     </breakpoint-manager>
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/inference_backend$Worker.ic" NAME="Worker Coverage Results" MODIFIED="1756784374356" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false">
+      <FILTER>worker.*</FILTER>
+    </SUITE>
   </component>
 </project>

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-MNIST local training with INT8 sparse compression (DGC-style, step-accumulation):
-- Per-step: clip -> u_t = m*u_{t-1} + g_t -> v_t += u_t
-- Send every step / every N steps / end-of-round (comm_every)
-- Momentum factor masking on sent indices
-- Warm-up for sparsity
-- Optional local gradient clipping with N^{-1/2}
+MNIST local training with INT8 sparse (DGC-style) as **model delta**:
+- Track round-start weights p_ref
+- After each step, compute delta_since_ref = p_cur - p_ref
+- Send the **increment since last sent**: delta_to_send = delta_since_ref - sent_accum
+- Error feedback: delta_ef = delta_to_send + residual
+- Top-k + int8 quantization per packet; update residual & sent_accum
+- At round end (comm_every=0), send the remaining delta
 
 Wire formats (little-endian):
 S8 (sparse int8, delta):  'S','8','\x00', ver=1 | dim(i32) | k(i32) | scale(f32) | idx[i32*k] | qvals[i8*k]
@@ -63,14 +64,8 @@ def make_shard_indices(n_total:int, num_clients:int, client_id:int, seed:int,
         idxs = idxs[:limit]
     return idxs
 
-def flatten_grads(model: nn.Module) -> torch.Tensor:
-    vecs = []
-    for p in model.parameters():
-        if p.grad is None:
-            vecs.append(torch.zeros_like(p.detach()).view(-1))
-        else:
-            vecs.append(p.grad.detach().float().view(-1))
-    return torch.cat(vecs, dim=0).contiguous()
+def flatten_params(model: nn.Module) -> torch.Tensor:
+    return torch.cat([p.detach().view(-1).float() for p in model.parameters()], dim=0).contiguous()
 
 def load_init_model(path: str, model: nn.Module):
     if not path or not os.path.exists(path):
@@ -125,11 +120,11 @@ def q8_dense_pack(vec_f32: np.ndarray, chunk: int, out_path: str) -> dict:
         "bytes_packed": (4+1)+4+8+4 + n_chunks*4 + total
     }
 
-def _topk_mask(x: np.ndarray, k: int) -> Tuple[np.ndarray, np.ndarray]:
+def _topk_mask(x: np.ndarray, k: int):
     if k <= 0 or k >= x.size:
         idx = np.arange(x.size, dtype=np.int32)
         mask = np.ones_like(x, dtype=bool)
-        return idx, mask
+        return idx.astype(np.int32), mask
     kth = np.argpartition(np.abs(x), -k)[-k:]
     ord_idx = kth[np.argsort(-np.abs(x[kth]))]
     mask = np.zeros_like(x, dtype=bool); mask[ord_idx] = True
@@ -171,62 +166,24 @@ def s8_sparse_pack_parallel(vals_f32: np.ndarray, dim: int, idx: np.ndarray, out
         "bytes_packed": (4+1)+4+4+4 + idx.size*4 + idx.size, "bytes_fp32": dim*4
     }
 
-# -------------- DGC 核心 --------------
-def dgc_state_paths(state_dir: str):
+# -------------- Δ 状态（误差反馈 + 分段发送累加） --------------
+def delta_state_paths(state_dir: str):
     os.makedirs(state_dir, exist_ok=True)
-    return (os.path.join(state_dir, "velocity.npy"),  # u_t
-            os.path.join(state_dir, "accum.npy"))     # v_t (residual accumulator)
+    return (os.path.join(state_dir, "delta_residual.npy"),   # 误差残差
+            os.path.join(state_dir, "delta_sent_accum.npy")) # 已发送的累计Δ
 
-def dgc_load_states(state_dir: str, dim: int):
-    vp, ap = dgc_state_paths(state_dir)
-    u = np.load(vp) if os.path.exists(vp) else np.zeros(dim, dtype=np.float32)
-    v = np.load(ap) if os.path.exists(ap) else np.zeros(dim, dtype=np.float32)
-    if u.size != dim: u = np.zeros(dim, dtype=np.float32)
-    if v.size != dim: v = np.zeros(dim, dtype=np.float32)
-    return u, v
+def delta_load_states(state_dir: str, dim: int):
+    rp, sp = delta_state_paths(state_dir)
+    r = np.load(rp) if os.path.exists(rp) else np.zeros(dim, dtype=np.float32)
+    s = np.load(sp) if os.path.exists(sp) else np.zeros(dim, dtype=np.float32)
+    if r.size != dim: r = np.zeros(dim, dtype=np.float32)
+    if s.size != dim: s = np.zeros(dim, dtype=np.float32)
+    return r, s
 
-def dgc_save_states(state_dir: str, u: np.ndarray, v: np.ndarray):
-    vp, ap = dgc_state_paths(state_dir)
-    np.save(vp, u.astype(np.float32))
-    np.save(ap, v.astype(np.float32))
-
-def dgc_accumulate_step(u_prev: np.ndarray, v_prev: np.ndarray,
-                        g_step: np.ndarray, momentum: float,
-                        clip_norm: float, num_clients: int):
-    g = g_step.astype(np.float32, copy=False)
-    if clip_norm and clip_norm > 0.0:
-        local_clip = float(clip_norm) / math.sqrt(max(1, int(num_clients)))
-        nrm = float(np.linalg.norm(g))
-        if nrm > local_clip:
-            g = (g * (local_clip / (nrm + EPS))).astype(np.float32)
-    u = (momentum * u_prev + g).astype(np.float32)
-    v = (v_prev + u).astype(np.float32)
-    return u, v
-
-def dgc_select_and_pack(v: np.ndarray, dim: int, out_path: str,
-                        k: int, mask_momentum: bool,
-                        u_current: np.ndarray):
-    idx, _ = _topk_mask(v, k)
-    vals = v[idx].astype(np.float32)
-    stats = s8_sparse_pack_parallel(vals, dim, idx, out_path)
-
-    # reconstruct sent to compute residual
-    maxabs = float(np.max(np.abs(vals))) if vals.size>0 else 0.0
-    scale = (maxabs / 127.0) if maxabs>0 else 1e-8
-    q = np.clip(np.round(vals / scale), -128, 127).astype(np.int8)
-    sent = np.zeros_like(v, dtype=np.float32); sent[idx] = (q.astype(np.float32) * scale)
-
-    v_next = (v - sent).astype(np.float32)
-    if mask_momentum:
-        u_next = np.zeros_like(u_current, dtype=np.float32); u_next[idx] = u_current[idx]
-    else:
-        u_next = u_current
-
-    stats.update({
-        "k": int(k), "scale": float(scale), "bytes_fp32": dim*4,
-        "compression_ratio": (dim*4) / float(stats["bytes_packed"]) if stats["bytes_packed"]>0 else 0.0
-    })
-    return stats, u_next, v_next
+def delta_save_states(state_dir: str, residual: np.ndarray, sent_accum: np.ndarray):
+    rp, sp = delta_state_paths(state_dir)
+    np.save(rp, residual.astype(np.float32))
+    np.save(sp, sent_accum.astype(np.float32))
 
 # -------------- 训练与发送 --------------
 def train_one_client(args):
@@ -253,7 +210,11 @@ def train_one_client(args):
     opt = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
     criterion = nn.CrossEntropyLoss()
 
-    u_prev = None; v_prev = None; dim = None
+    # 参考权重（回合起点）
+    p_ref = flatten_params(model).cpu().numpy()
+    dim = int(p_ref.size)
+    residual, sent_accum = delta_load_states(args.state_dir, dim)
+
     global_step = 0
     send_count = 0
     last_stats = None
@@ -266,72 +227,95 @@ def train_one_client(args):
         for x, y in loader:
             x, y = x.to(device), y.to(device)
             opt.zero_grad(set_to_none=True)
-            loss = criterion(model(x), y); loss.backward()
-
-            g_t = flatten_grads(model).detach().cpu().numpy()
-            if dim is None:
-                dim = int(g_t.size)
-                u_prev, v_prev = dgc_load_states(args.state_dir, dim)
-
-            u_prev, v_prev = dgc_accumulate_step(u_prev, v_prev, g_step=g_t,
-                                                 momentum=args.dgc_momentum,
-                                                 clip_norm=args.dgc_clip_norm,
-                                                 num_clients=args.num_clients)
-            opt.step()
+            loss = criterion(model(x), y); loss.backward(); opt.step()
             global_step += 1
 
-            # 每步/每N步发送
+            # 每步/每N步发送“新增Δ”
             if args.compress == "int8_sparse" and args.comm_every > 0 and (global_step % args.comm_every) == 0:
-                if args.dgc_warmup_rounds and args.round < args.dgc_warmup_rounds:
-                    warm_scale = (args.round + 1) / float(args.dgc_warmup_rounds)
-                else:
-                    warm_scale = 1.0
-                if args.sparse_k > 0:
-                    k = max(1, int(math.ceil(args.sparse_k * warm_scale)))
-                else:
-                    k = max(1, int(math.ceil(dim * max(0.0, args.sparse_ratio) * warm_scale)))
+                p_cur = flatten_params(model).cpu().numpy()
+                delta_since_ref = (p_cur - p_ref)
+                delta_to_send   = (delta_since_ref - sent_accum)
+                delta_ef        = (delta_to_send + residual).astype(np.float32)
 
+                # warmup 选择 k
+                if args.dgc_warmup_rounds and args.round < args.dgc_warmup_rounds: warm = (args.round + 1)/float(args.dgc_warmup_rounds)
+                else: warm = 1.0
+                if args.sparse_k > 0: k = max(1, int(math.ceil(args.sparse_k * warm)))
+                else: k = max(1, int(math.ceil(dim * max(0.0, args.sparse_ratio) * warm)))
+
+                idx, _ = _topk_mask(delta_ef, k)
+                vals   = delta_ef[idx].astype(np.float32)
                 step_out = os.path.join(args.out, f"r{args.round:04d}_s{global_step:06d}.s8")
-                last_stats, u_prev, v_prev = dgc_select_and_pack(v_prev, dim, step_out, k,
-                                                                 bool(args.dgc_mask_momentum), u_prev)
-                dgc_save_states(args.state_dir, u_prev, v_prev)
+                last_stats = s8_sparse_pack_parallel(vals, dim, idx, step_out)
+
+                # 回放 & 累计
+                maxabs = float(np.max(np.abs(vals))) if vals.size>0 else 0.0
+                scale  = (maxabs/127.0) if maxabs>0 else 1e-8
+                q      = np.clip(np.round(vals/scale), -128, 127).astype(np.int8)
+                sent   = np.zeros(dim, dtype=np.float32); sent[idx] = q.astype(np.float32) * scale
+
+                residual   = (delta_ef - sent).astype(np.float32)
+                sent_accum = (sent_accum + sent).astype(np.float32)
+                delta_save_states(args.state_dir, residual, sent_accum)
+
                 send_count += 1
 
     # 回合末处理
     if args.compress == "int8_sparse":
         if args.comm_every == 0:
-            # 单包：在 v_prev 上取 top-k
-            assert dim is not None and v_prev is not None and u_prev is not None, "DGC states not initialized"
-            if args.dgc_warmup_rounds and args.round < args.dgc_warmup_rounds:
-                warm_scale = (args.round + 1) / float(args.dgc_warmup_rounds)
-            else:
-                warm_scale = 1.0
-            if args.sparse_k > 0:
-                k = max(1, int(math.ceil(args.sparse_k * warm_scale)))
-            else:
-                k = max(1, int(math.ceil(dim * max(0.0, args.sparse_ratio) * warm_scale)))
+            p_cur = flatten_params(model).cpu().numpy()
+            delta_total = (p_cur - p_ref) - sent_accum
+            delta_ef    = (delta_total + residual).astype(np.float32)
+
+            if args.dgc_warmup_rounds and args.round < args.dgc_warmup_rounds: warm = (args.round + 1)/float(args.dgc_warmup_rounds)
+            else: warm = 1.0
+            if args.sparse_k > 0: k = max(1, int(math.ceil(args.sparse_k * warm)))
+            else: k = max(1, int(math.ceil(dim * max(0.0, args.sparse_ratio) * warm)))
+
             os.makedirs(os.path.dirname(args.out), exist_ok=True)
-            stats, u_next, v_next = dgc_select_and_pack(v_prev, dim, args.out, k,
-                                                        bool(args.dgc_mask_momentum), u_prev)
-            dgc_save_states(args.state_dir, u_next, v_next)
-            return len(ds), {**stats, "stream": False}
+            idx, _ = _topk_mask(delta_ef, k)
+            vals   = delta_ef[idx].astype(np.float32)
+            stats  = s8_sparse_pack_parallel(vals, dim, idx, args.out)
+
+            maxabs = float(np.max(np.abs(vals))) if vals.size>0 else 0.0
+            scale  = (maxabs/127.0) if maxabs>0 else 1e-8
+            q      = np.clip(np.round(vals/scale), -128, 127).astype(np.int8)
+            sent   = np.zeros(dim, dtype=np.float32); sent[idx] = q.astype(np.float32) * scale
+
+            residual   = (delta_ef - sent).astype(np.float32)
+            sent_accum = (sent_accum + sent).astype(np.float32)
+            delta_save_states(args.state_dir, residual, sent_accum)
+
+            stats["stream"] = False
+            return len(ds), stats
         else:
-            # 多包模式：训练中已写入多个 .s8；这里返回摘要
+            # 多包已写入；若 send_count==0，发送一次兜底
             if send_count == 0:
-                if args.dgc_warmup_rounds and args.round < args.dgc_warmup_rounds:
-                    warm_scale = (args.round + 1) / float(args.dgc_warmup_rounds)
-                else:
-                    warm_scale = 1.0
-                if args.sparse_k > 0:
-                    k = max(1, int(math.ceil(args.sparse_k * warm_scale)))
-                else:
-                    k = max(1, int(math.ceil(dim * max(0.0, args.sparse_ratio) * warm_scale)))
+                p_cur = flatten_params(model).cpu().numpy()
+                delta_total = (p_cur - p_ref) - sent_accum
+                delta_ef    = (delta_total + residual).astype(np.float32)
+
+                if args.dgc_warmup_rounds and args.round < args.dgc_warmup_rounds: warm = (args.round + 1)/float(args.dgc_warmup_rounds)
+                else: warm = 1.0
+                if args.sparse_k > 0: k = max(1, int(math.ceil(args.sparse_k * warm)))
+                else: k = max(1, int(math.ceil(dim * max(0.0, args.sparse_ratio) * warm)))
+
                 os.makedirs(args.out, exist_ok=True)
+                idx, _ = _topk_mask(delta_ef, k)
+                vals   = delta_ef[idx].astype(np.float32)
                 step_out = os.path.join(args.out, f"r{args.round:04d}_s{global_step:06d}.s8")
-                last_stats, u_prev, v_prev = dgc_select_and_pack(v_prev, dim, step_out, k,
-                                                                 bool(args.dgc_mask_momentum), u_prev)
-                dgc_save_states(args.state_dir, u_prev, v_prev)
+                last_stats = s8_sparse_pack_parallel(vals, dim, idx, step_out)
+
+                maxabs = float(np.max(np.abs(vals))) if vals.size>0 else 0.0
+                scale  = (maxabs/127.0) if maxabs>0 else 1e-8
+                q      = np.clip(np.round(vals/scale), -128, 127).astype(np.int8)
+                sent   = np.zeros(dim, dtype=np.float32); sent[idx] = q.astype(np.float32) * scale
+                residual   = (delta_ef - sent).astype(np.float32)
+                sent_accum = (sent_accum + sent).astype(np.float32)
+                delta_save_states(args.state_dir, residual, sent_accum)
+
                 send_count = 1
+
             return len(ds), {
                 "codec":"int8_sparse_stream","packets": int(send_count),
                 "bytes_packed_last": int(last_stats.get("bytes_packed",0)) if last_stats else 0,
@@ -355,7 +339,7 @@ def train_one_client(args):
         return len(ds), stats
 
 def main():
-    ap = argparse.ArgumentParser(description="MNIST local training + DGC int8 sparse packing (v3)")
+    ap = argparse.ArgumentParser(description="MNIST local training + DGC int8 sparse (delta) v3")
     ap.add_argument("--client_id",   type=int, required=True)
     ap.add_argument("--num_clients", type=int, required=True)
     ap.add_argument("--seed",        type=int, required=True)
@@ -372,10 +356,12 @@ def main():
     ap.add_argument("--sparse_k",    type=int, default=0)
     ap.add_argument("--sparse_ratio",type=float, default=0.001)
 
+    # DGC 占位参数（用于 warmup/兼容）
     ap.add_argument("--dgc_momentum",       type=float, default=0.9)
     ap.add_argument("--dgc_clip_norm",      type=float, default=0.0)
     ap.add_argument("--dgc_mask_momentum",  type=int,   default=1)
     ap.add_argument("--dgc_warmup_rounds",  type=int,   default=1)
+
     ap.add_argument("--round",              type=int,   default=0)
     ap.add_argument("--state_dir",          type=str,   default="state")
 

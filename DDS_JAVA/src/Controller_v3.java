@@ -1,5 +1,7 @@
 // Controller_v3.java
-// 聚合端：支持多包（流式）与单包两种客户端上报；自动解码 S8/Q8/FP32；FedAvg 聚合后发布 FP32 模型。
+// 聚合端：支持多包（流式）与单包；自动识别 S8/Q8/FP32；
+// 语义：S8=“模型增量 Δ”，对同一客户端多包先相加→做 FedAvg→叠加到 currentModel；
+//      Q8/FP32=“完整权重”，直接做权重平均→作为新 currentModel。
 // 运行：java Controller_v3 <controller_v3.conf.json>
 
 import ai_train.*;
@@ -46,11 +48,10 @@ public class Controller_v3 {
     private static final String TOPIC_CLIENT_UPDATE = "train/client_update";
     private static final String TOPIC_MODEL_BLOB    = "train/model_blob";
 
-    // =============== 数据结构 ===============
-    /** 单个客户端在某一轮的“流式上报”聚合器 */
+    // =============== 每客户端流式收包聚合器 ===============
     private static class ClientStream {
         final List<byte[]> packets = Collections.synchronizedList(new ArrayList<>());
-        volatile long numSamples = 0L;       // 仅“最后一个包”携带；其余为 0
+        volatile long numSamples = 0L;       // 仅“最后一包”携带；其余为 0
         volatile boolean finalReceived = false;
         volatile long lastTs = System.currentTimeMillis();
 
@@ -73,6 +74,10 @@ public class Controller_v3 {
     private ClientUpdateDataReader clientUpdateReader;
 
     private final AtomicLong roundCounter = new AtomicLong(1);
+
+    // =============== 全局模型（FP32） ===============
+    private float[] currentModel = null;
+    private int     modelDim     = -1;
 
     // =============== 入口 ===============
     public static void main(String[] args) throws Exception {
@@ -136,7 +141,7 @@ public class Controller_v3 {
         publisher.get_default_datawriter_qos(wq);
         wq.reliability.kind = ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS;
         wq.history.kind     = HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS;
-        wq.history.depth    = 8; // 多包时更稳
+        wq.history.depth    = 8; // 多包更稳
 
         trainCmdWriter  = (TrainCmdDataWriter) publisher.create_datawriter(tCmd, wq, null, StatusKind.STATUS_MASK_NONE);
         modelBlobWriter = (ModelBlobDataWriter) publisher.create_datawriter(tModel, wq, null, StatusKind.STATUS_MASK_NONE);
@@ -215,33 +220,26 @@ public class Controller_v3 {
         }
         System.out.println("[Controller_v3] collected clients: " + streams.size() + " / expected " + config.expected_clients);
 
-        // 聚合（将每个客户端的所有包解码后“求和”为一个向量，再做 FedAvg）
-        float[] aggregated = aggregateFedAvgFromStreams(streams);
-        byte[]  modelData  = float32ToBytesLE(aggregated);
+        // 收集向量及其语义
+        List<ClientVec> cvs = collectClientVectors(streams);
 
-        // 发布聚合模型（FP32）
-        ModelBlob blob = new ModelBlob();
-        blob.round_id = roundId;
-        blob.data = new Bytes();
-        blob.data.loan_contiguous(modelData, modelData.length, modelData.length);
-        rc = modelBlobWriter.write(blob, InstanceHandle_t.HANDLE_NIL_NATIVE);
-        if (rc != ReturnCode_t.RETCODE_OK) {
-            System.err.println("[Controller_v3] write ModelBlob failed: " + rc);
-        } else {
-            System.out.println("[Controller_v3] published FP32 model, bytes=" + modelData.length);
-        }
+        // 应用到全局并发布
+        applyAndPublish(cvs, roundId);
 
         long t1 = System.currentTimeMillis();
         System.out.println("[Controller_v3] round time: " + (t1 - t0) + " ms");
 
-        // 可选评估
-        evaluateModel(modelData);
+        // 可选评估：对 currentModel 评估
+        if (currentModel != null) {
+            byte[] modelData = float32ToBytesLE(currentModel);
+            evaluateModel(modelData);
+        }
 
         // 清理这一轮缓存
         roundStreams.remove(roundId);
     }
 
-    // =============== 等待这一轮的“最终包”到齐 ===============
+    // 等待一轮内各客户端的“最终包”
     private static Map<Integer, ClientStream> waitForRoundStreams(int roundId, int expectedClients, long timeoutMs) throws InterruptedException {
         long start = System.currentTimeMillis();
         int lastReady = -1;
@@ -249,9 +247,7 @@ public class Controller_v3 {
             ConcurrentMap<Integer, ClientStream> m = roundStreams.get(roundId);
             int have = (m == null ? 0 : m.size());
             int ready = 0;
-            if (m != null) {
-                for (ClientStream cs : m.values()) if (cs.finalReceived) ready++;
-            }
+            if (m != null) for (ClientStream cs : m.values()) if (cs.finalReceived) ready++;
             if (ready != lastReady) {
                 System.out.println("[Controller_v3] progress: clients=" + have + ", final-ready=" + ready + "/" + expectedClients);
                 lastReady = ready;
@@ -262,72 +258,109 @@ public class Controller_v3 {
         ConcurrentMap<Integer, ClientStream> m = roundStreams.get(roundId);
         if (m == null || m.isEmpty()) return Collections.emptyMap();
 
-        // 只取“已收到最终包”的客户端；若不够，也取所有已到的客户端（容错）
         Map<Integer, ClientStream> finals = new HashMap<>();
         for (Map.Entry<Integer, ClientStream> e : m.entrySet()) {
             if (e.getValue().finalReceived) finals.put(e.getKey(), e.getValue());
         }
         if (finals.size() >= Math.min(expectedClients, m.size())) return finals;
 
-        // 退而求其次：把所有收到的都聚合（numSamples 不足会被当作 1 权重）
         System.err.println("[Controller_v3] WARNING: timeout; only " + finals.size() + " clients have final packets. Falling back to partial aggregation.");
         return new HashMap<>(m);
     }
 
-    // =============== 从“每客户端多包”做 FedAvg 聚合 ===============
-    private static float[] aggregateFedAvgFromStreams(Map<Integer, ClientStream> streams) {
-        int dim = -1;
-        List<float[]> clientVecs = new ArrayList<>(streams.size());
-        List<Long>    weights    = new ArrayList<>(streams.size());
+    // =============== 收集每客户端向量及语义 ===============
+    private static class ClientVec {
+        final float[] v;
+        final long    numSamples;
+        final boolean isDelta; // true=S8(增量); false=Q8/FP32(权重)
+        ClientVec(float[] v, long n, boolean d) { this.v=v; this.numSamples=n; this.isDelta=d; }
+    }
 
+    private static List<ClientVec> collectClientVectors(Map<Integer, ClientStream> streams) {
+        List<ClientVec> out = new ArrayList<>(streams.size());
         for (Map.Entry<Integer, ClientStream> e : streams.entrySet()) {
-            int clientId = e.getKey();
             ClientStream cs = e.getValue();
             if (cs.packets.isEmpty()) continue;
 
             float[] sum = null;
+            boolean anyDelta = false, anyWeights = false;
+
             for (byte[] pkt : cs.packets) {
                 float[] v;
-                if (isS8Sparse(pkt)) {
-                    v = decodeS8SparseToFloat(pkt);
-                } else if (isQ8Dense(pkt)) {
-                    v = decodeQ8ToFloat(pkt);
-                } else {
-                    v = bytesToFloat32LE(pkt);
-                }
-                if (sum == null) {
-                    sum = v;
-                    if (dim < 0) dim = v.length;
-                    if (v.length != dim) throw new IllegalStateException("inconsistent dim among packets (client=" + clientId + ")");
-                } else {
-                    if (v.length != dim) throw new IllegalStateException("inconsistent dim among packets (client=" + clientId + ")");
-                    for (int i=0;i<dim;i++) sum[i] += v[i];
+                if (isS8Sparse(pkt)) { v = decodeS8SparseToFloat(pkt); anyDelta = true; }
+                else if (isQ8Dense(pkt)) { v = decodeQ8ToFloat(pkt); anyWeights = true; }
+                else { v = bytesToFloat32LE(pkt); anyWeights = true; }
+
+                if (sum == null) sum = v.clone();
+                else {
+                    if (sum.length != v.length) throw new IllegalStateException("inconsistent dim among packets");
+                    for (int i=0;i<sum.length;i++) sum[i] += v[i]; // 将多包相加
                 }
             }
-            if (sum != null) {
-                clientVecs.add(sum);
-                long w = (cs.numSamples > 0 ? cs.numSamples : 1L);
-                weights.add(w);
-            }
-        }
-
-        if (clientVecs.isEmpty()) return new float[0];
-        float[] out = new float[dim];
-        Arrays.fill(out, 0f);
-
-        double totalW = 0.0;
-        for (Long w : weights) totalW += Math.max(0L, w);
-        if (totalW <= 0) totalW = clientVecs.size();
-
-        for (int i = 0; i < clientVecs.size(); i++) {
-            float[] v = clientVecs.get(i);
-            float coef = (float)( (weights.get(i) > 0 ? weights.get(i) : 1) / totalW );
-            for (int j = 0; j < dim; j++) out[j] += v[j] * coef;
+            boolean isDelta = anyDelta && !anyWeights; // 只要出现非S8就按“权重”
+            long n = cs.numSamples > 0 ? cs.numSamples : 1L;
+            out.add(new ClientVec(sum, n, isDelta));
         }
         return out;
     }
 
-    // =============== S8 稀疏解码 ===============
+    // =============== 应用到全局并发布 ===============
+    private void applyAndPublish(List<ClientVec> cvs, int roundId) {
+        if (cvs.isEmpty()) return;
+
+        boolean anyWeights = cvs.stream().anyMatch(cv -> !cv.isDelta);
+        boolean allDelta   = cvs.stream().allMatch(cv -> cv.isDelta);
+
+        float[] result;
+
+        if (anyWeights && !allDelta) {
+            // 作为“完整权重”做 FedAvg
+            int dim = cvs.get(0).v.length;
+            result = new float[dim];
+            double tot = 0.0; for (ClientVec cv: cvs) tot += Math.max(1L, cv.numSamples);
+            for (ClientVec cv: cvs) {
+                if (cv.v.length != dim) throw new IllegalStateException("dim mismatch");
+                float coef = (float)(Math.max(1L, cv.numSamples) / tot);
+                for (int i=0;i<dim;i++) result[i] += cv.v[i] * coef;
+            }
+            currentModel = result;
+            modelDim     = dim;
+        } else if (allDelta) {
+            if (currentModel == null) {
+                System.err.println("[Controller_v3] WARNING: currentModel is null; bootstrap a weights round first!");
+                int dim = cvs.get(0).v.length;
+                currentModel = new float[dim]; // 从零起步（可行但效果差）
+                modelDim = dim;
+            }
+            if (modelDim != cvs.get(0).v.length) throw new IllegalStateException("dim mismatch to currentModel");
+
+            // FedAvg 得到 Δ，再叠加
+            float[] delta = new float[modelDim];
+            double tot = 0.0; for (ClientVec cv: cvs) tot += Math.max(1L, cv.numSamples);
+            for (ClientVec cv: cvs) {
+                float coef = (float)(Math.max(1L, cv.numSamples) / tot);
+                for (int i=0;i<modelDim;i++) delta[i] += cv.v[i] * coef;
+            }
+            for (int i=0;i<modelDim;i++) currentModel[i] += delta[i];
+            result = currentModel;
+        } else {
+            return; // 不会到这
+        }
+
+        byte[] modelBytes = float32ToBytesLE(result);
+        ModelBlob blob = new ModelBlob();
+        blob.round_id = roundId;
+        blob.data = new ai_train.Bytes();
+        blob.data.loan_contiguous(modelBytes, modelBytes.length, modelBytes.length);
+        ReturnCode_t rc = modelBlobWriter.write(blob, InstanceHandle_t.HANDLE_NIL_NATIVE);
+        if (rc != ReturnCode_t.RETCODE_OK) {
+            System.err.println("[Controller_v3] write ModelBlob failed: " + rc);
+        } else {
+            System.out.println("[Controller_v3] published FP32 model, bytes=" + modelBytes.length);
+        }
+    }
+
+    // =============== 识别/解码：S8 稀疏 ===============
     private static boolean isS8Sparse(byte[] data) {
         return data != null && data.length >= 4 && data[0]=='S' && data[1]=='8' && data[2]==0 && (data[3] & 0xFF) == 1;
     }
@@ -349,7 +382,7 @@ public class Controller_v3 {
         return out;
     }
 
-    // =============== Q8 稠密解码 ===============
+    // =============== 识别/解码：Q8 稠密 ===============
     private static boolean isQ8Dense(byte[] data) {
         return data != null && data.length >= 4 && data[0]=='Q' && data[1]=='8' && data[2]==0 && (data[3] & 0xFF) == 1;
     }
@@ -428,12 +461,10 @@ public class Controller_v3 {
             pb.redirectErrorStream(true);
             Process p = pb.start();
 
-            StringBuilder sb = new StringBuilder();
             try (BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = br.readLine()) != null) {
                     System.out.println("[PY] " + line);
-                    sb.append(line).append('\n');
                 }
             }
             int exit = p.waitFor();

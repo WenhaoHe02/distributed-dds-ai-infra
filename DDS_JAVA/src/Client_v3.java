@@ -1,6 +1,6 @@
 // Client_v3.java
 // 支持 comm_every：>0 每步/N步多包；=0 回合末单包
-// 依赖 ai_train.*, com.zrdds.* （与现有 v2 相同）
+// 与 Controller_v3 配套。S8 由 Python 脚本编码为“模型增量 Δ”。
 
 import ai_train.*;  // TrainCmd, ClientUpdate, ModelBlob, Bytes, ...
 import ai_train.Bytes;
@@ -295,7 +295,7 @@ public class Client_v3 {
             cmd.add("--compress"); cmd.add("fp32");
         }
 
-        // DGC 参数
+        // DGC 参数（与 Δ 方案无强耦合，仅保留接口占位）
         cmd.add("--dgc_momentum");      cmd.add("0.9");
         cmd.add("--dgc_clip_norm");     cmd.add("0.0");
         cmd.add("--dgc_mask_momentum"); cmd.add("1");

@@ -308,7 +308,7 @@ public class Controller_v2 {
 
 
 
-    // 自动识别 + 解码（S8/Q8/FP32）
+     //自动识别 + 解码（S8/Q8/FP32）
     private static float[] aggregateFedAvgAuto(List<ClientUpdate> updates) {
         if (updates.isEmpty()) return new float[0];
 
@@ -317,8 +317,11 @@ public class Controller_v2 {
         int dim = -1;
 
         for (ClientUpdate cu : updates) {
+//            byte[] payload = new byte[cu.data.length()];
+//            for (int i = 0; i < payload.length; i++) payload[i] = cu.data.get_at(i);
+
             byte[] payload = new byte[cu.data.length()];
-            for (int i = 0; i < payload.length; i++) payload[i] = cu.data.get_at(i);
+            cu.data.to_array(payload,cu.data.length());
 
             float[] v;
             if (isS8Sparse(payload)) {
@@ -349,6 +352,7 @@ public class Controller_v2 {
         }
         return out;
     }
+
 
     // ====== 识别/解码：S8 稀疏 ======
     private static boolean isS8Sparse(byte[] data) {

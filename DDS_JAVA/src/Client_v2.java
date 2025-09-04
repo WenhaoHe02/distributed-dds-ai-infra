@@ -244,6 +244,7 @@ public class Client_v2 {
         cmd.add("--batch_size");   cmd.add(String.valueOf(batchSize));
         cmd.add("--data_dir");     cmd.add(dataDir);
         cmd.add("--round");        cmd.add(String.valueOf(round));
+
         // 压缩/稀疏控制参数
         if ("int8_sparse".equalsIgnoreCase(COMPRESS)) {
             cmd.add("--compress"); cmd.add("int8_sparse");

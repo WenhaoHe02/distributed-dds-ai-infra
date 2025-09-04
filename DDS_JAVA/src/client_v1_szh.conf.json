@@ -1,0 +1,11 @@
+{
+  "domain_id": 200,
+  "num_clients": 2,
+  "client_id": 1,
+  "python_exe": "C:/Program Files/Python311/python.exe",
+  "trainer_py": "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/distributed_training/train/dist_train_v1.py",
+  "data_dir": "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/data",
+  "batch_size": 64,
+  "compress": "int8",
+  "trainer_script": "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/distributed_training/train/dist_train_v1.py"
+}

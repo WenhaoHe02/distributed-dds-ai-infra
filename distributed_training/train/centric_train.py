@@ -38,7 +38,7 @@ def main():
     ap.add_argument("--batch_size", type=int, default=64)
     ap.add_argument("--lr", type=float, default=0.01)
     ap.add_argument("--momentum", type=float, default=0.9)
-    ap.add_argument("--subset", type=int, default=10000,
+    ap.add_argument("--subset", type=int, default=60000,
                     help="训练集中最多使用多少样本（默认30000用于匹配联邦版本总量）")
     args = ap.parse_args()
 

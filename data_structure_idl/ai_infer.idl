@@ -7,7 +7,9 @@
 module data_structure {
 
   // ---------- Common ----------
-  typedef sequence<octet> Bytes;
+  struct Bytes {
+    sequence<octet> value;
+  };
 
   // ---------- Client → Patcher ----------
   struct SingleTask {
@@ -17,11 +19,10 @@ module data_structure {
     string client_id;     // 回传路由
     Bytes  payload;       // 输入字节
   };
-  typedef sequence<SingleTask> SingleTaskSeq;
 
   struct InferenceRequest {
     string request_id;
-    SingleTaskSeq tasks;  // 客户端一次提交的任务集合
+    sequence<SingleTask> tasks;  // 客户端一次提交的任务集合
   };
 
   // ---------- Patcher 批内载体（轻量） ----------
@@ -31,7 +32,6 @@ module data_structure {
     string client_id;
     Bytes  payload;
   };
-  typedef sequence<Task> TaskSeq;
 
   // ---------- Announce / Claim / Grant ----------
   // Patcher 公告：有批可领（仅元信息，不含 payload）
@@ -60,7 +60,7 @@ module data_structure {
     string batch_id;
     string model_id;
     string assigned_worker_id; // 仅该 worker 消费
-    TaskSeq tasks;
+    sequence<Task> tasks;
   };
 
   // ---------- Worker → Spliter ----------
@@ -71,13 +71,12 @@ module data_structure {
     string status;         // "OK" | "ERROR_*"
     Bytes  output_blob;    // 结果字节
   };
-  typedef sequence<WorkerTaskResult> WorkerTaskResultSeq;
 
   struct WorkerResult {
     string batch_id;
     string model_id;
     string worker_id;      // 实际处理该批的 worker
-    WorkerTaskResultSeq results;
+    sequence<WorkerTaskResult> results;
   };
 
   // ---------- Spliter → Client（纯流式增量；服务端去重） ----------
@@ -86,11 +85,10 @@ module data_structure {
     string status;
     Bytes  output_blob;
   };
-  typedef sequence<ResultItem> ResultItemSeq;
 
   struct ResultUpdate {
     string request_id;
     string client_id;      // 路由到目标客户端
-    ResultItemSeq items;   // 本次新增/到达的结果条目
+    sequence<ResultItem> items;   // 本次新增/到达的结果条目
   };
 };

@@ -1,0 +1,17 @@
+{
+  "domain_id": 0,
+  "client_id": 0,
+  "num_clients": 1,
+
+  "batch_size": 64,
+  "python_exe": "C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe",
+  "trainer_script": "E:/distributed-dds-ai-serving-system/distributed_training/train/dist_train_v3.py",
+  "data_dir": "E:/distributed-dds-ai-serving-system/data",
+
+  "compress": "int8_sparse",
+  "int8_chunk": 8192,
+  "sparse_k": 0,
+  "sparse_ratio": 0.01,
+
+  "comm_every": 1
+}

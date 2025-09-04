@@ -7,11 +7,13 @@
   "python_exe": "C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe",
   "trainer_script": "E:/distributed-dds-ai-serving-system/distributed_training/train/dist_train_v3.py",
   "data_dir": "E:/distributed-dds-ai-serving-system/data",
+  "wait_model_ms": 8000,
+  "init_model_path": "",
+  "comm_every": 1,
 
-  "compress": "fp32",
-  "int8_chunk": 8192,
-  "sparse_k": 0,
-  "sparse_ratio": 0.01,
-
-  "comm_every": 0
+  "topk_ratio": 0.01,
+  "clip_norm": 5.0,
+  "momentum": 0.9,
+  "use_nesterov": false,
+  "warmup_rounds": 1
 }

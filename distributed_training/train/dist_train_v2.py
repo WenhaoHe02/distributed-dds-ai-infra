@@ -353,8 +353,8 @@ def dgc_build_and_pack(model: nn.Module,
     vals = v[idx].astype(np.float32)
 
     # pack as S8 sparse
-    #stats = s8_sparse_pack(vals, dim, idx, out_path)
-    stats = s8_sparse_pack_parallel(vals, dim, idx, out_path)
+    stats = s8_sparse_pack(vals, dim, idx, out_path)
+    #stats = s8_sparse_pack_parallel(vals, dim, idx, out_path)
 
     # reconstruct sent part to compute new residual
     maxabs = float(np.max(np.abs(vals))) if vals.size > 0 else 0.0
@@ -488,7 +488,7 @@ def main():
     ap.add_argument("--dgc_mask_momentum",  type=int,   default=1)  # 1=true
     ap.add_argument("--dgc_warmup_rounds",  type=int,   default=0)
     ap.add_argument("--round",              type=int,   default=0)  # pass from Java for warmup schedule
-    ap.add_argument("--state_dir",          type=str,   default="E:\distributed-dds-ai-serving-system\distributed_training\train\log") # residual/momentum persistence
+    ap.add_argument("--state_dir",          type=str,   default="D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/distributed_training/train/log") # residual/momentum persistence
 
     ap.add_argument("--init_model", type=str, default=None,
                     help="Path to initial model weights (fp32/Q8/S8)")

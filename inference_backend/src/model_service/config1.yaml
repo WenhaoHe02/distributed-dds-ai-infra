@@ -1,0 +1,12 @@
+tasks:
+  # 任务1: 车辆检测 (YOLO)
+  vehicle_detection:
+    model_id: "yolo"
+    model_parameter: "models/parameter/yolov11n.pt"
+    input: "D:/Top-View Vehicle Detection Image Dataset/Vehicle_Detection_Image_Dataset/valid/images"
+    output: "results/vehicle_detection"
+    params:
+      conf: 0.5  # 置信度阈值
+      iou: 0.45  # IOU阈值
+
+ 

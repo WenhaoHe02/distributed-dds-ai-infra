@@ -31,6 +31,8 @@ public class TaskClassifier {
 
     /* -------------------- Config -------------------- */
     public static class Config {
+
+        public int priorty=0;
         /** Default maximum batch size per model if no override. */
         public int defaultMaxBatch = 16;
         /** Default maximum wait per model (ms) if no override. */
@@ -121,6 +123,9 @@ public class TaskClassifier {
     /** Offer a full request (fan-out items into per-model windows). */
     public void offer(InferenceRequest req){
         if (req == null || req.tasks == null || req.tasks.length() == 0) return;
+
+        cfg.priorty = extractPriority(req.request_id);
+
         for (int i = 0; i < req.tasks.length(); i++) {
             SingleTask st = req.tasks.get_at(i);
             if (st == null) continue;
@@ -148,6 +153,8 @@ public class TaskClassifier {
         servedRecently.addLast(sb);
         cleanupServed();
     }
+
+
 
     /* -------------------- Internal -------------------- */
     private void tick(){
@@ -201,5 +208,16 @@ public class TaskClassifier {
 
     private String newBatchId(){
         return "b-" + System.currentTimeMillis() + "-" + batchSeq.incrementAndGet();
+    }
+
+    public int extractPriority(String request_id){
+        if (request_id == null) return 0;
+        int idx = request_id.indexOf("priority:");
+        if (idx < 0) return 0;
+        try {
+            return Integer.parseInt(request_id.substring(idx + 9).trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 }

@@ -35,6 +35,9 @@ class MainActivity : AppCompatActivity() {
     // 存储选择的检测任务图片URI列表
     private var detectUris: MutableList<Uri> = mutableListOf()
     
+    // 全局变量保存用户选择的优先级，默认为1
+    private var selectedPriority: Int = 1
+    
     // DDS服务
     private lateinit var ddsSendService: DDSSendService
     private lateinit var dataSend: DataSend
@@ -110,6 +113,9 @@ class MainActivity : AppCompatActivity() {
             pickDetectImagesLauncher.launch(arrayOf("image/*"))
         }
 
+        // 设置优先级选择监听器
+        setupPriorityRadioGroup()
+
         // 上传所有图片按钮点击事件
         binding.btnUploadAll.setOnClickListener {
             Log.d(TAG, "点击上传所有图片按钮")
@@ -119,6 +125,20 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             uploadAllImages()
+        }
+    }
+
+    /**
+     * 设置优先级单选按钮组
+     */
+    private fun setupPriorityRadioGroup() {
+        binding.rgPriority.setOnCheckedChangeListener { _, checkedId ->
+            when (checkedId) {
+                binding.rbPriority1.id -> selectedPriority = 0
+                binding.rbPriority2.id -> selectedPriority = 1
+                binding.rbPriority3.id -> selectedPriority = 2
+            }
+            Log.d(TAG, "选择优先级: $selectedPriority")
         }
     }
 
@@ -257,7 +277,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 Log.d(TAG, "在后台线程中发送图片")
                 // 构造发送的请求 InferenceRequest
-                val request = dataSend.createInferenceRequest(ocrUris, detectUris)
+                val request = dataSend.createInferenceRequest(ocrUris, detectUris, selectedPriority)
 
                 // 在ResultDataManager中添加请求ID和客户端ID的映射
                 ResultDataManager.getInstance().addSentRequest(request.request_id, clientId)

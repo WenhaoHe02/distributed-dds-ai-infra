@@ -49,7 +49,7 @@ public class Worker {
         public int queueCapacity = 64;
 
         public boolean enableHeartbeat = true;        // 是否启用心跳
-        public int heartbeatIntervalSeconds = 5;
+        public int heartbeatIntervalSeconds = 30;
 
         public Config(String workerId, String modelId) {
             this.workerId = workerId;

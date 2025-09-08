@@ -109,7 +109,7 @@ public class StateMonitor {
         if (monitorExecutor != null) {
             monitorExecutor.shutdown();
             try {
-                if (!monitorExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                if (!monitorExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
                     monitorExecutor.shutdownNow();
                 }
             } catch (InterruptedException e) {

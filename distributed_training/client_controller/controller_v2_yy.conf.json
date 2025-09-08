@@ -1,0 +1,10 @@
+{
+  "domain_id": 200,
+  "expected_clients": 1,
+  "timeout_ms": 6000000,
+  "rounds": 5,
+  "python_exe": "C:\\Users\\twilight\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+  "eval_script": "D:/Myyyyyyyyy/Year3_Sem1_2025_Summer/v2/distributed-dds-ai-serving-system/distributed_training/train/evaluate.py",
+  "data_dir": "D:/Myyyyyyyyy/Year3_Sem1_2025_Summer/v2/distributed-dds-ai-serving-system/data",
+  "batch_size": 64
+}

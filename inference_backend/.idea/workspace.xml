@@ -4,11 +4,20 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="59eb5836-2ac1-464a-b7e0-a355d86499ba" name="Changes" comment="TaskClassifier的priorty解析实现">
-      <change afterPath="$PROJECT_DIR$/src/state_monitor/stateMonitor.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/worker/model_runner.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/worker/woker.py" afterDir="false" />
+    <list default="true" id="59eb5836-2ac1-464a-b7e0-a355d86499ba" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Client_v3.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Client_v3.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Controller_v3.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Controller_v3.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/client_v3_hwh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/client_v3_hwh.conf.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v3_hwh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v3_hwh.conf.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/.idea/distributed_training.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/.idea/distributed_training.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/data_structure/py_ai_infer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/data_structure/py_ai_infer.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/train/dist_train_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/train/dist_train_v3.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/model_service/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/src/model_service/config.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/spliter/Spliter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/spliter/Spliter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/state_monitor/StateMonitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/state_monitor/StateMonitor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/worker/Worker.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/Worker.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -76,10 +85,29 @@
       <recent name="E:\distributed-dds-ai-serving-system\distributed_backernd\src" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.test">
-    <configuration name="MonitoringDemo" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="MonitoringDemo" />
+  <component name="RunManager" selected="Application.StateMonitor">
+    <configuration name="Patcher" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="patcher.Patcher" />
       <module name="inference_backend" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="patcher.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Spliter" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="spliter.Spliter" />
+      <module name="inference_backend" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="spliter.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -110,40 +138,18 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="WorkerTestRunner" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="WorkerTestRunner" />
-      <module name="inference_backend" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="test" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="patcher.test" />
-      <module name="inference_backend" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="patcher.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
     <list>
-      <item itemvalue="Application.test" />
-      <item itemvalue="Application.MonitoringDemo" />
+      <item itemvalue="Application.Patcher" />
+      <item itemvalue="Application.Spliter" />
       <item itemvalue="Application.StateMonitor" />
-      <item itemvalue="Application.WorkerTestRunner" />
       <item itemvalue="Application.Worker" />
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Application.test" />
-        <item itemvalue="Application.Worker" />
         <item itemvalue="Application.StateMonitor" />
-        <item itemvalue="Application.WorkerTestRunner" />
-        <item itemvalue="Application.MonitoringDemo" />
+        <item itemvalue="Application.Worker" />
+        <item itemvalue="Application.Patcher" />
+        <item itemvalue="Application.Spliter" />
       </list>
     </recent_temporary>
   </component>
@@ -181,6 +187,7 @@
       <workItem from="1756781004750" duration="623000" />
       <workItem from="1756798615908" duration="2508000" />
       <workItem from="1756810975991" duration="14000" />
+      <workItem from="1757298951281" duration="1477000" />
     </task>
     <task id="LOCAL-00001" summary="Worker的State监视器实现">
       <option name="closed" value="true" />

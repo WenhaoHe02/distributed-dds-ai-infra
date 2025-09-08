@@ -1,0 +1,13 @@
+# VS Code
+/.vscode
+
+# Python executable and logs
+python.exe.ddslog
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyd
+*.pyc
+*.pyo
+
+/.idea

@@ -140,7 +140,7 @@ public class Patcher {
         synchronized (acc) {
             acc.add(c);
             if (acc.selectTask == null) {
-                long wait = Math.max(0L, cfg.claimSelectWaitMs);
+                long wait = waitWindowMsByPriority();
                 acc.selectTask = scheduler.schedule(() -> selectAndGrant(c.batch_id), wait, TimeUnit.MILLISECONDS);
             }
         }
@@ -159,37 +159,73 @@ public class Patcher {
         if (acc == null) return;
 
         BatchState st = open.get(batchId);
-        if (st == null) return; // 可能已经过期或已授予
+        if (st == null) return; // 可能已过期或已授予
 
-        List<Claim> list;
+        final List<Claim> list;
         synchronized (acc) {
-            list = acc.snapshot();
+            list = acc.snapshot(); // 到达顺序 = list 顺序
             acc.clear();
         }
         if (list.isEmpty()) return;
 
-        // 选择 queue_length 最小者；若相等，按到达顺序（list 顺序）择先
-        Claim best = list.get(0);
-        for (int i = 1; i < list.size(); i++) {
-            Claim x = list.get(i);
-            if (x.queue_length < best.queue_length) best = x;
+        final int priority = cfg.priority;
+
+        Claim best;
+        if (priority == 1) {
+            // p=1：不打批，直接第一条
+            best = pickByMinQueue(list);
+        } else if (priority == 0) {
+            // p=0：GPU优先 → 队列最小 → 先到先得
+            int bestIdx = 0;
+            int bestDevRank = devRankGpuFirst(list.get(0).worker_id);
+            int bestQ = safeQ(list.get(0).queue_length);
+            for (int i = 1; i < list.size(); i++) {
+                Claim x = list.get(i);
+                int r = devRankGpuFirst(x.worker_id);
+                int q = safeQ(x.queue_length);
+                if (r < bestDevRank || (r == bestDevRank && q < bestQ)) {
+                    bestIdx = i; bestDevRank = r; bestQ = q;
+                }
+            }
+            best = list.get(bestIdx);
+        } else {
+            // p=2：不区分设备 → 队列最小 → 先到先得
+            int bestIdx = 0;
+            int bestQ = safeQ(list.get(0).queue_length);
+            for (int i = 1; i < list.size(); i++) {
+                int q = safeQ(list.get(i).queue_length);
+                if (q < bestQ) { bestIdx = i; bestQ = q; }
+            }
+            best = list.get(bestIdx);
         }
 
-        // 原子授予，防止并发双赢
+        // 原子授予，防并发双赢
         if (st.winner.compareAndSet(null, best.worker_id)) {
             Grant g = new Grant();
             g.batch_id = batchId;
             g.winner_worker_id = best.worker_id;
 
-            // 发布 Grant
             try { grantEmitter.emit(g); } catch (Exception e) { e.printStackTrace(); }
 
-            // 触发发放 TaskList（TaskClassifier 会把 assigned_worker_id = winner）
+            // 通知 TaskClassifier 发放 TaskList（assigned_worker_id = winner）
             classifier.onGrant(g);
 
             // 清理 open 状态
             open.remove(batchId);
         }
+    }
+
+    /** GPU优先的设备 rank：gpu(0) < cpu(1) < unknown(2) */
+    private static int devRankGpuFirst(String workerId){
+        String d = parseDevice(workerId);
+        if ("gpu".equals(d)) return 0;
+        if ("cpu".equals(d)) return 1;
+        return 2;
+    }
+
+    /** 队列长度的安全读取：空值视为极大 */
+    private static int safeQ(Integer q){
+        return q == null ? Integer.MAX_VALUE : q;
     }
 
     /** 定时清理过期的 open 批，避免内存滞留。 */
@@ -204,6 +240,32 @@ public class Patcher {
             }
         }
     }
+
+    private long waitWindowMsByPriority(){
+        int p = cfg.priority;
+        if (p == 0) return Math.max(0L, cfg.waitFastMs);
+        if (p == 1) return Math.max(0L, cfg.waitNoneMs);
+        return Math.max(0L, cfg.defaultMaxWaitMs); // p==2 或其它
+    }
+
+    private static String parseDevice(String workerId){
+        if (workerId == null) return "unknown";
+        String id = workerId.toLowerCase(Locale.ROOT);
+        if (id.endsWith("-gpu")) return "gpu";
+        if (id.endsWith("-cpu")) return "cpu";
+        return "unknown";
+    }
+
+    private static Claim pickByMinQueue(List<Claim> claims){
+        int bestIdx = 0;
+        int bestQ = safeQ(claims.get(0).queue_length);
+        for (int i = 1; i < claims.size(); i++) {
+            int q = safeQ(claims.get(i).queue_length);
+            if (q < bestQ) { bestIdx = i; bestQ = q; }
+        }
+        return claims.get(bestIdx);
+    }
+
 
     public static void main(String[] args) throws Exception {
         DomainParticipant dp = null;

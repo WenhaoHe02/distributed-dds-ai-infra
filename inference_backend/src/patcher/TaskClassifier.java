@@ -40,7 +40,7 @@ public class TaskClassifier {
 
         /** 等待基线（可被 perModelMaxWaitMs 覆盖） */
         public long defaultMaxWaitMs = 8;   // 用于 priority=2
-        public long waitFastMs = 2;         // 用于 priority=0（极短等）
+        public long waitFastMs = 4;         // 用于 priority=0（极短等）
         public long waitNoneMs = 0;         // 用于 priority=1（不等）
 
         /** Per-model overrides. Key = model_id (String). */

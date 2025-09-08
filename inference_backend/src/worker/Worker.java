@@ -186,7 +186,8 @@ public class Worker {
     public int currentDepth(){ return inflight.get() + batchQueue.size(); }
 
     public static void main(String[] args) throws Exception {
-        String workerId = sysOrEnv("worker.id", "WORKER_ID", "worker-1");
+        String workerId = sysOrEnv("worker.id", "WORKER_ID",
+                "worker-" + Integer.toUnsignedString(new Random().nextInt(), 36) + "-cpu");
         String modelId  = sysOrEnv("worker.model", "WORKER_MODEL", "model_0");
 
         DomainParticipant dp = null;

@@ -31,19 +31,29 @@ public class TaskClassifier {
 
     /* -------------------- Config -------------------- */
     public static class Config {
-        /** Default maximum batch size per model if no override. */
-        public int defaultMaxBatch = 16;
-        /** Default maximum wait per model (ms) if no override. */
-        public long defaultMaxWaitMs = 8;
+        /** Priority: 0=GPU小批极短等, 1=不打批即切, 2=CPU略等合批（默认） */
+        public int priority = 2;
+
+        /** 批大小基线（可被 perModelMaxBatch 覆盖） */
+        public int defaultMaxCpuBatch = 8;
+        public int defaultMaxGpuBatch = 4;
+
+        /** 等待基线（可被 perModelMaxWaitMs 覆盖） */
+        public long defaultMaxWaitMs = 8;   // 用于 priority=2
+        public long waitFastMs = 2;         // 用于 priority=0（极短等）
+        public long waitNoneMs = 0;         // 用于 priority=1（不等）
+
         /** Per-model overrides. Key = model_id (String). */
         public Map<String, Integer> perModelMaxBatch = new ConcurrentHashMap<>();
         public Map<String, Long> perModelMaxWaitMs = new ConcurrentHashMap<>();
+
         /** Per-window capacity to guard memory. Oldest items dropped if exceeded. */
         public int perWindowCapacity = 4096;
         /** Ticker period for closing time windows. */
         public long tickPeriodMs = 1L;
         /** Keep recently served batches this long for safety (ms). */
         public long servedRetentionMs = 10_000L;
+
     }
 
     /* -------------------- Internal types -------------------- */
@@ -134,7 +144,8 @@ public class TaskClassifier {
         Window w = windows.computeIfAbsent(st.model_id, mid -> new Window(mid, cfg.perWindowCapacity));
         if (w.q.size() >= cfg.perWindowCapacity) { w.q.pollFirst(); } // simple backpressure: drop oldest
         w.add(new PendingItem(st.request_id, st.task_id, st.client_id, st.payload));
-        int maxBatch = cfg.perModelMaxBatch.getOrDefault(st.model_id, cfg.defaultMaxBatch);
+
+        int maxBatch = effectiveMaxBatch(w.modelId);
         if (w.size() >= maxBatch) cutAndAnnounce(w, maxBatch);
     }
 
@@ -143,7 +154,14 @@ public class TaskClassifier {
         if (grant == null) return;
         StoredBatch sb = pendingBatches.remove(grant.batch_id);
         if (sb == null) return; // already served or unknown
+
         sb.assignedWorkerId = grant.winner_worker_id;
+
+        // 解析 winner 是 CPU 还是 GPU，仅用于可观测性（不改变协议/行为）
+        String dev = parseDevice(sb.assignedWorkerId);
+        // 简单日志：你也可以替换成实际 logger
+        // System.out.println("[TaskClassifier] Grant batch=" + sb.batchId + " -> " + sb.assignedWorkerId + " (" + dev + ")");
+
         emitTaskList(sb);
         servedRecently.addLast(sb);
         cleanupServed();
@@ -151,11 +169,10 @@ public class TaskClassifier {
 
     /* -------------------- Internal -------------------- */
     private void tick(){
-        long now = System.currentTimeMillis();
         for (Window w : windows.values()){
             if (w.isEmpty()) continue;
-            int maxBatch = cfg.perModelMaxBatch.getOrDefault(w.modelId, cfg.defaultMaxBatch);
-            long maxWait = cfg.perModelMaxWaitMs.getOrDefault(w.modelId, cfg.defaultMaxWaitMs);
+            int  maxBatch = effectiveMaxBatch(w.modelId);
+            long maxWait  = effectiveMaxWaitMs(w.modelId);
             if (w.size() >= maxBatch || w.ageMs() >= maxWait){
                 cutAndAnnounce(w, maxBatch);
             }
@@ -163,9 +180,42 @@ public class TaskClassifier {
         cleanupServed();
     }
 
+    /** 根据优先级/模型覆盖，计算有效批大小 */
+    private int effectiveMaxBatch(String modelId){
+        Integer override = cfg.perModelMaxBatch.get(modelId);
+        if (override != null && override > 0) return override;
+
+        switch (cfg.priority) {
+            case 0: // GPU 快速小批
+                return Math.max(1, cfg.defaultMaxGpuBatch);
+            case 1: // 不打批
+                return 1;
+            case 2: // CPU 略等合批（默认）
+            default:
+                return Math.max(1, cfg.defaultMaxCpuBatch);
+        }
+    }
+
+    /** 根据优先级/模型覆盖，计算有效等待时长 */
+    private long effectiveMaxWaitMs(String modelId){
+        Long override = cfg.perModelMaxWaitMs.get(modelId);
+        if (override != null && override >= 0) return override;
+
+        switch (cfg.priority) {
+            case 0: // GPU 快速小批，极短等
+                return Math.max(0L, cfg.waitFastMs);
+            case 1: // 不打批，直接切
+                return Math.max(0L, cfg.waitNoneMs);
+            case 2: // CPU 略等合批（默认）
+            default:
+                return Math.max(0L, cfg.defaultMaxWaitMs);
+        }
+    }
+
     private void cutAndAnnounce(Window w, int maxBatch){
         List<PendingItem> items = w.drainUpTo(maxBatch);
         if (items.isEmpty()) return;
+
         String batchId = newBatchId();
         TaskSeq seq = new TaskSeq();
         seq.ensure_length(items.size(), items.size());
@@ -177,7 +227,9 @@ public class TaskClassifier {
         ob.batch_id = batchId;
         ob.model_id = w.modelId;
         ob.size = items.size();
-        ob.create_ts_ms = (int)sb.createTs;
+        // 注意：IDL若是int，这里仍按int写入；如需long请改IDL
+        ob.create_ts_ms = (int) sb.createTs;
+
         try { openBatchEmitter.emit(ob); } catch (Exception e){ e.printStackTrace(); }
     }
 
@@ -201,5 +253,25 @@ public class TaskClassifier {
 
     private String newBatchId(){
         return "b-" + System.currentTimeMillis() + "-" + batchSeq.incrementAndGet();
+    }
+
+    /* -------------------- Helpers -------------------- */
+
+    /** 从系统属性或环境变量读取，均无则用默认值 */
+    private static String sysOrEnv(String sysKey, String envKey, String defVal) {
+        String v = System.getProperty(sysKey);
+        if (v != null && !v.isEmpty()) return v;
+        v = System.getenv(envKey);
+        if (v != null && !v.isEmpty()) return v;
+        return defVal;
+    }
+
+    /** 解析 workerId 后缀，返回 "gpu"/"cpu"/"unknown" */
+    private static String parseDevice(String workerId){
+        if (workerId == null) return "unknown";
+        String id = workerId.toLowerCase(Locale.ROOT);
+        if (id.endsWith("-gpu")) return "gpu";
+        if (id.endsWith("-cpu")) return "cpu";
+        return "unknown";
     }
 }

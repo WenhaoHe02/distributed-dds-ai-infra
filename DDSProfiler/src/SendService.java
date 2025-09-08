@@ -10,6 +10,8 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import data_structure.*;
 import data_structure.Bytes;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class SendService {
@@ -106,6 +108,9 @@ public class SendService {
         SingleTaskSeq tasks = new SingleTaskSeq();
         tasks.ensure_length(taskCount, taskCount);
 
+        // 存储任务信息用于日志记录
+        List<String> taskLogs = new ArrayList<>();
+
         // 为每个任务记录日志
         for (int i = 0; i < taskCount; i++) {
             SingleTask task = new SingleTask();
@@ -119,16 +124,32 @@ public class SendService {
 
             tasks.set_at(i, task);
 
-            // 记录发送时间到日志 (使用毫秒时间戳)
+            // 记录任务信息用于日志
             long sendTimeMs = System.currentTimeMillis();
-
-            String logEntry = String.format(
-                    "{\"request_id\":\"%s\",\"task_id\":\"%s\",\"model_id\":\"%s\",\"client_id\":\"%s\",\"send_time\":%d}",
-                    requestIdWithPriority, task.task_id, task.model_id, clientId, sendTimeMs);
-
-            logWriter.println(logEntry);
-            logWriter.flush();
+            String taskLog = String.format(
+                    "{\"task_id\":\"%s\",\"model_id\":\"%s\",\"send_time\":%d}",
+                    task.task_id, task.model_id, sendTimeMs);
+            taskLogs.add(taskLog);
         }
+
+        // 记录完整的请求信息到日志 (使用新的JSON格式)
+        StringBuilder logEntry = new StringBuilder();
+        logEntry.append("{");
+        logEntry.append("\"request_id\":\"").append(requestIdWithPriority).append("\",");
+        logEntry.append("\"task_sum\":").append(taskCount).append(",");
+        logEntry.append("\"tasks\":[");
+        
+        for (int i = 0; i < taskLogs.size(); i++) {
+            if (i > 0) logEntry.append(",");
+            logEntry.append(taskLogs.get(i));
+        }
+        
+        logEntry.append("],");
+        logEntry.append("\"client_id\":\"").append(clientId).append("\"");
+        logEntry.append("}");
+
+        logWriter.println(logEntry.toString());
+        logWriter.flush();
 
         request.tasks = tasks;
 

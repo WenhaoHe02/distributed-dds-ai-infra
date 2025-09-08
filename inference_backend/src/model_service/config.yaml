@@ -3,7 +3,6 @@ tasks:
   document_ocr:
     model_id: "ocr"
     model_parameter: "rapidocr"  # 或 paddleocr/easyocr
-    input: "D:/Project_RapidOcrOnnx-1.2.0/images"
     output: "results/ocr_texts" 
     params:
       lang: "ch"  # 语言

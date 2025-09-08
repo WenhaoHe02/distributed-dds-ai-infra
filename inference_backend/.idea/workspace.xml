@@ -4,21 +4,21 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-<<<<<<< HEAD
     <list default="true" id="59eb5836-2ac1-464a-b7e0-a355d86499ba" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/client_v2_hwh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/client_v2_hwh.conf.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../DDS_JAVA/src/client_v3_szh.conf.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v3_szh.conf.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Client_v3.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Client_v3.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Controller_v3.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Controller_v3.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/client_v2_szh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/client_v2_szh.conf.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v2_hwh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v2_hwh.conf.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/client_v3_hwh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/client_v3_hwh.conf.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v2_szh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v2_szh.conf.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v3_hwh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v3_hwh.conf.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../distributed_training/.idea/distributed_training.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/.idea/distributed_training.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../distributed_training/data_structure/ai_train.cpp" beforeDir="false" />
-=======
-    <list default="true" id="59eb5836-2ac1-464a-b7e0-a355d86499ba" name="Changes" comment="Worker的State监视器实现">
->>>>>>> b4c1d947f2fa08c2d0797fe8cc0f20a09842bd55
+      <change beforePath="$PROJECT_DIR$/../distributed_training/data_structure/py_ai_infer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/data_structure/py_ai_infer.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/train/dist_train_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/train/dist_train_v3.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/yolo_service/benchmark_infer_batch.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/yolo_service/benchmark_infer_batch.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/latency_per_image_vs_batch.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/latency_per_image_vs_batch.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/throughput_vs_batch.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/throughput_vs_batch.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/yolo_batch_bench.csv" beforeDir="false" afterPath="$PROJECT_DIR$/src/yolo_service/yolo_bench_out/yolo_batch_bench.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/patcher/TaskClassifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/patcher/TaskClassifier.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -56,11 +56,12 @@
     "Application.Worker.executor": "Run",
     "Application.WorkerTestRunner.executor": "Run",
     "Application.simpleInterfaceBytesTypePub.executor": "Run",
+    "Application.test.executor": "Run",
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "WebServerToolWindowFactoryState": "false",
-    "git-widget-placeholder": "main",
+    "git-widget-placeholder": "Merging main",
     "jdk.selected.JAVA_MODULE": "17",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/DDS_JAVA",
@@ -85,14 +86,7 @@
       <recent name="E:\distributed-dds-ai-serving-system\distributed_backernd\src" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.Worker">
-    <configuration name="MonitoringDemo (2)" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="MonitoringDemo" />
-      <module name="inference_backend" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
+  <component name="RunManager" selected="Application.test">
     <configuration name="MonitoringDemo" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="MonitoringDemo" />
       <module name="inference_backend" />
@@ -133,20 +127,33 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="test" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="patcher.test" />
+      <module name="inference_backend" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="patcher.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <list>
+      <item itemvalue="Application.test" />
       <item itemvalue="Application.MonitoringDemo" />
-      <item itemvalue="Application.MonitoringDemo (2)" />
       <item itemvalue="Application.StateMonitor" />
       <item itemvalue="Application.WorkerTestRunner" />
       <item itemvalue="Application.Worker" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.test" />
         <item itemvalue="Application.Worker" />
         <item itemvalue="Application.StateMonitor" />
         <item itemvalue="Application.WorkerTestRunner" />
         <item itemvalue="Application.MonitoringDemo" />
-        <item itemvalue="Application.MonitoringDemo (2)" />
       </list>
     </recent_temporary>
   </component>
@@ -201,7 +208,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Worker的State监视器实现" />
-    <option name="LAST_COMMIT_MESSAGE" value="Worker的State监视器实现" />
+    <option name="LAST_COMMIT_MESSAGE" value="" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

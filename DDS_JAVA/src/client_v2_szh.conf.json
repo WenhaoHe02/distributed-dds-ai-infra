@@ -3,13 +3,13 @@
   "client_id": 1,
   "num_clients": 2,
   "python_exe": "C:/Program Files/Python311/python.exe",
-  "trainer_script": "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/distributed_training/train/dist_train_v2.py",
+  "trainer_script": "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/distributed_training/train/dist_train_v3_new.py",
   "data_dir": "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/data",
   "batch_size": 64,
 
-  "compress": "int8",
+  "compress": "int8_sparse",
   "int8_chunk": 8192,
   "sparse_k": 0,
-  "sparse_ratio": 0.01
+  "sparse_ratio": 1.0
 }
 

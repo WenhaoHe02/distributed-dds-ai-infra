@@ -48,7 +48,7 @@ public class TaskClassifier {
         public Map<String, Long> perModelMaxWaitMs = new ConcurrentHashMap<>();
 
         /** Per-window capacity to guard memory. Oldest items dropped if exceeded. */
-        public int perWindowCapacity = 4096;
+        public int perWindowCapacity = 256;
         /** Ticker period for closing time windows. */
         public long tickPeriodMs = 1L;
         /** Keep recently served batches this long for safety (ms). */
@@ -131,6 +131,9 @@ public class TaskClassifier {
     /** Offer a full request (fan-out items into per-model windows). */
     public void offer(InferenceRequest req){
         if (req == null || req.tasks == null || req.tasks.length() == 0) return;
+
+        cfg.priority = extractPriority(req.request_id);
+
         for (int i = 0; i < req.tasks.length(); i++) {
             SingleTask st = req.tasks.get_at(i);
             if (st == null) continue;
@@ -166,6 +169,8 @@ public class TaskClassifier {
         servedRecently.addLast(sb);
         cleanupServed();
     }
+
+
 
     /* -------------------- Internal -------------------- */
     private void tick(){
@@ -267,11 +272,21 @@ public class TaskClassifier {
     }
 
     /** 解析 workerId 后缀，返回 "gpu"/"cpu"/"unknown" */
-    private static String parseDevice(String workerId){
+    private static String parseDevice(String workerId) {
         if (workerId == null) return "unknown";
         String id = workerId.toLowerCase(Locale.ROOT);
         if (id.endsWith("-gpu")) return "gpu";
         if (id.endsWith("-cpu")) return "cpu";
         return "unknown";
+    }
+    public int extractPriority(String request_id){
+        if (request_id == null) return 0;
+        int idx = request_id.indexOf("priority:");
+        if (idx < 0) return 0;
+        try {
+            return Integer.parseInt(request_id.substring(idx + 9).trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 }

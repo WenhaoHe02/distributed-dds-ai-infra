@@ -29,3 +29,10 @@ bin/
 .DS_Store
 
 /.idea
+
+*.pyd
+*.pyc
+__pycache__/
+.pytest_cache/
+
+python.exe.ddslog

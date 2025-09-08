@@ -93,8 +93,8 @@ class ZrddsAllgather:
         for seq, ck in enumerate(chunks):
             mb = dds.ModelBlob()
             body = pack_frame(group_id, round_id, name, part_id, rank, world, seq, len(chunks), ck)
-            b = dds.Bytes(); b.loan_contiguous(body, len(body), len(body))
-            mb.data = b
+            b = bytearray(); b.extend(body)
+            mb.data = body
             self.writer.write(mb)
 
         ev = self._done[key]

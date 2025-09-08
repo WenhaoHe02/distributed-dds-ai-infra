@@ -1,51 +1,35 @@
+# -*- coding: utf-8 -*-
 import torch
-
-__all__ = ['Memory', 'DGCSGDMemory']
-
 
 class Memory:
     @staticmethod
-    def initialize(*args, **kwargs):
-        pass
-
+    def initialize(*args, **kwargs): pass
     @staticmethod
-    def compensate(tensor, *args, **kwargs):
-        return tensor
-
+    def compensate(tensor, *args, **kwargs): return tensor
     @staticmethod
-    def update(*args, **kwargs):
-        pass
-
+    def update(*args, **kwargs): pass
     @staticmethod
-    def state_dict():
-        return None
-
+    def state_dict(): return None
     @staticmethod
-    def load_state_dict(state_dict):
-        pass
-
+    def load_state_dict(state_dict): pass
 
 class DGCSGDMemory(Memory):
-    """ Memory for momentum correction in DGC for momentum SGD optimizer"""
-
-    def __init__(self, momentum=0.9, nesterov=False,
-                 gradient_clipping=None, momentum_masking=True):
+    """ DGC 的动量修正 + 误差反馈缓存 """
+    def __init__(self, momentum=0.9, nesterov=False, gradient_clipping=None, momentum_masking=True):
         self.gradient_clipping = gradient_clipping
         self.momentum_masking = momentum_masking
-
         self.momentum = momentum
         self.nesterov = nesterov
         self.momentums = {}
         self.velocities = {}
 
     def initialize(self, named_parameters):
-        print("=> initializing dist_train_ddp_dgc sgd memory")
-        for name, param in named_parameters:
-            self.momentums[name] = torch.zeros_like(param.data)
-            self.velocities[name] = torch.zeros_like(param.data)
+        print("=> initializing dgc sgd memory")
+        for name, p in named_parameters:
+            self.momentums[name] = torch.zeros_like(p.data)
+            self.velocities[name] = torch.zeros_like(p.data)
 
     def compensate(self, grad, name, accumulate=True):
-        """Update the velocities with the momentums."""
         if self.gradient_clipping is not None:
             grad = self.gradient_clipping(grad)
         mmt = self.momentums[name]
@@ -67,7 +51,6 @@ class DGCSGDMemory(Memory):
                 return mmt.clone()
 
     def update(self, name, ctx):
-        """Update the momentums."""
         indices = ctx[0]
         if self.momentum_masking:
             self.momentums[name].view(-1).index_fill_(0, indices, 0)

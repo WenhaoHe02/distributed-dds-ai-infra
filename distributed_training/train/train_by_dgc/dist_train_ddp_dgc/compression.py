@@ -1,11 +1,8 @@
-import math
-import random
+# -*- coding: utf-8 -*-
+# 你的 DGCCompressor，按 DDP 适配：支持设置 world_size 和 AVG 语义
+import math, random
 import torch
-
 from memory import Memory
-
-__all__ = ['DGCCompressor']
-
 
 class DGCCompressor:
     def __init__(self, compress_ratio, memory=None,
@@ -13,19 +10,17 @@ class DGCCompressor:
                  compress_upper_bound=1.3, compress_lower_bound=0.8, max_adaptation_iters=10, resample=True,
                  fp16_values=False, int32_indices=False,
                  warmup_epochs=-1, warmup_coeff=None):
-        self.world_size = 1  # 单节点设置为1
-        self.op = 'average'  # 简化操作类型
+        self.world_size = 1   # DDP 下请在外部设置为实际 world_size
+        self.op = "average"   # 简化：目标语义 = 平均
         self.fp16_values = fp16_values
         self.int32_indices = int32_indices
 
-        self.base_compress_ratio = self.compress_ratio = \
-            compress_ratio if compress_ratio <= 1.0 else 1.0 / compress_ratio
+        self.base_compress_ratio = self.compress_ratio = compress_ratio if compress_ratio <= 1.0 else 1.0 / compress_ratio
         self.memory = Memory if memory is None else memory
         self.warmup_epochs = warmup_epochs
         if self.warmup_epochs > 0:
             if warmup_coeff is None:
-                self.warmup_coeff = self.base_compress_ratio \
-                                    ** (1. / (self.warmup_epochs + 1))
+                self.warmup_coeff = self.base_compress_ratio ** (1.0 / (self.warmup_epochs + 1))
             else:
                 if isinstance(warmup_coeff, (tuple, list)):
                     assert len(warmup_coeff) >= self.warmup_epochs
@@ -46,8 +41,11 @@ class DGCCompressor:
 
         self.attributes = {}
 
+    def set_world_size(self, world_size:int):
+        self.world_size = int(world_size)
+
     def initialize(self, named_parameters):
-        print("=> initializing dist_train_ddp_dgc compressor")
+        print("=> initializing dgc compressor")
         for name, param in named_parameters:
             if torch.is_tensor(param):
                 numel = param.numel()
@@ -84,8 +82,7 @@ class DGCCompressor:
                 if isinstance(self.warmup_coeff, (tuple, list)):
                     compress_ratio = self.warmup_coeff[epoch]
                 else:
-                    compress_ratio = max(self.warmup_coeff ** (epoch + 1),
-                                         self.base_compress_ratio)
+                    compress_ratio = max(self.warmup_coeff ** (epoch + 1), self.base_compress_ratio)
             else:
                 compress_ratio = self.base_compress_ratio
         else:
@@ -98,31 +95,26 @@ class DGCCompressor:
     def _sparsify(self, tensor, name):
         tensor = tensor.view(-1)
         numel, shape, num_selects, num_samples, top_k_samples, sample_stride = self.attributes[name]
-
         importance = tensor.abs()
         if numel == num_samples:
             samples = importance
         else:
             if self.strided_sample:
+                # 随机步长采样
                 sample_start = random.randint(0, sample_stride - 1)
                 samples = importance[sample_start::sample_stride]
             else:
                 samples = importance[torch.randint(0, numel, (num_samples,), device=tensor.device)]
-
         threshold = torch.min(torch.topk(samples, top_k_samples, 0, largest=True, sorted=False)[0])
         mask = torch.ge(importance, threshold)
         indices = mask.nonzero().view(-1)
         num_indices = indices.numel()
-
         if numel > num_samples:
             for _ in range(self.max_adaptation_iters):
                 if num_indices > num_selects:
                     if num_indices > num_selects * self.compress_upper_bound:
                         if self.resample:
-                            indices = indices[
-                                torch.topk(importance[indices], num_selects,
-                                           0, largest=True, sorted=False)[1]
-                            ]
+                            indices = indices[torch.topk(importance[indices], num_selects, 0, largest=True, sorted=False)[1]]
                             break
                         else:
                             threshold = threshold * self.compress_upper_bound
@@ -135,24 +127,19 @@ class DGCCompressor:
                 mask = torch.ge(importance, threshold)
                 indices = mask.nonzero().view(-1)
                 num_indices = indices.numel()
-
         indices = indices[:num_selects]
         values = tensor[indices]
         return values, indices, numel, shape, num_selects
 
     def compress(self, tensor, name):
         if self.compress_ratio < 1.0 and name in self.attributes:
-            # compress
-            tensor_compensated = self.memory.compensate(
-                tensor, name, accumulate=True)
-            values, indices, numel, shape, num_selects = \
-                self._sparsify(tensor_compensated, name)
+            # 误差反馈补偿
+            tensor_compensated = self.memory.compensate(tensor, name, accumulate=True)
+            values, indices, numel, shape, num_selects = self._sparsify(tensor_compensated, name)
             self.memory.update(name, (indices,))
             indices = indices.view(-1, 1)
             values = values.view(-1, 1)
-
-            ctx = (name, numel, shape, values.dtype, indices.dtype,
-                   tensor.data.view(numel))
+            ctx = (name, numel, shape, values.dtype, indices.dtype, tensor.data.view(numel))
             if self.fp16_values and values.dtype.is_floating_point:
                 values = values.type(torch.float16)
             if self.int32_indices and not indices.dtype.is_floating_point:
@@ -167,7 +154,7 @@ class DGCCompressor:
     def decompress(self, tensor, ctx):
         name, numel, shape, vdtype, idtype, grad = ctx
         if self.compress_ratio < 1.0 and name in self.attributes:
-            # decompress
+            # 解压+平均
             assert isinstance(tensor, (list, tuple))
             values, indices = tensor
             values = values.view(-1)
@@ -177,12 +164,10 @@ class DGCCompressor:
             if self.int32_indices and not idtype.is_floating_point:
                 indices = indices.type(idtype)
             grad.zero_().index_put_([indices], values, accumulate=True)
-            if self.op == 'average':
-                grad.mul_(1. / self.world_size)
+            if self.op == 'average' and self.world_size > 0:
+                grad.mul_(1.0 / self.world_size)
             return grad.view(shape)
         else:
             if self.fp16_values and vdtype.is_floating_point:
                 tensor = tensor.type(vdtype)
             return self.memory.compensate(tensor, name, accumulate=False)
-
-    # 移除了分布式通信相关方法

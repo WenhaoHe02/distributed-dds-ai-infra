@@ -47,15 +47,15 @@ public class DataSend {
      * @param detectUris 检测任务图片URI列表
      * @return InferenceRequest对象
      */
-    public InferenceRequest createInferenceRequest(List<Uri> ocrUris, List<Uri> detectUris) {
+    public InferenceRequest createInferenceRequest(List<Uri> ocrUris, List<Uri> detectUris, int selectedPriority) {
         Log.d(TAG, "开始创建InferenceRequest对象");
         Log.d(TAG, "OCR任务数量: " + ocrUris.size() + ", 检测任务数量: " + detectUris.size());
 
         InferenceRequest request = new InferenceRequest();
         // 获取Android ID
         String androidId = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
-        // 结合UUID和Android ID生成唯一的请求ID（会有一点长）
-        request.request_id = UUID.randomUUID() + "_" + androidId;
+        // 结合UUID和Android ID生成唯一的请求ID（会有一点长），并把优先级信息添加到request_id中
+        request.request_id = UUID.randomUUID() + "_" + androidId + "_priority" + selectedPriority;
 
         Log.d(TAG, "请求ID: " + request.request_id);
 
@@ -149,13 +149,13 @@ public class DataSend {
     /**
      * 发送所有图片请求
      */
-    public boolean sendAllImages(List<Uri> ocrUris, List<Uri> detectUris) {
+    public boolean sendAllImages(List<Uri> ocrUris, List<Uri> detectUris, int selectPriority) {
         try {
             Log.d(TAG, "开始发送所有图片请求");
             Log.d(TAG, "OCR图片数量: " + ocrUris.size() + "，检测图片数量: " + detectUris.size());
 
             // 创建InferenceRequest对象
-            InferenceRequest inferenceRequest = createInferenceRequest(ocrUris, detectUris);
+            InferenceRequest inferenceRequest = createInferenceRequest(ocrUris, detectUris, selectPriority);
 
             // 将请求ID和客户端ID添加到ResultDataManager中，以便验证返回的数据
             ResultDataManager resultDataManager = ResultDataManager.getInstance();

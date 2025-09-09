@@ -13,17 +13,9 @@ import data_structure.Bytes;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class SendService {
     private static final int DOMAIN_ID = 100;
     private static final String TOPIC_INFER_REQ = "inference/request";
-
-    private DomainParticipant dp;
-    private Publisher pub;
-    private InferenceRequestDataWriter requestWriter;
-    private PrintWriter logWriter;
-    private String clientId;
-    private Random random = new Random();
 
     // 模型配置
     private static final String[] MODELS = { "modelA", "modelB" };
@@ -31,9 +23,9 @@ public class SendService {
     // 优先级配置
     private static final int[] PRIORITIES = { 0, 1, 2 };
 
-    // 任务数量配置
-    private static final int MIN_TASKS_PER_REQUEST = 1;
-    private static final int MAX_TASKS_PER_REQUEST = 10;
+    // 任务数量配置（现在作为实例变量，可以被构造函数覆盖）
+    private int minTasksPerRequest = 5;
+    private int maxTasksPerRequest = 200;
 
     // 图片数据配置
     private static final int MIN_IMAGE_WIDTH = 224;
@@ -42,12 +34,19 @@ public class SendService {
     private static final int MAX_IMAGE_HEIGHT = 1080;
     private static final int IMAGE_CHANNELS = 3; // RGB图像
 
-    // 请求间隔配置（毫秒）
-    private static final int MIN_REQUEST_INTERVAL_MS = 50;
-    private static final int MAX_REQUEST_INTERVAL_MS = 500;
+    // 请求间隔配置（现在作为实例变量，可以被构造函数覆盖）
+    private int minRequestIntervalMs = 50;
+    private int maxRequestIntervalMs = 500;
 
     // 默认请求数量
     private static final int DEFAULT_REQUEST_COUNT = 20;
+
+    private DomainParticipant dp;
+    private Publisher pub;
+    private InferenceRequestDataWriter requestWriter;
+    private PrintWriter logWriter;
+    private String clientId;
+    private Random random = new Random();
 
     public SendService(String clientId) throws Exception {
         this.clientId = clientId;
@@ -57,6 +56,17 @@ public class SendService {
 
         // 初始化DDS
         initDDS();
+    }
+    
+    // 带配置参数的构造函数
+    public SendService(String clientId, 
+                      int minTasksPerRequest, int maxTasksPerRequest,
+                      int minRequestIntervalMs, int maxRequestIntervalMs) throws Exception {
+        this(clientId);
+        this.minTasksPerRequest = minTasksPerRequest;
+        this.maxTasksPerRequest = maxTasksPerRequest;
+        this.minRequestIntervalMs = minRequestIntervalMs;
+        this.maxRequestIntervalMs = maxRequestIntervalMs;
     }
 
     private void initDDS() throws Exception {
@@ -98,7 +108,7 @@ public class SendService {
         }
     }
 
-    public void sendRequest(String requestId, int taskCount, String modelId, int priority) throws Exception {
+    public void sendRequest(String requestId, int taskCount, int priority) throws Exception {
         // 创建请求，包含优先级信息
         String requestIdWithPriority = requestId + "-priority" + priority;
         InferenceRequest request = new InferenceRequest();
@@ -117,21 +127,26 @@ public class SendService {
             task.request_id = requestIdWithPriority;
             task.task_id = String.format("t%03d", (i + 1));
             task.client_id = clientId;
-            task.model_id = modelId;
+            task.model_id = MODELS[random.nextInt(MODELS.length)];
 
             // 添加图片数据负载
             task.payload = createImagePayload();
 
             tasks.set_at(i, task);
 
-            // 记录任务信息用于日志
-            long sendTimeMs = System.currentTimeMillis();
+            // 记录任务信息用于日志（但暂不记录时间）
             String taskLog = String.format(
-                    "{\"task_id\":\"%s\",\"model_id\":\"%s\",\"send_time\":%d}",
-                    task.task_id, task.model_id, sendTimeMs);
+                    "{\"task_id\":\"%s\",\"model_id\":\"%s\",\"send_time\":%%d}",
+                    task.task_id, task.model_id);
             taskLogs.add(taskLog);
         }
 
+        request.tasks = tasks;
+
+        // 发送请求
+        ReturnCode_t rc = requestWriter.write(request, InstanceHandle_t.HANDLE_NIL_NATIVE);
+        long sendTimeMs = System.currentTimeMillis(); // 在发送后记录时间
+        
         // 记录完整的请求信息到日志 (使用新的JSON格式)
         StringBuilder logEntry = new StringBuilder();
         logEntry.append("{");
@@ -141,7 +156,8 @@ public class SendService {
         
         for (int i = 0; i < taskLogs.size(); i++) {
             if (i > 0) logEntry.append(",");
-            logEntry.append(taskLogs.get(i));
+            // 在此处插入实际发送时间
+            logEntry.append(String.format(taskLogs.get(i), sendTimeMs));
         }
         
         logEntry.append("],");
@@ -151,15 +167,11 @@ public class SendService {
         logWriter.println(logEntry.toString());
         logWriter.flush();
 
-        request.tasks = tasks;
-
-        // 发送请求
-        ReturnCode_t rc = requestWriter.write(request, InstanceHandle_t.HANDLE_NIL_NATIVE);
         if (rc != ReturnCode_t.RETCODE_OK) {
             System.err.println("[SendService] request write failed, rc=" + rc);
         } else {
             System.out.println("[SendService] Sent request " + requestIdWithPriority +
-                    " with " + taskCount + " tasks on model " + modelId + " with priority " + priority);
+                    " with " + taskCount + " tasks" + " with priority " + priority);
         }
     }
 
@@ -167,7 +179,7 @@ public class SendService {
     public void sendRequest(String requestId, int taskCount) throws Exception {
         String modelId = MODELS[random.nextInt(MODELS.length)];
         int priority = PRIORITIES[random.nextInt(PRIORITIES.length)];
-        sendRequest(requestId, taskCount, modelId, priority);
+        sendRequest(requestId, taskCount, priority);
     }
 
     // 发送多种不同类型的任务
@@ -176,19 +188,16 @@ public class SendService {
             String requestId = "r" + String.format("%03d", i);
 
             // 随机任务数量
-            int taskCount = random.nextInt(MAX_TASKS_PER_REQUEST - MIN_TASKS_PER_REQUEST + 1) + MIN_TASKS_PER_REQUEST;
-
-            // 随机选择模型
-            String modelId = MODELS[random.nextInt(MODELS.length)];
+            int taskCount = random.nextInt(maxTasksPerRequest - minTasksPerRequest + 1) + minTasksPerRequest;
 
             // 随机选择优先级
             int priority = PRIORITIES[random.nextInt(PRIORITIES.length)];
 
-            sendRequest(requestId, taskCount, modelId, priority);
+            sendRequest(requestId, taskCount, priority);
 
             // 随机间隔
             TimeUnit.MILLISECONDS.sleep(
-                    random.nextInt(MAX_REQUEST_INTERVAL_MS - MIN_REQUEST_INTERVAL_MS + 1) + MIN_REQUEST_INTERVAL_MS);
+                    random.nextInt(maxRequestIntervalMs - minRequestIntervalMs + 1) + minRequestIntervalMs);
         }
     }
 

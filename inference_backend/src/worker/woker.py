@@ -172,7 +172,7 @@ class Worker:
             )
             self.task_topic = self.dp.create_topic(
                 Worker.TOPIC_TASK_LIST,
-                Task.__name__,
+                TaskList.__name__,
                 DDS_All.TOPIC_QOS_DEFAULT,
                 None,
                 0
@@ -268,24 +268,28 @@ class Worker:
         rc = self.claim_writer.write(claim)
         if rc != DDS_All.DDS_ReturnCode_t.OK:
             print(f"[WorkerMain] claim write rc={rc}")
+        else:
+            print("[Worker]成功发送claim batch_id: ",claim.batch_id," worker_id: ",claim.worker_id," queue_length: ",claim.queue_length)
 
     def result_emitter(self,worker_result: WorkerResult) -> None:
         rc = self.result_writer.write(worker_result)
         if rc != DDS_All.DDS_ReturnCode_t.OK:
             print(f"[WorkerMain] result write rc={rc}")
+        else:
+            print("[Worker]成功发送WokerResult")
 
     def on_open_batch(self, open_batch: OpenBatch) -> None:
         """Handle OpenBatch message"""
         if not open_batch or open_batch.model_id != self.config.model_id:
-            print("模型不符")
+            print("[Worker]模型不符")
             return
 
         if self.current_depth() >= self.config.max_inflight_batches:
-            print("队列不足")
+            print("[Worker]队列不足")
             return
 
         if open_batch.batch_id in self.claimed_lru:
-            print("已存在")
+            print("[Worker]batch已存在")
             return
 
         self.claimed_lru[open_batch.batch_id] = True
@@ -307,7 +311,6 @@ class Worker:
         """Handle TaskList message"""
         if  not task_list:
             return
-
         if (task_list.assigned_worker_id != self.config.worker_id or
                 task_list.model_id != self.config.model_id):
             return
@@ -317,6 +320,9 @@ class Worker:
                 return
             self.seen_task_list.add(task_list.batch_id)
 
+        print("[Worker]get tasklist worker_id: ", task_list.assigned_worker_id, " batch_id: ",
+              task_list.batch_id, " model_id: ", task_list.model_id)
+        #"tasks: ",task_list.tasks
         try:
             self.batch_queue.put_nowait(task_list)
         except queue.Full:
@@ -402,7 +408,7 @@ class Worker:
             result.task_id = task.task_id
             result.client_id = task.client_id
             result.status = "ERROR_RUNNER"
-            result.output_blob = bytearray()
+            result.output_blob = b''
             results.set_at(i, result)
 
         worker_result.results = results
@@ -493,7 +499,6 @@ class OpenBatchListener(DataReaderListener):
         self.worker = worker
 
     def on_data_available(self, reader:DDS_All.OpenBatchDataReader):
-        """处理心跳数据"""
         data_seq = OpenBatchSeq()
         info_seq = SampleInfoSeq()
 
@@ -516,18 +521,6 @@ class OpenBatchListener(DataReaderListener):
         except Exception as e:
             print(f"[Worker] Error processing: {e}")
 
-    # def on_process_sample(self, reader: OpenBatchDataReader, sample: OpenBatch, info) -> None:
-    #     print("接收")
-    #     if sample:
-    #         try:
-    #             self.worker.on_open_batch(sample)
-    #         except Exception as e:
-    #             print(f"Error processing OpenBatch: {e}")
-    #
-    # def on_data_arrived(self, reader: DataReader, sample, info) -> None:
-    #     # Required abstract method, can be empty
-    #     pass
-
 class TaskListListener(DataReaderListener):
     """Listener for TaskList messages"""
 
@@ -535,16 +528,38 @@ class TaskListListener(DataReaderListener):
         super().__init__()
         self.worker = worker
 
-    def on_process_sample(self, reader: DataReader, sample: TaskList, info) -> None:
-        if sample:
-            try:
-                self.worker.on_task_list(sample)
-            except Exception as e:
-                print(f"Error processing TaskList: {e}")
+    def on_data_available(self, reader:DDS_All.TaskListDataReader):
+        data_seq = TaskListSeq()
+        info_seq = SampleInfoSeq()
 
-    def on_data_arrived(self, reader: DataReader, sample, info) -> None:
-        # Required abstract method, can be empty
-        pass
+        try:
+            result = reader.take(
+                data_seq, info_seq, -1,
+                DDS_All.ANY_SAMPLE_STATE,
+                DDS_All.ANY_VIEW_STATE,
+                DDS_All.ANY_INSTANCE_STATE
+            )
+
+            if result == DDS_All.DDS_ReturnCode_t.OK:
+                for i in range(info_seq.length()):
+                    info = info_seq.get_at(i)
+                    if info and info.valid_data:
+                        tasklist = data_seq.get_at(i)
+                        if tasklist:
+                            self.worker.on_task_list(tasklist)
+
+        except Exception as e:
+            print(f"[Worker] Error processing: {e}")
+
+    # def on_process_sample(self, reader: DataReader, sample: TaskList, info) -> None:
+    #     if sample:
+    #         try:
+    #             self.worker.on_task_list(sample)
+    #         except Exception as e:
+    #             print(f"Error processing TaskList: {e}")
+    #
+    # def on_data_arrived(self, reader: DataReader, sample, info) -> None:
+    #     pass
 
 
 def main():

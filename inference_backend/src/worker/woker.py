@@ -14,7 +14,7 @@ from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Callable, Dict, Set
 from dataclasses import dataclass
-from threading import Event, Lock
+from threading import Event, Lock,RLock
 import signal
 
 import DDS_All
@@ -39,7 +39,7 @@ class LRUDict(OrderedDict):
     def __init__(self, max_size=4096):
         super().__init__()
         self.max_size = max_size
-        self._lock = Lock()
+        self._lock = RLock()
 
     def __setitem__(self, key, value):
         with self._lock:
@@ -251,7 +251,7 @@ class Worker:
                 StatusKind.DATA_AVAILABLE_STATUS
             )
 
-            if not (rtn_open is DDS_All.DDS_ReturnCode_t.OK and rtn_task is DDS_All.DDS_ReturnCode_t.OK ):
+            if not (rtn_open == DDS_All.DDS_ReturnCode_t.OK and rtn_task == DDS_All.DDS_ReturnCode_t.OK ):
                 print("associate listener failed")
                 return False
             print("成功绑定listener")
@@ -277,20 +277,26 @@ class Worker:
     def on_open_batch(self, open_batch: OpenBatch) -> None:
         """Handle OpenBatch message"""
         if not open_batch or open_batch.model_id != self.config.model_id:
+            print("模型不符")
             return
 
         if self.current_depth() >= self.config.max_inflight_batches:
+            print("队列不足")
             return
 
         if open_batch.batch_id in self.claimed_lru:
+            print("已存在")
             return
 
         self.claimed_lru[open_batch.batch_id] = True
 
         claim = Claim()
+
         claim.batch_id = open_batch.batch_id
         claim.worker_id = self.config.worker_id
         claim.queue_length = self.current_depth()
+
+        print("[Worker]get batch batch_id: ",claim.batch_id," worker_id: ",claim.worker_id," queue_length: ",claim.queue_length)
 
         try:
             self.claim_emitter(claim)
@@ -299,7 +305,7 @@ class Worker:
 
     def on_task_list(self, task_list: TaskList) -> None:
         """Handle TaskList message"""
-        if not task_list:
+        if  not task_list:
             return
 
         if (task_list.assigned_worker_id != self.config.worker_id or
@@ -456,10 +462,10 @@ class Worker:
 
             # Send heartbeat
             rc = self.heartbeat_writer.write(heartbeat)
-            if rc == DDS_ReturnCode_t.OK:
-                print(f"[Worker] Heartbeat sent: {self.config.worker_id}")
-            else:
-                print(f"[Worker] Failed to send heartbeat, rc={rc}")
+            # if rc == DDS_ReturnCode_t.OK:
+            #     print(f"[Worker] Heartbeat sent: {self.config.worker_id}")
+            # else:
+            #     print(f"[Worker] Failed to send heartbeat, rc={rc}")
 
         except Exception as e:
             print(f"[Worker] Error sending heartbeat: {e}")
@@ -486,16 +492,41 @@ class OpenBatchListener(DataReaderListener):
         super().__init__()
         self.worker = worker
 
-    def on_process_sample(self, reader: DataReader, sample: OpenBatch, info) -> None:
-        if sample:
-            try:
-                self.worker.on_open_batch(sample)
-            except Exception as e:
-                print(f"Error processing OpenBatch: {e}")
+    def on_data_available(self, reader:DDS_All.OpenBatchDataReader):
+        """处理心跳数据"""
+        data_seq = OpenBatchSeq()
+        info_seq = SampleInfoSeq()
 
-    def on_data_arrived(self, reader: DataReader, sample, info) -> None:
-        # Required abstract method, can be empty
-        pass
+        try:
+            result = reader.take(
+                data_seq, info_seq, -1,
+                DDS_All.ANY_SAMPLE_STATE,
+                DDS_All.ANY_VIEW_STATE,
+                DDS_All.ANY_INSTANCE_STATE
+            )
+
+            if result == DDS_All.DDS_ReturnCode_t.OK:
+                for i in range(info_seq.length()):
+                    info = info_seq.get_at(i)
+                    if info and info.valid_data:
+                        openbatch = data_seq.get_at(i)
+                        if openbatch:
+                            self.worker.on_open_batch(openbatch)
+
+        except Exception as e:
+            print(f"[Worker] Error processing: {e}")
+
+    # def on_process_sample(self, reader: OpenBatchDataReader, sample: OpenBatch, info) -> None:
+    #     print("接收")
+    #     if sample:
+    #         try:
+    #             self.worker.on_open_batch(sample)
+    #         except Exception as e:
+    #             print(f"Error processing OpenBatch: {e}")
+    #
+    # def on_data_arrived(self, reader: DataReader, sample, info) -> None:
+    #     # Required abstract method, can be empty
+    #     pass
 
 class TaskListListener(DataReaderListener):
     """Listener for TaskList messages"""

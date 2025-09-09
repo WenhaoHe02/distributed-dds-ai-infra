@@ -71,7 +71,7 @@ class DDPDGCStepper:
                                               payload=d_bytes)
                 self._handles.append((name, False, (h,)))
 
-    def finish_and_apply(self, timeout_s=60.0):
+    def finish_and_apply(self, timeout_s=10000.0):
         device = next(self.model.parameters()).device
         for (name, is_sparse, hs), (_, ctx, p) in zip(self._handles, self._ctx):
             if is_sparse:

@@ -10,10 +10,10 @@ from dgc_stepper import DDPDGCStepper
 from compression import DGCCompressor
 from memory import DGCSGDMemory
 from dgc_eval import ddp_evaluate_top1   # 用我上一条给你的 ddp_eval.py
-
+from dds_barrier_verbose import ddp_barrier_verbose
 # ---- 环境参数（也可从命令行传入）
 RANK = int(os.environ.get("RANK", "0"))
-WORLD = int(os.environ.get("WORLD_SIZE", "1"))
+WORLD = int(os.environ.get("WORLD_SIZE", "2"))
 GROUP = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
 DATA_DIR = os.environ.get("DATA_DIR", "./data")
@@ -55,6 +55,13 @@ def main():
     # 通信引擎
     ag = ZrddsAllgather(dp, topic="ddp/allgather_blob")
 
+    ok = ddp_barrier_verbose(ag, group_id=GROUP, rank=RANK, world=WORLD,
+                             domain_id=DOMAIN_ID, topic_name="ddp/allgather_blob",
+                             min_writer_matches=1, min_reader_matches=1,
+                             match_timeout_s=15.0, barrier_timeout_s=60.0)
+    if not ok:
+        raise SystemExit("[barrier] failed; check missing ranks / matching logs")
+
     # 模型/优化器
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = MNISTNet().to(device)
@@ -70,7 +77,7 @@ def main():
     loss_fn = nn.CrossEntropyLoss()
 
     # 训练参数
-    epochs = 10
+    epochs = 3
     eval_every = 100                      # 每 200 个 step 评一次
     EVAL_ROUND_OFFSET = 1_000_000_000     # 评估的 round_id 空间与训练分离，避免混包
 
@@ -87,7 +94,7 @@ def main():
             loss = loss_fn(logits, yb)
             loss.backward()
 
-            stepper.finish_and_apply(timeout_s=120)
+            stepper.finish_and_apply(timeout_s=10000)
             opt.step()
 
             if RANK == 0 and (global_step % 100 == 0):
@@ -100,7 +107,7 @@ def main():
                     model, val_loader, device,
                     zrdds=ag, group_id=GROUP,
                     epoch_or_step=metric_round,   # 使用独立的评估 round_id
-                    name="val.top1", rank=RANK, world=WORLD, timeout_s=60.0
+                    name="val.top1", rank=RANK, world=WORLD, timeout_s=10000.0
                 )
                 if RANK == 0:
                     print(f"[VAL] step {global_step:05d} acc={acc*100:.2f}% ({g_correct}/{g_total})")

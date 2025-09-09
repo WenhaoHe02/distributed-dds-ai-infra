@@ -176,14 +176,6 @@ public class SendService {
                     " with " + taskCount + " tasks" + " with priority " + priority);
         }
     }
-
-    // 重载方法，随机选择模型和优先级
-    public void sendRequest(String requestId, int taskCount) throws Exception {
-        String modelId = MODELS[random.nextInt(MODELS.length)];
-        int priority = PRIORITIES[random.nextInt(PRIORITIES.length)];
-        sendRequest(requestId, taskCount, priority);
-    }
-
     // 发送多种不同类型的任务
     public void sendMixedRequests(int count) throws Exception {
         for (int i = 1; i <= count; i++) {

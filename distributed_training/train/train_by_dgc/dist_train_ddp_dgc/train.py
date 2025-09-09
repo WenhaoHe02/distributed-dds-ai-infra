@@ -54,14 +54,12 @@ def wait_for_discovery(ag: ZrddsAllgather, world:int, timeout_ms:int=10000, incl
     target = world if include_self else max(0, world-1)
 
     def _get_pub_count():
-        st = dds.PublicationMatchedStatus()
-        ag.writer.get_publication_matched_status(st)
-        return int(st.current_count)
+        st = ag.writer.get_publication_matched_status()  # 直接返回 DDS_All.PublicationMatchedStatus
+        return int(getattr(st, "current_count", 0))
 
     def _get_sub_count():
-        st = dds.SubscriptionMatchedStatus()
-        ag.reader.get_subscription_matched_status(st)
-        return int(st.current_count)
+        st = ag.reader.get_subscription_matched_status()
+        return int(getattr(st, "current_count", 0))
 
     last_w = last_r = -1
     while True:

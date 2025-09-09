@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
-from dist_train import Net  # 假设你的模型结构定义在 model.py 中
+from dist_train_deprecated import Net  # 假设你的模型结构定义在 model.py 中
 from torch.nn.utils import vector_to_parameters
 
 # 全局缓存 loader

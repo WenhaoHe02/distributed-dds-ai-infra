@@ -8,7 +8,8 @@
 #include <memory>
 
 #include "ai_infer.h"  // 生成头，类型都在 namespace data_structure 里
-
+#include "ai_inferDataReader.h"
+#include "ai_inferDataWriter.h"
 
 
 #include "ai_infer.h"
@@ -253,6 +254,101 @@ static void deep_copy(const ds::WorkerResult& src, WorkerResultWrapper& dst) {
     // 拷贝内部序列（元素类型是 ds::WorkerTaskResult）
     copy_seq<ds::WorkerTaskResultSeq, ds::WorkerTaskResult>(src.results, dst.results);
 }
+
+// ---- Writer deleters ----
+struct TaskDataWriterDeleter {
+    void operator()(ds::TaskDataWriter*)             const {}
+};
+struct ClaimDataWriterDeleter {
+    void operator()(ds::ClaimDataWriter*)            const {}
+};
+struct OpenBatchDataWriterDeleter {
+    void operator()(ds::OpenBatchDataWriter*)        const {}
+};
+struct GrantDataWriterDeleter {
+    void operator()(ds::GrantDataWriter*)            const {}
+};
+struct TaskListDataWriterDeleter {
+    void operator()(ds::TaskListDataWriter*)         const {}
+};
+struct WorkerTaskResultDataWriterDeleter {
+    void operator()(ds::WorkerTaskResultDataWriter*) const {}
+};
+struct WorkerResultDataWriterDeleter {
+    void operator()(ds::WorkerResultDataWriter*)     const {}
+};
+
+// ---- Reader deleters ----
+struct TaskDataReaderDeleter {
+    void operator()(ds::TaskDataReader*)             const {}
+};
+struct ClaimDataReaderDeleter {
+    void operator()(ds::ClaimDataReader*)            const {}
+};
+struct OpenBatchDataReaderDeleter {
+    void operator()(ds::OpenBatchDataReader*)        const {}
+};
+struct GrantDataReaderDeleter {
+    void operator()(ds::GrantDataReader*)            const {}
+};
+struct TaskListDataReaderDeleter {
+    void operator()(ds::TaskListDataReader*)         const {}
+};
+struct WorkerTaskResultDataReaderDeleter {
+    void operator()(ds::WorkerTaskResultDataReader*) const {}
+};
+struct WorkerResultDataReaderDeleter {
+    void operator()(ds::WorkerResultDataReader*)     const {}
+};
+
+// ========== DataWriter 绑定：write(wrapper) ==========
+template <typename DDSWriterT, typename MsgT, typename WrapperT, typename DeleterT>
+void bind_datawriter(py::module_& m, const char* py_name) {
+    py::class_<DDSWriterT, DDS::DataWriter, std::unique_ptr<DDSWriterT, DeleterT>>(m, py_name)
+        .def("write", [](DDSWriterT& writer, const WrapperT& w) {
+        const MsgT& msg = static_cast<const MsgT&>(w);
+        return writer.write(msg, DDS::HANDLE_NIL_NATIVE);
+             });
+}
+
+// ========== DataReader 绑定：read_list / take_list ==========
+template <typename DDSReaderT, typename MsgT, typename SeqT, typename WrapperT, typename DeleterT>
+void bind_datareader(py::module_& m, const char* py_name) {
+    py::class_<DDSReaderT, DDS::DataReader, std::unique_ptr<DDSReaderT, DeleterT>>(m, py_name)
+        .def("read_list", [](DDSReaderT& r, int max_samples = -1) {
+        SeqT dataSeq; DDS_SampleInfoSeq infoSeq;
+        auto rc = r.read(dataSeq, infoSeq,
+                         (DDS::Long)max_samples,
+                         DDS::ANY_SAMPLE_STATE, DDS::ANY_VIEW_STATE, DDS::ANY_INSTANCE_STATE);
+        py::list out;
+        DDS_ULong n = dataSeq.length();
+        for (DDS_ULong i = 0; i < n; ++i) {
+            const MsgT& elem = dataSeq.get_at(i);
+            auto w = new WrapperT();
+            deep_copy(elem, *w);
+            out.append(py::cast(w, py::return_value_policy::take_ownership));
+        }
+        r.return_loan(dataSeq, infoSeq);
+        return out;  // 仅返回数据列表，rc 如需也可一起返回
+             }, py::arg("max_samples") = -1)
+        .def("take_list", [](DDSReaderT& r, int max_samples = -1) {
+                 SeqT dataSeq; DDS_SampleInfoSeq infoSeq;
+                 auto rc = r.take(dataSeq, infoSeq,
+                                  (DDS::Long)max_samples,
+                                  DDS::ANY_SAMPLE_STATE, DDS::ANY_VIEW_STATE, DDS::ANY_INSTANCE_STATE);
+                 py::list out;
+                 DDS_ULong n = dataSeq.length();
+                 for (DDS_ULong i = 0; i < n; ++i) {
+                     const MsgT& elem = dataSeq.get_at(i);
+                     auto w = new WrapperT();
+                     deep_copy(elem, *w);
+                     out.append(py::cast(w, py::return_value_policy::take_ownership));
+                 }
+                 r.return_loan(dataSeq, infoSeq);
+                 return out;
+             }, py::arg("max_samples") = -1);
+}
+
 PYBIND11_MODULE(dds_infer_pybindings, m) {
     // --------- Task（TaskList 内会用到）---------
     py::class_<TaskWrapper>(m, "Task")
@@ -400,4 +496,23 @@ PYBIND11_MODULE(dds_infer_pybindings, m) {
                       }
                       );
     bind_sequence_mapped<ds::WorkerResultSeq, ds::WorkerResult, WorkerResultWrapper>(m, "WorkerResultSeq");
+
+
+    // --------- Writers ---------
+    bind_datawriter<ds::TaskDataWriter, ds::Task, TaskWrapper, TaskDataWriterDeleter>(m, "TaskDataWriter");
+    bind_datawriter<ds::ClaimDataWriter, ds::Claim, ClaimWrapper, ClaimDataWriterDeleter>(m, "ClaimDataWriter");
+    bind_datawriter<ds::OpenBatchDataWriter, ds::OpenBatch, OpenBatchWrapper, OpenBatchDataWriterDeleter>(m, "OpenBatchDataWriter");
+    bind_datawriter<ds::GrantDataWriter, ds::Grant, GrantWrapper, GrantDataWriterDeleter>(m, "GrantDataWriter");
+    bind_datawriter<ds::TaskListDataWriter, ds::TaskList, TaskListWrapper, TaskListDataWriterDeleter>(m, "TaskListDataWriter");
+    bind_datawriter<ds::WorkerTaskResultDataWriter, ds::WorkerTaskResult, WorkerTaskResultWrapper, WorkerTaskResultDataWriterDeleter>(m, "WorkerTaskResultDataWriter");
+    bind_datawriter<ds::WorkerResultDataWriter, ds::WorkerResult, WorkerResultWrapper, WorkerResultDataWriterDeleter>(m, "WorkerResultDataWriter");
+
+    // --------- Readers ---------
+    bind_datareader<ds::TaskDataReader, ds::Task, ds::TaskSeq, TaskWrapper, TaskDataReaderDeleter>(m, "TaskDataReader");
+    bind_datareader<ds::ClaimDataReader, ds::Claim, ds::ClaimSeq, ClaimWrapper, ClaimDataReaderDeleter>(m, "ClaimDataReader");
+    bind_datareader<ds::OpenBatchDataReader, ds::OpenBatch, ds::OpenBatchSeq, OpenBatchWrapper, OpenBatchDataReaderDeleter>(m, "OpenBatchDataReader");
+    bind_datareader<ds::GrantDataReader, ds::Grant, ds::GrantSeq, GrantWrapper, GrantDataReaderDeleter>(m, "GrantDataReader");
+    bind_datareader<ds::TaskListDataReader, ds::TaskList, ds::TaskListSeq, TaskListWrapper, TaskListDataReaderDeleter>(m, "TaskListDataReader");
+    bind_datareader<ds::WorkerTaskResultDataReader, ds::WorkerTaskResult, ds::WorkerTaskResultSeq, WorkerTaskResultWrapper, WorkerTaskResultDataReaderDeleter>(m, "WorkerTaskResultDataReader");
+    bind_datareader<ds::WorkerResultDataReader, ds::WorkerResult, ds::WorkerResultSeq, WorkerResultWrapper, WorkerResultDataReaderDeleter>(m, "WorkerResultDataReader");
 }

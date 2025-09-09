@@ -5,19 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="59eb5836-2ac1-464a-b7e0-a355d86499ba" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/java.exe.ddslog" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Client_v3.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Client_v3.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/Controller_v3.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/Controller_v3.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/client_v3_hwh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/client_v3_hwh.conf.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v3_hwh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA/src/controller_v3_hwh.conf.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../distributed_training/.idea/distributed_training.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/.idea/distributed_training.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../distributed_training/data_structure/py_ai_infer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/data_structure/py_ai_infer.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../distributed_training/train/dist_train_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/train/dist_train_v3.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model_service/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/src/model_service/config.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/spliter/Spliter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/spliter/Spliter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/state_monitor/StateMonitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/state_monitor/StateMonitor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/Worker.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/Worker.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/state_monitor/stateMonitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/state_monitor/stateMonitor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/worker/woker.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/woker.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -85,7 +75,7 @@
       <recent name="E:\distributed-dds-ai-serving-system\distributed_backernd\src" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.StateMonitor">
+  <component name="RunManager" selected="Application.Patcher">
     <configuration name="Patcher" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="patcher.Patcher" />
       <module name="inference_backend" />
@@ -146,9 +136,9 @@
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.Patcher" />
         <item itemvalue="Application.StateMonitor" />
         <item itemvalue="Application.Worker" />
-        <item itemvalue="Application.Patcher" />
         <item itemvalue="Application.Spliter" />
       </list>
     </recent_temporary>
@@ -202,6 +192,29 @@
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="origin/main" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Worker的State监视器实现" />

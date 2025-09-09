@@ -12,27 +12,29 @@ import data_structure.*;
 import data_structure.Bytes;
 import java.util.ArrayList;
 import java.util.List;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import javax.imageio.ImageIO;
 
 public class SendService {
     private static final int DOMAIN_ID = 100;
     private static final String TOPIC_INFER_REQ = "inference/request";
 
     // 模型配置
-    private static final String[] MODELS = { "modelA", "modelB" };
+    private static final String[] MODELS = { "model_0", "model_1" };
 
     // 优先级配置
     private static final int[] PRIORITIES = { 0, 1, 2 };
 
     // 任务数量配置（现在作为实例变量，可以被构造函数覆盖）
     private int minTasksPerRequest = 5;
-    private int maxTasksPerRequest = 200;
+    private int maxTasksPerRequest = 20;
 
     // 图片数据配置
     private static final int MIN_IMAGE_WIDTH = 224;
-    private static final int MAX_IMAGE_WIDTH = 1920;
+    private static final int MAX_IMAGE_WIDTH = 500;
     private static final int MIN_IMAGE_HEIGHT = 224;
-    private static final int MAX_IMAGE_HEIGHT = 1080;
-    private static final int IMAGE_CHANNELS = 3; // RGB图像
+    private static final int MAX_IMAGE_HEIGHT = 500;
 
     // 请求间隔配置（现在作为实例变量，可以被构造函数覆盖）
     private int minRequestIntervalMs = 50;
@@ -174,14 +176,6 @@ public class SendService {
                     " with " + taskCount + " tasks" + " with priority " + priority);
         }
     }
-
-    // 重载方法，随机选择模型和优先级
-    public void sendRequest(String requestId, int taskCount) throws Exception {
-        String modelId = MODELS[random.nextInt(MODELS.length)];
-        int priority = PRIORITIES[random.nextInt(PRIORITIES.length)];
-        sendRequest(requestId, taskCount, priority);
-    }
-
     // 发送多种不同类型的任务
     public void sendMixedRequests(int count) throws Exception {
         for (int i = 1; i <= count; i++) {
@@ -209,16 +203,59 @@ public class SendService {
         int width = random.nextInt(MAX_IMAGE_WIDTH - MIN_IMAGE_WIDTH + 1) + MIN_IMAGE_WIDTH;
         int height = random.nextInt(MAX_IMAGE_HEIGHT - MIN_IMAGE_HEIGHT + 1) + MIN_IMAGE_HEIGHT;
         
-        // 计算图片数据大小 (width * height * channels)
-        int size = width * height * IMAGE_CHANNELS;
-        
-        // 生成模拟的图片数据
-        byte[] imageData = new byte[size];
-        // 模拟图片数据，这里使用随机数据代替真实图片
-        random.nextBytes(imageData);
+        // 生成有效的PNG图像数据
+        byte[] imageData = generatePNGImage(width, height);
         payload.value.from_array(imageData, imageData.length);
 
         return payload;
+    }
+
+    /**
+     * 使用BufferedImage生成PNG图像数据
+     */
+    private byte[] generatePNGImage(int width, int height) {
+        try {
+            // 创建BufferedImage
+            BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+            
+            // 生成随机颜色的像素数据
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    // 生成随机RGB颜色
+                    int red = random.nextInt(256);
+                    int green = random.nextInt(256);
+                    int blue = random.nextInt(256);
+                    int rgb = (red << 16) | (green << 8) | blue;
+                    image.setRGB(x, y, rgb);
+                }
+            }
+            
+            // 将图像写入字节数组
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(image, "png", baos);
+            baos.flush();
+            byte[] imageBytes = baos.toByteArray();
+            baos.close();
+            
+            return imageBytes;
+        } catch (Exception e) {
+            // 如果出现异常，返回一个简单的1x1像素图像
+            try {
+                BufferedImage image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
+                image.setRGB(0, 0, 0); // 黑色像素
+                
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                ImageIO.write(image, "png", baos);
+                baos.flush();
+                byte[] imageBytes = baos.toByteArray();
+                baos.close();
+                
+                return imageBytes;
+            } catch (Exception ex) {
+                // 如果还失败，返回空数组
+                return new byte[0];
+            }
+        }
     }
 
     public void close() {

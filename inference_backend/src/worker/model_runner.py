@@ -38,37 +38,41 @@ class ModelRunner:
         worker_result.batch_id = tasks.batch_id
         worker_result.model_id = tasks.model_id
 
-        n = tasks.tasks.length() if tasks and tasks.tasks else 0
+        print("[WorkerRunner] batch_id: ",worker_result.batch_id," model_id: ",worker_result.model_id)
+        #" tasks: ",tasks.tasks)
+        n = len(tasks.tasks) if tasks.tasks else 0
+
         results_seq = WorkerTaskResultSeq()
         results_seq.ensure_length(n, n)
 
         if n == 0:
             worker_result.results = results_seq
+            print("here")
             return worker_result
 
         run_paths = None
         try:
+
             run_paths = ModelRunner._make_batch_run_paths(tasks.batch_id)
 
             # 1) Write inputs/<task_id>.jpg
             for i in range(n):
-                task = tasks.tasks.get_at(i)
-                if not task or not task.payload or task.payload.length() == 0:
+                task = tasks.tasks[i]
+                if not task or not task.payload or len(task.payload) == 0:
                     continue
 
-                in_len = task.payload.length()
-                in_bytes = bytearray(in_len)
-                task.payload.to_array(in_bytes, in_len)
+                in_len = len(task.payload)
+                task.payload = bytes(in_len)
 
                 input_path = run_paths.inputs / f"{task.task_id}.jpg"
-                ModelRunner._atomic_write(input_path, bytes(in_bytes))
+                ModelRunner._atomic_write(input_path, bytes(task.payload))
 
             # 2) Batch inference
             ModelRunner._run_model_batch(str(run_paths.inputs), str(run_paths.outputs))
 
             # 3) Read outputs
             for i in range(n):
-                task = tasks.tasks.get_at(i)
+                task = tasks.tasks[i]
                 result = WorkerTaskResult()
                 result.request_id = task.request_id
                 result.task_id = task.task_id
@@ -97,7 +101,7 @@ class ModelRunner:
             print(f"Batch processing error: {e}")
             # Fallback to single task processing
             for i in range(n):
-                task = tasks.tasks.get_at(i)
+                task = tasks.tasks[i]
                 result = ModelRunner._run_single_task(task)
                 results_seq.set_at(i, result)
 
@@ -118,16 +122,16 @@ class ModelRunner:
 
         run_paths = None
         try:
-            if not task or not task.payload or task.payload.length() == 0:
+            if not task or not task.payload or len(task.payload) == 0:
                 result.status = "ERROR_INVALID_INPUT"
                 result.output_blob = ModelRunner._empty_bytes()
                 return result
 
             run_paths = ModelRunner._make_single_run_paths(task.task_id, task.request_id)
 
-            in_len = task.payload.length()
-            in_bytes = bytearray(in_len)
-            task.payload.to_array(in_bytes, in_len)
+            in_len = len(task.payload)
+            in_bytes = bytes(in_len)
+            task.payload = bytes(in_bytes)
 
             input_path = run_paths.inputs / f"{task.task_id}.jpg"
             ModelRunner._atomic_write(input_path, bytes(in_bytes))
@@ -277,18 +281,14 @@ class ModelRunner:
         return safe if safe else default
 
     @staticmethod
-    def _empty_bytes() -> bytearray:
-        """Create empty Bytes object"""
-        b = bytearray()
-        b.from_array(bytearray(0), 0)
-        return b
+    def _empty_bytes() -> bytes:
+        """Create empty bytes object"""
+        return b""
 
     @staticmethod
-    def _to_bytes(data: bytes) -> bytearray:
-        """Convert bytes to Bytes object"""
-        b = bytearray()
-        b.from_array(bytearray(data), len(data))
-        return b
+    def _to_bytes(data: bytes) -> bytes:
+        """Convert bytes to bytes object (passthrough)"""
+        return data
 
 
 # Example usage and testing

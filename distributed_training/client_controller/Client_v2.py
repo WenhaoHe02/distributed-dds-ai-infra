@@ -21,6 +21,14 @@ import signal
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from threading import Event
+import argparse
+import torch
+from torch.nn.utils import vector_to_parameters
+import numpy as np
+
+# 添加对dist_train_v2模块的导入
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from dist_train_v2 import train_one_client, load_init_model, Net
 
 
 class Client_v2:
@@ -58,8 +66,8 @@ class Client_v2:
         self.lastRound = -1
 
         # 新增：保存从 Controller 收到的聚合模型，供下一轮初始化
-        self.latestModelDir = Path(os.getcwd()) / "global_model"
-        self.latestModelPath = self.latestModelDir / "latest_model.bin"
+        # 使用内存中的模型参数替代文件存储
+        self.latestModelParams = None
         self.latestModelRound = -1
         self._quit_event = Event()
 
@@ -123,7 +131,8 @@ class Client_v2:
 
     def start(self):
         try:
-            os.makedirs(self.latestModelDir, exist_ok=True)
+            # 不再需要创建latestModelDir目录
+            pass
         except Exception:
             pass
 
@@ -298,12 +307,12 @@ class Client_v2:
                     return
                     
                 try:
+                    # 直接将模型参数保存在内存中，而不是写入文件
                     buf = Client_v2.bytesToArray(mb.data)
-                    with open(self.client.latestModelPath, 'wb') as f:
-                        f.write(buf)
                     self.client.latestModelRound = int(mb.round_id)
+                    self.client.latestModelParams = buf
                     print(f"[Client_v2] ModelBlob: round={mb.round_id} "
-                          f"bytes={Client_v2.bytesLen(mb.data)} -> saved to {self.client.latestModelPath}")
+                          f"bytes={Client_v2.bytesLen(mb.data)} -> saved in memory")
                 except Exception as e:
                     print(f"[Client_v2] failed to save ModelBlob: {e}", file=sys.stderr)
                     
@@ -333,101 +342,75 @@ class Client_v2:
         print("[Client_v2] shutdown.")
         self._quit_event.set()
 
-    # 调 Python：stdout 打 JSON（含 num_samples）；二进制写临时文件并读回
+    # 直接调用train_one_client函数替代subprocess调用
     def runPythonTraining(self, clientId, seed, subset, epochs, lr, batchSize, dataDir, round_id):
-        with tempfile.NamedTemporaryFile(prefix="upd_", suffix=".bin", delete=False) as tmp:
-            outBin = tmp.name
-
-        cmd = []
-        cmd.append(self.PYTHON_EXE)
-        cmd.append(self.TRAINER_PY)
-
-        cmd.append("--client_id")
-        cmd.append(str(clientId))
-        cmd.append("--num_clients")
-        cmd.append(str(self.NUM_CLIENTS))
-        cmd.append("--seed")
-        cmd.append(str(seed))
-        if subset > 0:
-            cmd.append("--subset")
-            cmd.append(str(subset))
-        cmd.append("--epochs")
-        cmd.append(str(epochs))
-        cmd.append("--lr")
-        cmd.append(str(lr))
-        cmd.append("--batch_size")
-        cmd.append(str(batchSize))
-        cmd.append("--data_dir")
-        cmd.append(dataDir)
-        cmd.append("--round")
-        cmd.append(str(round_id))
-
+        # 构造类似命令行参数的对象
+        args = argparse.Namespace()
+        args.client_id = clientId
+        args.num_clients = self.NUM_CLIENTS
+        args.seed = seed
+        args.subset = subset
+        args.epochs = epochs
+        args.lr = lr
+        args.batch_size = batchSize
+        args.data_dir = dataDir
+        args.round = round_id
+        
         # 压缩/稀疏控制参数
         if self.COMPRESS.lower() == "int8_sparse":
-            cmd.append("--compress")
-            cmd.append("int8_sparse")
-            if self.SPARSE_K > 0:
-                cmd.append("--sparse_k")
-                cmd.append(str(self.SPARSE_K))
-            elif self.SPARSE_RATIO > 0.0:
-                cmd.append("--sparse_ratio")
-                cmd.append(str(self.SPARSE_RATIO))
+            args.compress = "int8_sparse"
+            args.sparse_k = self.SPARSE_K
+            args.sparse_ratio = self.SPARSE_RATIO
         elif self.COMPRESS.lower() == "int8":
-            cmd.append("--compress")
-            cmd.append("int8")
-            cmd.append("--chunk")
-            cmd.append(str(self.INT8_CHUNK))
+            args.compress = "int8"
+            args.chunk = self.INT8_CHUNK
         else:
-            cmd.append("--compress")
-            cmd.append("fp32")
-
-        # DGC 参数（可按需改为配置读取）
-        cmd.append("--dgc_momentum")
-        cmd.append("0.9")
-        cmd.append("--dgc_clip_norm")
-        cmd.append("0.0")
-        cmd.append("--dgc_mask_momentum")
-        cmd.append("1")
-        cmd.append("--dgc_warmup_rounds")
-        cmd.append("1")
-
-        # === 新增：如存在最新聚合模型，则传给 Python 作为初始化 ===
-        if os.path.exists(self.latestModelPath):
-            cmd.append("--init_model")
-            cmd.append(str(self.latestModelPath))
-            print(f"[Client_v2] init from model: {self.latestModelPath}")
-        else:
-            print("[Client_v2] no init model found, cold start this round.")
-
-        cmd.append("--out")
-        cmd.append(outBin)
-        stateDir = os.path.join(dataDir, f"client_{clientId}_state")
-        cmd.append("--state_dir")
-        cmd.append(stateDir)
-
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
-                                 text=True, encoding='utf-8')
-
-        sb = []
-        for line in process.stdout:
-            print(f"[PY] {line.rstrip()}")
-            sb.append(line)
+            args.compress = "fp32"
+            
+        # DGC 参数
+        args.dgc_momentum = 0.9
+        args.dgc_clip_norm = 0.0
+        args.dgc_mask_momentum = 1
+        args.dgc_warmup_rounds = 1
+        args.partition = "contig"
         
-        code = process.wait()
-        if code != 0:
-            raise RuntimeError(f"trainer exit={code}")
+        # 如果有最新的模型参数，则创建临时文件供初始化使用
+        temp_model_path = None
+        if self.latestModelParams is not None:
+            with tempfile.NamedTemporaryFile(prefix="init_model_", suffix=".bin", delete=False) as tmp:
+                temp_model_path = tmp.name
+                tmp.write(self.latestModelParams)
+            args.init_model = temp_model_path
+            print(f"[Client_v2] init from model in memory")
+        else:
+            args.init_model = None
+            print("[Client_v2] no init model found, cold start this round.")
+            
+        # 设置state_dir
+        args.state_dir = os.path.join(dataDir, f"client_{clientId}_state")
+        
+        # 设置out为临时文件
+        with tempfile.NamedTemporaryFile(prefix="upd_", suffix=".bin", delete=False) as tmp:
+            outBin = tmp.name
+        args.out = outBin
 
-        numSamples = self.parseNumSamplesFromJson(''.join(sb))
+        # 直接调用train_one_client函数
+        num_samples, stats = train_one_client(args)
+        
+        # 读取生成的更新文件
         with open(outBin, 'rb') as f:
             bytes_data = f.read()
-
-        # 清理输出文件
+            
+        # 清理临时文件
         try:
             os.unlink(outBin)
+            if temp_model_path:
+                os.unlink(temp_model_path)
         except Exception:
             pass
-
-        return self.TrainResult(numSamples, bytes_data)
+            
+        # 返回结果
+        return self.TrainResult(num_samples, bytes_data)
 
     @staticmethod
     def parseNumSamplesFromJson(text):
@@ -461,6 +444,7 @@ class Client_v2:
             return bytearray()
         n = len(b)
         out = bytearray(n)
+        out[:] = b[:]
         return out
 
     class TrainResult:

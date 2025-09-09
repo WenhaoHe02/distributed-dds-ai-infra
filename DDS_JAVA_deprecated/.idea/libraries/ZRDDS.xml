@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="ZRDDS">
+    <CLASSES>
+      <root url="jar://C:/Program Files (x86)/ZRDDS/ZRDDS-2.4.4/lib/ZRDDS.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <NATIVE>
+      <root url="file://C:/Program Files (x86)/ZRDDS/ZRDDS-2.4.4/lib" />
+    </NATIVE>
+    <SOURCES />
+  </library>
+</component>

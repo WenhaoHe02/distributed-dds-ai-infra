@@ -1,0 +1,10 @@
+{
+  "domain_id": 200,
+  "expected_clients": 1,
+  "timeout_ms": 6000000,
+  "rounds": 5,
+  "python_exe": "D:/ANACONDA/python.exe",
+  "eval_script": "D:/distributed-dds-ai-serving-system/distributed_training/train/evaluate.py",
+  "data_dir": "D:/distributed-dds-ai-serving-system/data",
+  "batch_size": 64
+}

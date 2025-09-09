@@ -1,6 +1,5 @@
-# train_ddp_mnist.py
 # -*- coding: utf-8 -*-
-import os, torch, torch.nn as nn, torch.optim as optim, torch.nn.functional as F
+import os, time, torch, torch.nn as nn, torch.optim as optim, torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
@@ -9,14 +8,15 @@ from zrdds_allgather import ZrddsAllgather
 from dgc_stepper import DDPDGCStepper
 from compression import DGCCompressor
 from memory import DGCSGDMemory
-from dgc_eval import ddp_evaluate_top1   # 用我上一条给你的 ddp_eval.py
+from dgc_eval import ddp_evaluate_top1   # 用你提供的 ddp_eval.py
 from dds_barrier_verbose import ddp_barrier_verbose
+
 # ---- 环境参数（也可从命令行传入）
-RANK = int(os.environ.get("RANK", "0"))
-WORLD = int(os.environ.get("WORLD_SIZE", "1"))
-GROUP = os.environ.get("GROUP_ID", "job-20250908-01")
+RANK      = int(os.environ.get("RANK", "0"))
+WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
+GROUP     = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
-DATA_DIR = os.environ.get("DATA_DIR", "./data")
+DATA_DIR  = os.environ.get("DATA_DIR", "./data")
 
 # ---- 模型：自动扁平化 28x28 -> 784
 class MNISTNet(nn.Module):
@@ -46,6 +46,33 @@ def make_loaders(data_dir, batch_size, device):
                               num_workers=0, pin_memory=pin)
     return train_loader, val_loader
 
+# ---- 在这里给 ZrddsAllgather 添加轮询函数
+def wait_for_discovery(ag: ZrddsAllgather, world:int, timeout_ms:int=1000000, include_self:bool=True, poll_ms:int=200):
+    """阻塞直到 discovery 匹配完成"""
+    deadline = time.time() + timeout_ms/1000.0
+    target = world if include_self else max(0, world-1)
+
+    def _get_pub_count():
+        st = ag.writer.get_publication_matched_status()  # 直接返回 DDS_All.PublicationMatchedStatus
+        return int(getattr(st, "current_count", 0))
+
+    def _get_sub_count():
+        st = ag.reader.get_subscription_matched_status()
+        return int(getattr(st, "current_count", 0))
+
+    last_w = last_r = -1
+    while True:
+        cw, cr = _get_pub_count(), _get_sub_count()
+        if (cw >= target) and (cr >= target):
+            print(f"[ag][discovery] OK: writer={cw}, reader={cr}, target={target}")
+            return
+        if cw != last_w or cr != last_r:
+            print(f"[ag][discovery] waiting... writer={cw}, reader={cr}, target={target}")
+            last_w, last_r = cw, cr
+        if time.time() >= deadline:
+            raise TimeoutError(f"discovery timeout: writer={cw}, reader={cr}, target={target}, world={world}")
+        time.sleep(poll_ms/1000.0)
+
 def main():
     # DDS participant
     dp = dds.DomainParticipantFactory.get_instance().create_participant(
@@ -55,10 +82,13 @@ def main():
     # 通信引擎
     ag = ZrddsAllgather(dp, topic="ddp/allgather_blob")
 
+    # ---- ★ 在 barrier 之前先确保 discovery 已完成
+    wait_for_discovery(ag, world=WORLD, timeout_ms=1000000, include_self=True)
+
     ok = ddp_barrier_verbose(ag, group_id=GROUP, rank=RANK, world=WORLD,
                              domain_id=DOMAIN_ID, topic_name="ddp/allgather_blob",
                              min_writer_matches=WORLD, min_reader_matches=WORLD,
-                             match_timeout_s=15.0, barrier_timeout_s=60.0)
+                             match_timeout_s=15.0, barrier_timeout_s=6000.0)
     if not ok:
         raise SystemExit("[barrier] failed; check missing ranks / matching logs")
 
@@ -67,19 +97,19 @@ def main():
     model = MNISTNet().to(device)
     opt = optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
 
-    # 压缩器（示例：0.1% 稀疏；indices 用 int32；如需更激进可调小 compress_ratio）
+    # 压缩器
     mem = DGCSGDMemory(momentum=0.9, nesterov=False, gradient_clipping=None, momentum_masking=True)
     comp = DGCCompressor(compress_ratio=0.001, memory=mem, fp16_values=False, int32_indices=True, warmup_epochs=3)
     stepper = DDPDGCStepper(model, comp, ag, GROUP, RANK, WORLD)
 
-    # 数据s
+    # 数据
     train_loader, val_loader = make_loaders(DATA_DIR, batch_size=256, device=device)
     loss_fn = nn.CrossEntropyLoss()
 
     # 训练参数
     epochs = 3
-    eval_every = 100                      # 每 200 个 step 评一次
-    EVAL_ROUND_OFFSET = 1_000_000_000     # 评估的 round_id 空间与训练分离，避免混包
+    eval_every = 100
+    EVAL_ROUND_OFFSET = 1_000_000_000
 
     global_step = 0
     for ep in range(epochs):
@@ -94,7 +124,7 @@ def main():
             loss = loss_fn(logits, yb)
             loss.backward()
 
-            stepper.finish_and_apply(timeout_s=10000)
+            stepper.finish_and_apply(timeout_s=100000)
             opt.step()
 
             if RANK == 0 and (global_step % 100 == 0):
@@ -106,8 +136,8 @@ def main():
                 g_correct, g_total, acc = ddp_evaluate_top1(
                     model, val_loader, device,
                     zrdds=ag, group_id=GROUP,
-                    epoch_or_step=metric_round,   # 使用独立的评估 round_id
-                    name="val.top1", rank=RANK, world=WORLD, timeout_s=10000.0
+                    epoch_or_step=metric_round,
+                    name="val.top1", rank=RANK, world=WORLD, timeout_s=100000.0
                 )
                 if RANK == 0:
                     print(f"[VAL] step {global_step:05d} acc={acc*100:.2f}% ({g_correct}/{g_total})")

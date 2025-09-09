@@ -26,7 +26,7 @@ def main():
 
     print(f"[rank {RANK}] creating ZrddsAllgather(topic=ddp/allgather_blob)")
     ag = ZrddsAllgather(dp, topic="ddp/allgather_blob")
-
+    ag.wait_for_discovery(world=WORLD, timeout_ms=10000, include_self=True)
     # ---- 仅用于观察发现是否完成（暖机期日志）
     # 由于我们在这个文件拿不到 writer/reader 的 matched 统计，这里只能打印时间窗口内的“等待发现完成”的提示
     if DISCOVERY_WARMUP_MS > 0:

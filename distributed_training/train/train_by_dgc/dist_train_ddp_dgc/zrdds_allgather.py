@@ -24,11 +24,11 @@ def unpack_frame(frame: bytes):
 
 class ZrddsAllgather:
     """
-    通过单个 Topic 进行 P2P allgather：
+    通过单个 Topic 进行 allgather：
       - 每个 rank 把自己的分片广播出去
       - 每个 rank 同时收集所有 rank 的同名分片，收齐后返回
     """
-    def __init__(self, dp, topic="ddp/allgather_blob", history_depth=1024):
+    def __init__(self, dp, topic="ddp/allgather_blob", history_depth=10):
         self.dp = dp
         self.topic = dp.create_topic(topic, "ModelBlob", dds.TOPIC_QOS_DEFAULT, None, 0)
 
@@ -93,7 +93,8 @@ class ZrddsAllgather:
         for seq, ck in enumerate(chunks):
             mb = dds.ModelBlob()
             body = pack_frame(group_id, round_id, name, part_id, rank, world, seq, len(chunks), ck)
-            b = bytearray(); b.extend(body)
+            b = bytearray()
+            b.extend(body)
             mb.data = body
             self.writer.write(mb)
 

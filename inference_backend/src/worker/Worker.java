@@ -91,6 +91,7 @@ public class Worker {
 
     /* ===================== DDS listeners hook ===================== */
     public void onOpenBatch(OpenBatch ob){
+
         if (ob == null) return;
         if (!cfg.modelId.equals(ob.model_id)) return;
         if (currentDepth() >= cfg.maxInflightBatches) return;
@@ -102,6 +103,7 @@ public class Worker {
         c.batch_id = ob.batch_id;
         c.worker_id = cfg.workerId;
         c.queue_length = currentDepth();
+        System.out.println("[Worker]get openbatch  batch_id:"+c.batch_id+" worker_id: "+c.worker_id+" queue_length: "+c.queue_length);
         try { claimEmitter.emit(c); } catch (Exception e){ e.printStackTrace(); }
     }
 

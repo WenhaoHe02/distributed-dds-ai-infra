@@ -3,16 +3,16 @@
 ModelRunner - Python version of the Java ModelRunner class
 """
 
-import os
-import sys
 import shutil
 import subprocess
-import tempfile
 import time
 import uuid
 from pathlib import Path
 from typing import Optional, NamedTuple
 import platform
+import model_service.runners.ocr_runner as ocr_runner
+import model_service.runners.yolo_runner as yolo_runner
+
 
 from DDS_All import (
     TaskList, WorkerResult, WorkerTaskResult, WorkerTaskResultSeq,
@@ -151,85 +151,47 @@ class ModelRunner:
             if run_paths:
                 ModelRunner._delete_recursive_quietly(run_paths.root)
 
-    # ========== Python model execution ==========
+    # ========== Python model execution (use ocr_runner / yolo_runner) ==========
 
     @staticmethod
-    def _run_model_batch(input_dir: str, output_dir: str) -> None:
-        """Run batch model inference"""
+    def _run_model_batch(input_dir: str, output_dir: str, model_type: str = "ocr") -> None:
+        """Run batch model inference using OCR or YOLO runner"""
         try:
-            python_exe = ModelRunner._find_python_executable()
-            script_path = ModelRunner._find_python_script_path()
-
-            cmd = [
-                python_exe,
-                script_path,
-                "--path", input_dir,
-                "--out_dir", output_dir
-            ]
-
-            process = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=300  # 5 minute timeout
-            )
-
-            # Print output
-            if process.stdout:
-                for line in process.stdout.splitlines():
-                    print(f"[PYTHON] {line}")
-
-            if process.stderr:
-                for line in process.stderr.splitlines():
-                    print(f"[PYTHON ERROR] {line}")
-
-            print(f"batch exitcode={process.returncode}")
-
-        except subprocess.TimeoutExpired:
-            print("Python process timed out")
-            raise
+            task_config = {
+                "input": input_dir,
+                "output": output_dir,
+                # 如果是 YOLO，可以传更多参数
+                "model_parameter": "yolov8n.pt",
+                "params": {"conf": 0.25, "iou": 0.45}
+            }
+            if model_type == "ocr":
+                ocr_runner.run_ocr(task_config)
+            elif model_type == "yolo":
+                yolo_runner.run_yolo(task_config)
+            else:
+                raise ValueError(f"Unknown model type: {model_type}")
         except Exception as e:
-            print(f"Error running Python batch: {e}")
+            print(f"Error running {model_type} batch: {e}")
             raise
 
     @staticmethod
-    def _run_model_single(input_path: str, task_id: str, output_dir: str) -> None:
-        """Run single model inference"""
+    def _run_model_single(input_path: str, task_id: str, output_dir: str, model_type: str = "ocr") -> None:
+        """Run single model inference using OCR or YOLO runner"""
         try:
-            python_exe = ModelRunner._find_python_executable()
-            script_path = ModelRunner._find_python_script_path()
-
-            cmd = [
-                python_exe,
-                script_path,
-                "--path", input_path,
-                "--task_id", task_id,
-                "--out_dir", output_dir
-            ]
-
-            process = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=60  # 1 minute timeout for single task
-            )
-
-            # Print output
-            if process.stdout:
-                for line in process.stdout.splitlines():
-                    print(f"[PYTHON] {line}")
-
-            if process.stderr:
-                for line in process.stderr.splitlines():
-                    print(f"[PYTHON ERROR] {line}")
-
-            print(f"single exitcode={process.returncode}")
-
-        except subprocess.TimeoutExpired:
-            print("Python process timed out")
-            raise
+            task_config = {
+                "input": input_path,
+                "output": output_dir,
+                "model_parameter": "yolov8n.pt",
+                "params": {"conf": 0.25, "iou": 0.45}
+            }
+            if model_type == "ocr":
+                ocr_runner.run_ocr(task_config)
+            elif model_type == "yolo":
+                yolo_runner.run_yolo(task_config)
+            else:
+                raise ValueError(f"Unknown model type: {model_type}")
         except Exception as e:
-            print(f"Error running Python single: {e}")
+            print(f"Error running {model_type} single: {e}")
             raise
 
     # ========== Path/directory utilities ==========
@@ -313,54 +275,6 @@ class ModelRunner:
         # Replace unsafe characters with underscores
         safe = "".join(c if c.isalnum() or c in "_-" else "_" for c in name)
         return safe if safe else default
-
-    @staticmethod
-    def _find_python_executable() -> str:
-        """Find Python executable"""
-        # Try common Python executables
-        candidates = ["python", "python3"]
-
-        if platform.system() == "Windows":
-            candidates.extend([
-                "py",
-                r"C:\Users\HWH\AppData\Local\Programs\Python\Python39\python.exe"
-            ])
-
-        for candidate in candidates:
-            try:
-                result = subprocess.run(
-                    [candidate, "--version"],
-                    capture_output=True,
-                    timeout=5
-                )
-                if result.returncode == 0:
-                    return candidate
-            except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-                continue
-
-        # Default fallback
-        if platform.system() == "Windows":
-            return r"C:\Users\HWH\AppData\Local\Programs\Python\Python39\python.exe"
-        else:
-            return "python3"
-
-    @staticmethod
-    def _find_python_script_path() -> str:
-        """Find Python script path"""
-        # Try relative path first
-        script_paths = [
-            Path("src") / "yolo_service" / "pred.py",
-            Path.cwd() / "src" / "yolo_service" / "pred.py",
-            Path("yolo_service") / "pred.py",
-            Path("pred.py")
-        ]
-
-        for script_path in script_paths:
-            if script_path.exists():
-                return str(script_path)
-
-        # Default fallback
-        return str(Path.cwd() / "src" / "yolo_service" / "pred.py")
 
     @staticmethod
     def _empty_bytes() -> bytearray:

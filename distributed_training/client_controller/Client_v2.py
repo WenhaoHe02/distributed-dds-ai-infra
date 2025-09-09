@@ -1,30 +1,15 @@
-# 从ai_train模块导入所需类型 (TrainCmd, ClientUpdate, ModelBlob, Bytes等)
+
 import DDS_All as dds
-# DDS相关导入
-# from com.zrdds.domain import DomainParticipant, DomainParticipantFactory
-# from com.zrdds.infrastructure import StatusKind, ReturnCode_t, InstanceHandle_t, PublicationMatchedStatus, SubscriptionMatchedStatus
-# from com.zrdds.publication import Publisher, DataWriterQos
-# from com.zrdds.subscription import DataReader, SimpleDataReaderListener, Subscriber, DataReaderQos
-# from com.zrdds.topic import Topic
-
-# 不再需要自定义SimpleDataReaderListener基类，直接使用DDS_All提供的DataReaderListener
-
-# 标准库导入
 import json
 import os
 import sys
-import subprocess
 import tempfile
 import time
 import threading
 import signal
 from pathlib import Path
-from typing import List, Optional, Dict, Any
 from threading import Event
 import argparse
-import torch
-from torch.nn.utils import vector_to_parameters
-import numpy as np
 
 # 添加对dist_train_v2模块的导入
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -308,7 +293,7 @@ class Client_v2:
                     
                 try:
                     # 直接将模型参数保存在内存中，而不是写入文件
-                    buf = Client_v2.bytesToArray(mb.data)
+                    buf = mb.data
                     self.client.latestModelRound = int(mb.round_id)
                     self.client.latestModelParams = buf
                     print(f"[Client_v2] ModelBlob: round={mb.round_id} "
@@ -373,26 +358,24 @@ class Client_v2:
         args.dgc_mask_momentum = 1
         args.dgc_warmup_rounds = 1
         args.partition = "contig"
+        args.state_dir = os.path.join(dataDir, f"client_{clientId}_state")
         
+        # 创建临时文件用于输出
+        with tempfile.NamedTemporaryFile(prefix="upd_", suffix=".bin", delete=False) as tmp:
+            outBin = tmp.name
+        args.out = outBin
+
         # 如果有最新的模型参数，则创建临时文件供初始化使用
         temp_model_path = None
         if self.latestModelParams is not None:
             with tempfile.NamedTemporaryFile(prefix="init_model_", suffix=".bin", delete=False) as tmp:
                 temp_model_path = tmp.name
-                tmp.write(self.latestModelParams)
+                tmp.write(self.latestModelParams)  # 确保正确写入字节数据
             args.init_model = temp_model_path
             print(f"[Client_v2] init from model in memory")
         else:
             args.init_model = None
             print("[Client_v2] no init model found, cold start this round.")
-            
-        # 设置state_dir
-        args.state_dir = os.path.join(dataDir, f"client_{clientId}_state")
-        
-        # 设置out为临时文件
-        with tempfile.NamedTemporaryFile(prefix="upd_", suffix=".bin", delete=False) as tmp:
-            outBin = tmp.name
-        args.out = outBin
 
         # 直接调用train_one_client函数
         num_samples, stats = train_one_client(args)
@@ -412,27 +395,6 @@ class Client_v2:
         # 返回结果
         return self.TrainResult(num_samples, bytes_data)
 
-    @staticmethod
-    def parseNumSamplesFromJson(text):
-        try:
-            l = text.find('{')
-            r = text.rfind('}')
-            if l >= 0 and r > l:
-                json_str = text[l:r+1]
-                obj = json.loads(json_str)
-                if "num_samples" in obj:
-                    return obj["num_samples"]
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-        return 0
-
-    # @staticmethod
-    # def toBytes(raw):
-    #     out = Bytes()
-    #     if raw is not None:
-    #         out.loan_contiguous(raw, len(raw), len(raw))
-    #     return out
 
     @staticmethod
     def bytesLen(b):

@@ -3,7 +3,6 @@
 Worker (Scheme B, Claim updated: {batch_id, worker_id, queue_length})
 Python version of the Java Worker class
 """
-
 import os
 import sys
 import time
@@ -85,12 +84,9 @@ class Worker:
 
     def __init__(self,
                  config: WorkerConfig,
-                 claim_emitter: Callable[[Claim], None],
-                 result_emitter: Callable[[WorkerResult], None],
                  model_runner: ModelRunner):
+
         self.config = config
-        self.claim_emitter = claim_emitter
-        self.result_emitter = result_emitter
         self.model_runner = model_runner
 
         # State
@@ -105,10 +101,178 @@ class Worker:
         self.running = Event()
         self.consumer_thread: Optional[threading.Thread] = None
 
-        # Heartbeat
+        # DDS组件
+        self.dp: Optional[DomainParticipant] = None
+        self.sub: Optional[Subscriber] = None
+        self.pub: Optional[Publisher] = None
+
+        self.open_topic: Optional[Topic] = None
+        self.claim_topic: Optional[Topic] = None
+        self.task_topic: Optional[Topic] = None
+        self.result_topic: Optional[Topic] = None
+        self.heartbeat_topic: Optional[Topic] = None
+
+        self.claim_writer: Optional[ClaimDataWriter] = None
+        self.result_writer: Optional[WorkerResultDataWriter] = None
         self.heartbeat_writer: Optional[WorkerResultDataWriter] = None
+        self.openbatch_reader: Optional[OpenBatchDataReader] = None
+        self.tasklist_reader: Optional[TaskListDataReader] = None
+
+        self.openbatch_listener: Optional[OpenBatchListener] = None
+        self.tasklist_listener: Optional[TaskListListener] = None
+
+        # Heartbeat
         self.heartbeat_enabled = Event()
         self.heartbeat_executor: Optional[ThreadPoolExecutor] = None
+
+    def _initialize_dds(self) -> bool:
+        """初始化DDS组件"""
+        try:
+            # 1.从工厂创建DomainParticipant
+            dpf = DomainParticipantFactory.get_instance()
+            if not dpf:
+                print("DomainParticipantFactory.get_instance() failed")
+                return False
+
+            self.dp = dpf.create_participant(
+                self.DOMAIN_ID,
+                DDS_All.DOMAINPARTICIPANT_QOS_DEFAULT, None, 0
+            )
+            if not self.dp:
+                print("create_participant failed")
+                return False
+            print("成功创建DomainParticipant")
+
+            # 2.注册类型
+            DDS_All.register_all_types(self.dp)
+
+            # 3.创建 Publisher 和 Subscriber
+            self.pub = self.dp.create_publisher(-1, None, 0)
+            self.sub = self.dp.create_subscriber(-1, None, 0)
+
+            if not self.pub or not self.sub:
+                print("create_publisher/subscriber failed")
+                return False
+            print("成功创建Publisher和Subscriber")
+
+            # 4.创建Topic
+            self.open_topic = self.dp.create_topic(
+                Worker.TOPIC_OPEN_BATCH,
+                OpenBatch.__name__,
+                DDS_All.TOPIC_QOS_DEFAULT,
+                None,
+                0
+            )
+            self.claim_topic = self.dp.create_topic(
+                Worker.TOPIC_CLAIM,
+                Claim.__name__,
+                DDS_All.TOPIC_QOS_DEFAULT,
+                None,
+                0
+            )
+            self.task_topic = self.dp.create_topic(
+                Worker.TOPIC_TASK_LIST,
+                Task.__name__,
+                DDS_All.TOPIC_QOS_DEFAULT,
+                None,
+                0
+            )
+            self.result_topic = self.dp.create_topic(
+                Worker.TOPIC_WORKER_RESULT,
+                WorkerResult.__name__,
+                DDS_All.TOPIC_QOS_DEFAULT,
+                None,
+                0
+            )
+            self.heartbeat_topic = self.dp.create_topic(
+                Worker.TOPIC_WORKER_HEARTBEAT,
+                WorkerResult.__name__,
+                DDS_All.TOPIC_QOS_DEFAULT,
+                None,
+                0
+            )
+            if not all([self.open_topic, self.claim_topic, self.task_topic, self.result_topic, self.heartbeat_topic]):
+                print("create_topic failed")
+                return False
+            print("成功创建Topic")
+
+            # 5.创建DateReadeer 和 DateWriter
+            mask = StatusKind.DATA_AVAILABLE_STATUS | StatusKind.SUBSCRIPTION_MATCHED_STATUS
+            self.claim_writer = self.pub.create_datawriter(self.claim_topic, DDS_All.DATAREADER_QOS_DEFAULT, None, mask)
+            self.result_writer = self.pub.create_datawriter(self.result_topic, DDS_All.DATAREADER_QOS_DEFAULT, None, mask)
+
+            heartbeat_qos = DataWriterQos()
+            self.pub.get_default_datawriter_qos(heartbeat_qos)
+
+            self.heartbeat_writer = self.pub.create_datawriter(
+                self.heartbeat_topic,
+                DDS_All.DATAREADER_QOS_DEFAULT,
+                None,
+                mask
+            )
+
+            if not all([self.claim_writer, self.result_writer, self.heartbeat_writer]):
+                print("create_datawriter failed")
+                return False
+            print("成功创建Writers")
+
+            # Create data readers with listeners
+            self.openbatch_reader = self.sub.create_datareader(
+                self.open_topic,
+                DDS_All.DATAREADER_QOS_DEFAULT,
+                None,
+                0
+            )
+
+            self.tasklist_reader = self.sub.create_datareader(
+                self.task_topic,
+                DDS_All.DATAREADER_QOS_DEFAULT,
+                None,
+                0
+            )
+
+            if not self.openbatch_reader or not self.tasklist_reader:
+                print("create_datareader failed")
+                return False
+
+            print("成功创建Readers")
+
+            self.openbatch_listener=OpenBatchListener(self)
+            self.tasklist_listener=TaskListListener(self)
+
+            # Set listeners
+            rtn_open=self.openbatch_reader.set_listener(
+                self.openbatch_listener,
+                StatusKind.DATA_AVAILABLE_STATUS
+            )
+
+            rtn_task=self.tasklist_reader.set_listener(
+                self.tasklist_listener,
+                StatusKind.DATA_AVAILABLE_STATUS
+            )
+
+            if not (rtn_open is DDS_All.DDS_ReturnCode_t.OK and rtn_task is DDS_All.DDS_ReturnCode_t.OK ):
+                print("associate listener failed")
+                return False
+            print("成功绑定listener")
+
+            return True
+
+        except Exception as e:
+            print(f"Exception during DDS initialization: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def claim_emitter(self,claim: Claim) -> None:
+        rc = self.claim_writer.write(claim)
+        if rc != DDS_All.DDS_ReturnCode_t.OK:
+            print(f"[WorkerMain] claim write rc={rc}")
+
+    def result_emitter(self,worker_result: WorkerResult) -> None:
+        rc = self.result_writer.write(worker_result)
+        if rc != DDS_All.DDS_ReturnCode_t.OK:
+            print(f"[WorkerMain] result write rc={rc}")
 
     def on_open_batch(self, open_batch: OpenBatch) -> None:
         """Handle OpenBatch message"""
@@ -354,18 +518,9 @@ class TaskListListener(DataReaderListener):
 
 def main():
     """Main function"""
-    worker_id = sys_or_env("worker.id", "WORKER_ID", generate_random_id())
+    worker_id = sys_or_env("worker.id", "WORKER_ID", "worker1_cpu")
     model_id = sys_or_env("worker.model", "WORKER_MODEL", "model_0")
 
-    # DDS entities
-    dp = None
-    pub = None
-    sub = None
-    open_reader = None
-    task_reader = None
-    claim_writer = None
-    result_writer = None
-    heartbeat_writer = None
     worker = None
 
     def cleanup():
@@ -389,148 +544,18 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
 
     try:
-        # 1.从工厂创建DomainParticipant
-        dpf = DomainParticipantFactory.get_instance()
-        if not dpf:
-            print("DomainParticipantFactory.get_instance() failed")
-            return
-
-        dp = dpf.create_participant(
-            Worker.DOMAIN_ID,
-            DDS_All.DOMAINPARTICIPANT_QOS_DEFAULT, None, 0
-        )
-        if not dp:
-            print("create_participant failed")
-            return
-        print("成功创建DomainParticipant")
-
-        # 2.注册类型
-        DDS_All.register_all_types(dp)
-
-        # 3.创建 Publisher 和 Subscriber
-        pub = dp.create_publisher(-1, None, 0)
-        sub = dp.create_subscriber(-1, None, 0)
-
-        if not pub or not sub:
-            print("create_publisher/subscriber failed")
-            return
-        print("成功创建Publisher和Subscriber")
-
-        # 4.创建Topic
-        open_topic = dp.create_topic(
-             Worker.TOPIC_OPEN_BATCH,
-             OpenBatch.__name__,
-            DDS_All.TOPIC_QOS_DEFAULT,
-            None,
-            0
-        )
-        claim_topic = dp.create_topic(
-            Worker.TOPIC_CLAIM,
-            Claim.__name__,
-            DDS_All.TOPIC_QOS_DEFAULT,
-            None,
-            0
-        )
-        task_topic = dp.create_topic(
-            Worker.TOPIC_TASK_LIST,
-            Task.__name__,
-            DDS_All.TOPIC_QOS_DEFAULT,
-            None,
-            0
-        )
-        result_topic = dp.create_topic(
-            Worker.TOPIC_WORKER_RESULT,
-            WorkerResult.__name__,
-            DDS_All.TOPIC_QOS_DEFAULT,
-            None,
-            0
-        )
-        heartbeat_topic = dp.create_topic(
-            Worker.TOPIC_WORKER_HEARTBEAT,
-            WorkerResult.__name__,
-            DDS_All.TOPIC_QOS_DEFAULT,
-            None,
-            0
-        )
-        if not all([open_topic, claim_topic, task_topic, result_topic, heartbeat_topic]):
-            print("create_topic failed")
-            return
-        print("成功创建Topic")
-
-        # 5.创建DateReadeer 和 DateWriter
-        mask = StatusKind.DATA_AVAILABLE_STATUS | StatusKind.SUBSCRIPTION_MATCHED_STATUS
-        claim_writer = pub.create_datawriter(claim_topic, DDS_All.DATAREADER_QOS_DEFAULT, None, mask)
-        result_writer = pub.create_datawriter(result_topic,DDS_All.DATAREADER_QOS_DEFAULT, None, mask)
-
-        # Heartbeat writer with special QoS
-        heartbeat_qos = DataWriterQos()
-        pub.get_default_datawriter_qos(heartbeat_qos)
-
-        heartbeat_writer = pub.create_datawriter(
-            heartbeat_topic,
-            DDS_All.DATAREADER_QOS_DEFAULT,
-            None,
-            mask
-        )
-
-        if not all([claim_writer, result_writer, heartbeat_writer]):
-            print("create_datawriter failed")
-            return
-        print("成功创建Writers")
-
-        status = heartbeat_writer.get_publication_matched_status()
-        print("heartbeat_writer的匹配状态:", status)
-        print("当前匹配的订阅者数量:", status.current_count)
-
-        # Create worker with emitters
-        def claim_emitter(claim: Claim) -> None:
-            rc = claim_writer.write(claim, InstanceHandle_t.HANDLE_NIL_NATIVE)
-            if rc != DDS_All.DDS_ReturnCode_t.OK:
-                print(f"[WorkerMain] claim write rc={rc}")
-
-        def result_emitter(worker_result: WorkerResult) -> None:
-            rc = result_writer.write(worker_result, InstanceHandle_t.HANDLE_NIL_NATIVE)
-            if rc != DDS_All.DDS_ReturnCode_t.OK:
-                print(f"[WorkerMain] result write rc={rc}")
-
         config = WorkerConfig(worker_id, model_id)
         config.enable_heartbeat = True
         config.heartbeat_interval_seconds = 5
 
-        worker = Worker(config, claim_emitter, result_emitter, ModelRunner())
-        worker.set_heartbeat_writer(heartbeat_writer)
+        model_runner=ModelRunner()
 
-        # Create data readers with listeners
-        open_reader = sub.create_datareader(
-            open_topic,
-            DDS_All.DATAREADER_QOS_DEFAULT,
-            None,
-            0
-        )
+        worker = Worker(config,model_runner)
 
-        task_reader = sub.create_datareader(
-            task_topic,
-            DDS_All.DATAREADER_QOS_DEFAULT,
-            None,
-            0
-        )
-
-        if not open_reader or not task_reader:
-            print("create_datareader failed")
-            return
-
-        print("成功创建Readers")
-
-        # Set listeners
-        open_reader.set_listener(
-            OpenBatchListener(worker),
-            StatusKind.DATA_AVAILABLE_STATUS
-        )
-
-        task_reader.set_listener(
-            TaskListListener(worker),
-            StatusKind.DATA_AVAILABLE_STATUS
-        )
+        res=worker._initialize_dds()
+        if not res:
+            print("worker dds initialize failed")
+        print("worker dds环境初始化成功")
 
         # Start worker
         worker.start()

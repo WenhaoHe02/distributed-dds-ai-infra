@@ -5,7 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/client_controller" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/train/train_by_dgc/dist_train_ddp_dgc" isTestSource="false" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.9 (venv) (2)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="dds" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

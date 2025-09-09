@@ -1,10 +1,8 @@
-#!/usr/bin/env python3
 """
 StateMonitor - 监控Worker的健康状态
 使用DDS的Liveliness QoS机制来监控Worker是否在指定时间内发送心跳信号
 Python版本的Java StateMonitor类
 """
-
 import os
 import sys
 import time
@@ -12,18 +10,14 @@ import threading
 import signal
 from concurrent.futures import ThreadPoolExecutor
 from threading import Event, Lock
-from typing import Optional, Dict, Callable, Protocol
+from typing import Optional, Dict, Protocol
 from dataclasses import dataclass
-from collections import defaultdict
 
 import DDS_All
 from DDS_All import *
-from DDS_All import DomainParticipantFactory, DataReader, DataReaderListener
-from DDS_All import Subscriber, StatusKind
-
-# Data structure imports
+from DDS_All import DomainParticipantFactory, DataReader
+from DDS_All import Subscriber
 from DDS_All import WorkerResult, WorkerResultSeq, SampleInfoSeq
-from typing_extensions import override
 
 
 @dataclass
@@ -36,17 +30,18 @@ class StateMonitorConfig:
 
 class HealthStatusCallback(Protocol):
     """健康状态回调接口"""
-    @staticmethod
-    def on_worker_healthy(worker_id: str) -> None:
-        print(f">>> CALLBACK: Worker {worker_id} is HEALTHY")
 
-    @staticmethod
+    def on_worker_healthy(self, worker_id: str) -> None:
+        """Worker健康时调用"""
+        ...
+
     def on_worker_failed(self, worker_id: str) -> None:
-        print(f">>> CALLBACK: Worker {worker_id} FAILED!")
+        """Worker失效时调用"""
+        ...
 
-    @staticmethod
     def on_worker_recovered(self, worker_id: str) -> None:
-        print(f">>> CALLBACK: Worker {worker_id} RECOVERED!")
+        """Worker恢复时调用"""
+        ...
 
 class StateMonitor:
     """监控Worker健康状态的主类"""
@@ -219,6 +214,7 @@ class StateMonitor:
 
         def monitor_loop():
             while self.running.is_set():
+                print("监控")
                 try:
                     self._check_worker_health()
                     time.sleep(self.config.check_interval_seconds)
@@ -253,14 +249,14 @@ class StateMonitor:
                     self.worker_health_status[worker_id] = is_healthy
 
                     if is_healthy:
-                        if previous_status is not None and not previous_status:
-                            # Worker恢复健康
-                            print(f"[StateMonitor] Worker recovered: {worker_id}")
-                            self.callback.on_worker_recovered(worker_id)
-                        else:
+                        if previous_status is None:
                             # Worker首次检测到健康
                             print(f"[StateMonitor] Worker healthy: {worker_id}")
                             self.callback.on_worker_healthy(worker_id)
+                        else:
+                            # Worker恢复健康
+                            print(f"[StateMonitor] Worker recovered: {worker_id}")
+                            self.callback.on_worker_recovered(worker_id)
                     else:
                         # Worker失效
                         elapsed_ms = int((current_time - last_seen_time) * 1000)
@@ -307,13 +303,12 @@ class HeartbeatReaderListener(DDS_All.DataReaderListener):
         self.state_monitor=statemonitor
 
     def on_data_available(self, reader:DDS_All.WorkerResultDataReader):
-        print("有数据到达")
         """处理心跳数据"""
         data_seq = WorkerResultSeq()
         info_seq = SampleInfoSeq()
 
         try:
-            result = reader.read(
+            result = reader.take(
                 data_seq, info_seq, -1,
                 DDS_All.ANY_SAMPLE_STATE,
                 DDS_All.ANY_VIEW_STATE,
@@ -366,6 +361,19 @@ class HeartbeatReaderListener(DDS_All.DataReaderListener):
         # Required abstract method, can be empty
         pass
 
+
+class TestHealthStatusCallback:
+    """测试用的健康状态回调实现"""
+
+    def on_worker_healthy(self, worker_id: str) -> None:
+        print(f">>> CALLBACK: Worker {worker_id} is HEALTHY")
+
+    def on_worker_failed(self, worker_id: str) -> None:
+        print(f">>> CALLBACK: Worker {worker_id} FAILED!")
+
+    def on_worker_recovered(self, worker_id: str) -> None:
+        print(f">>> CALLBACK: Worker {worker_id} RECOVERED!")
+
 def main():
     """测试主函数"""
     try:
@@ -377,7 +385,7 @@ def main():
         )
 
         # 创建回调
-        callback = HealthStatusCallback()
+        callback = TestHealthStatusCallback()
 
         # 创建监控器
         monitor = StateMonitor(config, callback)
@@ -406,6 +414,7 @@ def main():
         import traceback
         traceback.print_exc()
         sys.exit(1)
+
 
 
 if __name__ == "__main__":

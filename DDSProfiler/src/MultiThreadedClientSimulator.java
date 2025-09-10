@@ -7,15 +7,14 @@ import java.util.Random;
 
 public class MultiThreadedClientSimulator {
     //---------------------------配-置-区-域------------------------------
-    // 默认配置，与单线程属性相同的配置可覆盖单线程里的配置
 
     // 线程数
-    private static final int DEFAULT_THREAD_COUNT = 5;
+    private static final int DEFAULT_THREAD_COUNT = 2;
     // 每个线程发送的请求数
-    private static final int DEFAULT_REQUEST_COUNT_PER_THREAD = 20;
+    private static final int DEFAULT_REQUEST_COUNT_PER_THREAD = 5;
     // 任务数范围
     private static final int DEFAULT_MIN_TASKS_PER_REQUEST = 1;
-    private static final int DEFAULT_MAX_TASKS_PER_REQUEST = 200;
+    private static final int DEFAULT_MAX_TASKS_PER_REQUEST = 10;
     // 请求间隔范围
     private static final int DEFAULT_MIN_REQUEST_INTERVAL_MS = 50;
     private static final int DEFAULT_MAX_REQUEST_INTERVAL_MS = 500;

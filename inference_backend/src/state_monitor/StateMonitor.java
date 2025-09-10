@@ -8,6 +8,7 @@ import com.zrdds.publication.*;
 import com.zrdds.topic.Topic;
 import data_structure.*;
 
+import java.nio.ByteOrder;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Map;
@@ -187,7 +188,7 @@ public class StateMonitor {
             // 配置Liveliness QoS
             readerQos.liveliness.kind = LivelinessQosPolicyKind.MANUAL_BY_TOPIC_LIVELINESS_QOS;
             readerQos.liveliness.lease_duration.sec = config.heartbeatTimeoutSeconds;
-            readerQos.liveliness.lease_duration.nanosec = 0;
+            //readerQos.liveliness.lease_duration.nanosec = 0;
 
             DataReader reader = subscriber.create_datareader(
                     heartbeatTopic,
@@ -337,9 +338,30 @@ public class StateMonitor {
 
         @Override
         public void on_liveliness_changed(DataReader reader, LivelinessChangedStatus status) {
+
+            if (status.alive_count == 1) {
+                System.out.println("DataWriter liveliness changed : create");
+            } else if (status.alive_count == 0) {
+                System.out.println("DataWriter liveliness changed : delete");
+            }
+
+            int[] arr = toIntArray(status.last_publication_handle.get_valuesI(), 16);
+
+            // 通过LivelinessChangedStatus可以获取相关详细信息
+            System.out.println("LivelinessChangedStatus alive_count:" + status.alive_count);
+            System.out.println("LivelinessChangedStatus not_alive_count:" + status.not_alive_count);
+            System.out.println("LivelinessChangedStatus alive_count_change:"
+                    + status.alive_count_change);
+            System.out.println("LivelinessChangedStatus not_alive_count_change:"
+                    + status.not_alive_count_change);
+
             System.out.println("[StateMonitor] Liveliness changed - " +
                     "alive_count: " + status.alive_count +
                     ", not_alive_count: " + status.not_alive_count);
+
+            System.out.println("Subscription_id = 0x" + String.format("%08X", arr[0])
+                    + String.format("%08X", arr[1]) + String.format("%08X", arr[2])
+                    + String.format("%08X", arr[3]) + "\n");
 
             // 当有Worker的liveliness发生变化时，可以在这里处理
             if (status.not_alive_count > 0) {
@@ -365,6 +387,24 @@ public class StateMonitor {
         }
 
         public void on_data_arrived(DataReader reader, Object sample, SampleInfo info) {}
+
+        private int[] toIntArray(byte[] b, int byte_arr_size) {
+            int arr_len = byte_arr_size / 4;
+            int[] arr = new int[arr_len];
+            for (int i = 0; i < arr_len; i++) {
+                if (isLittleEndian()) {
+                    arr[i] = (0xff & b[i * 4 + 0]) | (0xff00 & (b[i * 4 + 1] << 8))
+                            | (0xff0000 & (b[i * 4 + 2] << 16)) | (0xff000000 & (b[i * 4 + 3] << 24));
+                } else {
+                    arr[i] = (0xff & b[i * 4 + 3]) | (0xff00 & (b[i * 4 + 2] << 8))
+                            | (0xff0000 & (b[i * 4 + 1] << 16)) | (0xff000000 & (b[i * 4] << 24));
+                }
+            }
+            return arr;
+        }
+        private static boolean isLittleEndian() {
+            return ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN;
+        }
     }
 
     /* ===================== 公共接口 ===================== */

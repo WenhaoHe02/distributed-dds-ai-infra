@@ -206,7 +206,7 @@ class Worker:
 
             self.heartbeat_writer = self.pub.create_datawriter(
                 self.heartbeat_topic,
-                DDS_All.DATAREADER_QOS_DEFAULT,
+                heartbeat_qos,
                 None,
                 mask
             )

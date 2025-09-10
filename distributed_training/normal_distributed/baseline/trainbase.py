@@ -5,19 +5,19 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 import DDS_All as dds
-from zrdds_allgather import ZrddsAllgather
-from dgc_stepper import DDPDGCStepper
+from zrdds_allgatherBaseline import ZrddsAllgather
+from dgc_stepperBaseline import DDPDGCStepper
 from compressionBaseline import Int8Compressor
 from memoryBaseline import Int8SGDMemory
-from dgc_eval import ddp_evaluate_top1
-from dds_barrier_verbose import ddp_barrier_verbose
+from dgc_evalBaseline import ddp_evaluate_top1
+from dds_barrier_verboseBaseline import ddp_barrier_verbose
 
 # ---- 环境参数（也可从命令行传入）
-RANK      = int(os.environ.get("RANK", "0"))
+RANK      = int(os.environ.get("RANK", "1"))
 WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
 GROUP     = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
-DATA_DIR  = os.environ.get("DATA_DIR", "../dist_train_ddp_dgc/data")
+DATA_DIR  = os.environ.get("DATA_DIR", "../data")
 
 # ---- 模型：自动扁平化 28x28 -> 784
 class MNISTNet(nn.Module):

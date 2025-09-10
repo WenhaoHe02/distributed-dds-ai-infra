@@ -14,7 +14,7 @@ from dds_barrier_verbose import ddp_barrier_verbose
 
 # ---- 环境参数（也可从命令行传入）
 RANK      = int(os.environ.get("RANK", "0"))
-WORLD     = int(os.environ.get("WORLD_SIZE", "1"))
+WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
 GROUP     = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
 DATA_DIR  = os.environ.get("DATA_DIR", "./data")
@@ -84,12 +84,12 @@ def main():
     ag = ZrddsAllgather(dp, topic="ddp/allgather_blob")
 
     # ---- ★ 在 barrier 之前先确保 discovery 已完成
-    wait_for_discovery(ag, world=WORLD, timeout_ms=10000, include_self=True)
+    wait_for_discovery(ag, world=WORLD, timeout_ms=100000, include_self=True)
 
     ok = ddp_barrier_verbose(ag, group_id=GROUP, rank=RANK, world=WORLD,
                              domain_id=DOMAIN_ID, topic_name="ddp/allgather_blob",
                              min_writer_matches=WORLD, min_reader_matches=WORLD,
-                             match_timeout_s=15.0, barrier_timeout_s=60.0)
+                             match_timeout_s=150.0, barrier_timeout_s=600.0)
     if not ok:
         raise SystemExit("[barrier] failed; check missing ranks / matching logs")
 
@@ -125,7 +125,7 @@ def main():
             loss = loss_fn(logits, yb)
             loss.backward()
 
-            stepper.finish_and_apply(timeout_s=10000)
+            stepper.finish_and_apply(timeout_s=100000)
             opt.step()
 
             if RANK == 0 and (global_step % 100 == 0):
@@ -138,7 +138,7 @@ def main():
                     model, val_loader, device,
                     zrdds=ag, group_id=GROUP,
                     epoch_or_step=metric_round,
-                    name="val.top1", rank=RANK, world=WORLD, timeout_s=10000.0
+                    name="val.top1", rank=RANK, world=WORLD, timeout_s=100000.0
                 )
                 if RANK == 0:
                     print(f"[VAL] step {global_step:05d} acc={acc*100:.2f}% ({g_correct}/{g_total})")

@@ -11,8 +11,9 @@ from pathlib import Path
 from threading import Event
 import argparse
 
-# 添加对dist_train_v2模块的导入
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# 从train目录导入dist_train_v2模块
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'train'))
 from dist_train_v2 import train_one_client, load_init_model, Net
 
 

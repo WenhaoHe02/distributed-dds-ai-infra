@@ -13,8 +13,8 @@ from dgc_eval import ddp_evaluate_top1   # 用你提供的 ddp_eval.py
 from dds_barrier_verbose import ddp_barrier_verbose
 
 # ---- 环境参数（也可从命令行传入）
-RANK      = int(os.environ.get("RANK", "0"))
-WORLD     = int(os.environ.get("WORLD_SIZE", "1"))
+RANK      = int(os.environ.get("RANK", "1"))
+WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
 GROUP     = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
 DATA_DIR  = os.environ.get("DATA_DIR", "./data")
@@ -89,7 +89,7 @@ def main():
     ok = ddp_barrier_verbose(ag, group_id=GROUP, rank=RANK, world=WORLD,
                              domain_id=DOMAIN_ID, topic_name="ddp/allgather_blob",
                              min_writer_matches=WORLD, min_reader_matches=WORLD,
-                             match_timeout_s=15.0, barrier_timeout_s=60.0)
+                             match_timeout_s=150.0, barrier_timeout_s=600.0)
     if not ok:
         raise SystemExit("[barrier] failed; check missing ranks / matching logs")
 

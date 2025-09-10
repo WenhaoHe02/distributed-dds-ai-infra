@@ -13,11 +13,11 @@ from dgc_eval import ddp_evaluate_top1
 from dds_barrier_verbose import ddp_barrier_verbose
 
 # ---- 环境参数（也可从命令行传入）
-RANK      = int(os.environ.get("RANK", "1"))
+RANK      = int(os.environ.get("RANK", "0"))
 WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
 GROUP     = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
-DATA_DIR  = os.environ.get("DATA_DIR", "./data")
+DATA_DIR  = os.environ.get("DATA_DIR", "../dist_train_ddp_dgc/data")
 
 # ---- 模型：自动扁平化 28x28 -> 784
 class MNISTNet(nn.Module):

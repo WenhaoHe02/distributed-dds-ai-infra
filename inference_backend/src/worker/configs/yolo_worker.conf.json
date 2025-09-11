@@ -1,9 +1,8 @@
 {
   "model_id": "yolo",
   "model_config": {
-     "input": "",
      "output": "",
-     "model_parameter": "models/parameter/yolov11.pt",
+     "parameter": "E:\\distributed-dds-ai-serving-system\\inference_backend\\src\\worker\\parameter\\yolo",
      "conf": 0.5,
      "iou": 0.45
   }

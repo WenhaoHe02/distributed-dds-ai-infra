@@ -49,7 +49,7 @@ public class Spliter {
     private static final long DEDUP_TTL_MS          = 60_000L;
 
     /** 后台清理/定时 flush 的周期（毫秒） */
-    private static final long CLEANUP_INTERVAL_MS   = 10_000L;
+    private static final long CLEANUP_INTERVAL_MS   = 60_000L;
     private static final long FLUSH_TICK_MS         = 2L;
 
     /** 去重表：key = batch_id|request_id|task_id -> 首次看到的时间戳 */
@@ -195,8 +195,7 @@ public class Spliter {
             if (rc != ReturnCode_t.RETCODE_OK) {
                 System.err.println("[Spliter] write ResultUpdate failed: " + rc + " req=" + st.requestId + " items=" + m);
             } else {
-                // 你也可以在此加 debug 日志
-                // System.out.println("[Spliter] flush req=" + st.requestId + " items=" + m);
+                 System.out.println("[Spliter] flush req=" + st.requestId + " items=" + m);
             }
 
             st.buffer.clear();

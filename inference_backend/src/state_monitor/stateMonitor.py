@@ -8,6 +8,7 @@ import sys
 import time
 import threading
 import signal
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from threading import Event, Lock
 from typing import Optional, Dict, Protocol
@@ -19,6 +20,18 @@ from DDS_All import DomainParticipantFactory, DataReader
 from DDS_All import Subscriber
 from DDS_All import WorkerResult, WorkerResultSeq, SampleInfoSeq
 
+log_dir = './logs/'
+log_file = os.path.join(log_dir, 'stateMonitorlog.txt')
+
+# 如果目录不存在就创建
+os.makedirs(log_dir, exist_ok=True)
+
+logging.basicConfig(
+    level=logging.INFO,                 # 日志级别
+    format='%(asctime)s - %(levelname)s -[StateMonitor]- %(message)s',  # 日志格式
+    filename=log_dir+'stateMonitorlog.txt',                 # 日志文件名
+    filemode='a'                        # 'w' 会覆盖日志，'a' 会追加
+)
 
 @dataclass
 class StateMonitorConfig:
@@ -73,7 +86,7 @@ class StateMonitor:
     def start(self) -> bool:
         """启动监控器"""
         if self.running.is_set():
-            print("StateMonitor already running")
+            logging.debug("StateMonitor already running")
             return False
         else:
             self.running.set()
@@ -81,24 +94,22 @@ class StateMonitor:
         try:
             # 初始化DDS组件
             if not self._initialize_dds():
-                print("Failed to initialize DDS components")
+                logging.error("Failed to initialize DDS components")
                 self.stop()
                 return False
 
             # 启动监控线程
             self._start_monitoring_threads()
 
-            print("StateMonitor started successfully")
-            print(f"Monitor ID: {self.config.monitor_id}")
-            print(f"Heartbeat timeout: {self.config.heartbeat_timeout_seconds} seconds")
-            print(f"Check interval: {self.config.check_interval_seconds} seconds")
+            logging.info("StateMonitor started successfully")
+            logging.info(f"Monitor ID: {self.config.monitor_id}")
+            logging.info(f"Heartbeat timeout: {self.config.heartbeat_timeout_seconds} seconds")
+            logging.info(f"Check interval: {self.config.check_interval_seconds} seconds")
 
             return True
 
         except Exception as e:
-            print(f"Failed to start StateMonitor: {e}")
-            import traceback
-            traceback.print_exc()
+            logging.error(f"Failed to start StateMonitor: {e}")
             self.stop()
             return False
 
@@ -107,7 +118,7 @@ class StateMonitor:
         if not self.running.is_set():
             return
 
-        print("Stopping StateMonitor...")
+        logging.debug("Stopping StateMonitor...")
         self.running.clear()
 
         # 停止监控线程
@@ -122,7 +133,7 @@ class StateMonitor:
         # 清理DDS资源
         self._cleanup_dds()
 
-        print("StateMonitor stopped")
+        logging.debug("StateMonitor stopped")
 
     def _initialize_dds(self) -> bool:
         """初始化DDS组件"""
@@ -130,7 +141,7 @@ class StateMonitor:
             # 创建DomainParticipant
             dpf = DomainParticipantFactory.get_instance()
             if not dpf:
-                print("Failed to get DomainParticipantFactory")
+                logging.error("Failed to get DomainParticipantFactory")
                 return False
 
             self.domain_participant = dpf.create_participant(
@@ -140,9 +151,9 @@ class StateMonitor:
                 0
             )
             if not self.domain_participant:
-                print("Failed to create DomainParticipant")
+                logging.error("Failed to create DomainParticipant")
                 return False
-            print("成功创建DomainParticipant")
+            logging.debug("成功创建DomainParticipant")
 
             # 注册数据类型
             DDS_All.register_all_types(self.domain_participant)
@@ -156,9 +167,9 @@ class StateMonitor:
                 0
             )
             if not heartbeat_topic:
-                print("Failed to create heartbeat topic")
+                logging.error("Failed to create heartbeat topic")
                 return False
-            print("成功创建Topic")
+            logging.debug("成功创建Topic")
 
             # 创建Subscriber
             self.subscriber = self.domain_participant.create_subscriber(
@@ -167,9 +178,9 @@ class StateMonitor:
                 0
             )
             if not self.subscriber:
-                print("Failed to create Subscriber")
+                logging.error("Failed to create Subscriber")
                 return False
-            print("成功创建Subscriber")
+            logging.debug("成功创建Subscriber")
 
             # 创建DataReader with Liveliness QoS
             reader_qos = DataReaderQos()
@@ -185,16 +196,14 @@ class StateMonitor:
             )
 
             if not self.heartbeat_reader:
-                print("Failed to create DataReader")
+                logging.error("Failed to create DataReader")
                 return False
-            print("成功创建Reader")
+            logging.debug("成功创建Reader")
 
             return True
 
         except Exception as e:
-            print(f"Exception during DDS initialization: {e}")
-            import traceback
-            traceback.print_exc()
+            logging.error(f"Exception during DDS initialization: {e}")
             return False
 
     def _cleanup_dds(self) -> None:
@@ -205,7 +214,7 @@ class StateMonitor:
                 DomainParticipantFactory.get_instance().delete_participant(self.domain_participant)
                 self.domain_participant = None
         except Exception as e:
-            print(f"Error during DDS cleanup: {e}")
+            logging.error(f"Error during DDS cleanup: {e}")
 
     def _start_monitoring_threads(self) -> None:
         """启动监控线程"""
@@ -214,12 +223,11 @@ class StateMonitor:
 
         def monitor_loop():
             while self.running.is_set():
-                print("监控")
                 try:
                     self._check_worker_health()
                     time.sleep(self.config.check_interval_seconds)
                 except Exception as e:
-                    print(f"Error in monitor loop: {e}")
+                    logging.error(f"Error in monitor loop: {e}")
                     if not self.running.is_set():
                         break
 
@@ -251,16 +259,16 @@ class StateMonitor:
                     if is_healthy:
                         if previous_status is None:
                             # Worker首次检测到健康
-                            print(f"[StateMonitor] Worker healthy: {worker_id}")
+                            logging.info(f"Worker healthy: {worker_id}")
                             self.callback.on_worker_healthy(worker_id)
                         else:
                             # Worker恢复健康
-                            print(f"[StateMonitor] Worker recovered: {worker_id}")
+                            logging.info(f"Worker recovered: {worker_id}")
                             self.callback.on_worker_recovered(worker_id)
                     else:
                         # Worker失效
                         elapsed_ms = int((current_time - last_seen_time) * 1000)
-                        print(f"[StateMonitor] Worker failed: {worker_id} "
+                        logging.info(f"Worker failed: {worker_id} "
                               f"(last seen {elapsed_ms}ms ago)")
                         self.callback.on_worker_failed(worker_id)
 
@@ -271,7 +279,7 @@ class StateMonitor:
                 time.sleep(1.0)
             except Exception as e:
                 if self.running.is_set():
-                    print(f"Error in heartbeat processing thread: {e}")
+                    logging.error(f"Error in heartbeat processing thread: {e}")
                 break
 
     def _update_worker_heartbeat(self, worker_id: str) -> None:
@@ -323,24 +331,24 @@ class HeartbeatReaderListener(DDS_All.DataReaderListener):
                         if heartbeat and heartbeat.worker_id:
                             # 更新Worker最后心跳时间
                             self.state_monitor._update_worker_heartbeat(heartbeat.worker_id)
-                            print(f"[StateMonitor] Heartbeat received from worker: {heartbeat.worker_id}")
+                            logging.info(f"Heartbeat received from worker: {heartbeat.worker_id}")
 
         except Exception as e:
-            print(f"[StateMonitor] Error processing heartbeat data: {e}")
+            logging.error(f"Error processing heartbeat data: {e}")
         finally:
             try:
                 reader.return_loan(data_seq, info_seq)
             except Exception as e:
-                print(f"[StateMonitor] Error returning loan: {e}")
+                logging.error(f"Error returning loan: {e}")
 
     def on_liveliness_changed(self, reader: DataReader, status) -> None:
         """Liveliness状态变化时调用"""
-        print(f"[StateMonitor] Liveliness changed - "
+        logging.info(f"Liveliness changed - "
               f"alive_count: {status.alive_count}, "
               f"not_alive_count: {status.not_alive_count}")
 
         if status.not_alive_count > 0:
-            print("[StateMonitor] Some workers may have failed (liveliness lost)")
+            logging.info("Some workers may have failed (liveliness lost)")
 
     def on_requested_deadline_missed(self, reader: DataReader, status) -> None:
         pass
@@ -355,7 +363,7 @@ class HeartbeatReaderListener(DDS_All.DataReaderListener):
         pass
 
     def on_subscription_matched(self, reader: DataReader, status) -> None:
-        print(f"[StateMonitor] Subscription matched - current_count: {status.current_count}")
+        logging.info(f"Subscription matched - current_count: {status.current_count}")
 
     def on_data_arrived(self, reader: DataReader, sample, info) -> None:
         # Required abstract method, can be empty
@@ -366,13 +374,13 @@ class TestHealthStatusCallback:
     """测试用的健康状态回调实现"""
 
     def on_worker_healthy(self, worker_id: str) -> None:
-        print(f">>> CALLBACK: Worker {worker_id} is HEALTHY")
+        logging.info(f">>> CALLBACK: Worker {worker_id} is HEALTHY")
 
     def on_worker_failed(self, worker_id: str) -> None:
-        print(f">>> CALLBACK: Worker {worker_id} FAILED!")
+        logging.info(f">>> CALLBACK: Worker {worker_id} FAILED!")
 
     def on_worker_recovered(self, worker_id: str) -> None:
-        print(f">>> CALLBACK: Worker {worker_id} RECOVERED!")
+        logging.info(f">>> CALLBACK: Worker {worker_id} RECOVERED!")
 
 def main():
     """测试主函数"""
@@ -392,7 +400,7 @@ def main():
 
         # 信号处理
         def signal_handler(signum, frame):
-            print(f"\nReceived signal {signum}, shutting down...")
+            logging.info(f"\nReceived signal {signum}, shutting down...")
             monitor.stop()
             sys.exit(0)
 
@@ -401,18 +409,15 @@ def main():
 
         # 启动监控器
         if monitor.start():
-            print("=" * 50)
-            print("StateMonitor started successfully!")
-            print(f"Monitoring topic: {StateMonitor.TOPIC_WORKER_HEARTBEAT}")
-            print("=" * 50)
+            logging.info("=" * 50)
+            logging.info("StateMonitor started successfully!")
+            logging.info(f"Monitoring topic: {StateMonitor.TOPIC_WORKER_HEARTBEAT}")
+            logging.info("=" * 50)
             while True:
-                print("正在监控数据...")
                 time.sleep(10)
 
     except Exception as e:
-        print(f"Error in main: {e}")
-        import traceback
-        traceback.print_exc()
+        logging.error(f"Error in main: {e}")
         sys.exit(1)
 
 

@@ -6,13 +6,28 @@ ModelRunner - Python version of the Java ModelRunner class
 
 import base64
 import io
+import logging
 import shutil
 import time
 import uuid
+import os
 from pathlib import Path
 from typing import Optional, NamedTuple, List, Tuple, Callable, Any
 
 from DDS_All import TaskList, WorkerResult, WorkerTaskResult
+
+log_dir = './logs/'
+log_file = os.path.join(log_dir, 'workerlog.txt')
+
+# 如果目录不存在就创建
+os.makedirs(log_dir, exist_ok=True)
+
+logging.basicConfig(
+    level=logging.INFO,                 # 日志级别
+    format='%(asctime)s - %(levelname)s -[ModelRunner]- %(message)s',  # 日志格式
+    filename=log_dir+'workerlog.txt',                 # 日志文件名
+    filemode='a'                        # 'w' 会覆盖日志，'a' 会追加
+)
 
 class RunPaths(NamedTuple):
     run_id: str
@@ -55,7 +70,7 @@ class ModelRunner:
         wr.batch_id = tasks.batch_id
         wr.model_id = tasks.model_id
 
-        print("[WorkerRunner] batch_id:", wr.batch_id, " model_id:", wr.model_id)
+        logging.info("batch_id:", wr.batch_id, " model_id:", wr.model_id)
 
         seq = getattr(tasks, "tasks", None) or []
         n, get_at = self._make_seq_accessors(seq)
@@ -117,7 +132,7 @@ class ModelRunner:
             return wr
 
         except Exception as e:
-            print(f"Batch processing error: {e}")
+            logging.error(f"Batch processing error: {e}")
             # 兜底：构造 ERROR_RUNNER
             for i in range(n):
                 t = get_at(i)
@@ -162,7 +177,7 @@ class ModelRunner:
         try:
             shutil.rmtree(root_path, ignore_errors=True)
         except Exception as e:
-            print(f"Failed to delete {root_path}: {e}")
+            logging.error(f"Failed to delete {root_path}: {e}")
 
     @staticmethod
     def _safe_name(name: str, default: str = "unknown") -> str:

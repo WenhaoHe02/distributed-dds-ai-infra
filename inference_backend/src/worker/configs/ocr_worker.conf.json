@@ -1,0 +1,11 @@
+{
+  "model_id": "ocr",
+  "output": "results",
+  "model_config": {
+       "input": "",
+       "output": "",
+       "model_parameter": "",
+       "lang": "ch",
+       "det": true
+  }
+}

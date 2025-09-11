@@ -1,9 +1,0 @@
-tasks:
-  # 任务2: 文档OCR识别
-  document_ocr:
-    model_id: "ocr"
-    model_parameter: "rapidocr"  # 或 paddleocr/easyocr
-    output: "results/ocr_texts" 
-    params:
-      lang: "ch"  # 语言
-      det: true   # 启用文本检测

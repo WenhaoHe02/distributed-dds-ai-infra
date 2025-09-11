@@ -5,13 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7abc258a-df1c-4709-b9e9-57e3210de8dd" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../DDS_JAVA_deprecated/java.exe.ddslog" beforeDir="false" afterPath="$PROJECT_DIR$/../DDS_JAVA_deprecated/java.exe.ddslog" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model_service/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_service/config.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model_service/config1.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_service/config1.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model_service/run.bat" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_service/run.bat" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model_service/runners/ocr_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_service/runners/ocr_runner.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model_service/runners/yolo_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_service/runners/yolo_runner.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/model_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_runner.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/worker/woker.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/woker.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -56,7 +51,7 @@
       <workItem from="1757404133522" duration="3584000" />
       <workItem from="1757468943510" duration="428000" />
       <workItem from="1757474208132" duration="395000" />
-      <workItem from="1757551878416" duration="567000" />
+      <workItem from="1757551878416" duration="2086000" />
     </task>
     <servers />
   </component>

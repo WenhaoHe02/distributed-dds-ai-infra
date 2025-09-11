@@ -95,7 +95,7 @@ class WorkerConfig:
     """Configuration for Worker"""
     worker_id: str
     model_id: str
-    max_inflight_batches: int = 2
+    max_inflight_batches: int = 64
     queue_capacity: int = 64
     enable_heartbeat: bool = True
     heartbeat_interval_seconds: int = 5
@@ -228,8 +228,8 @@ class Worker:
 
             # 5.创建DateReadeer 和 DateWriter
             mask = StatusKind.DATA_AVAILABLE_STATUS | StatusKind.SUBSCRIPTION_MATCHED_STATUS
-            self.claim_writer = self.pub.create_datawriter(self.claim_topic, DDS_All.DATAREADER_QOS_DEFAULT, None, mask)
-            self.result_writer = self.pub.create_datawriter(self.result_topic, DDS_All.DATAREADER_QOS_DEFAULT, None, mask)
+            self.claim_writer = self.pub.create_datawriter(self.claim_topic, DDS_All.DATAWRITER_QOS_DEFAULT, None, mask)
+            self.result_writer = self.pub.create_datawriter(self.result_topic, DDS_All.DATAWRITER_QOS_DEFAULT, None, mask)
 
             heartbeat_qos = DataWriterQos()
             self.pub.get_default_datawriter_qos(heartbeat_qos)
@@ -386,39 +386,114 @@ class Worker:
         if self.consumer_thread:
             self.consumer_thread.join(timeout=5.0)
 
-    def _consume_loop(self) -> None:
-        """Main consumer loop"""
-        while self.running.is_set():
+    def _consume_loop(self):
+        """
+        取批 → 运行模型 → 回写结果 的工作线程主循环。
+        关键保证：
+          - 只有在成功 get 到任务后才递增 inflight_count；
+          - 自减在内层 finally，任何路径都能配对成功；
+          - 不对 queue.Empty 做“白减”；
+          - 对外上报/内部统计都不让 inflight 出现负数；
+          - 支持优雅停机（stop_event / _stop_event）。
+        """
+        import time, queue, logging, traceback
+        logger = getattr(self, "log", logging.getLogger("Worker"))
+
+        stop_flag = getattr(self, "stop_event", None) or getattr(self, "_stop_event", None)
+        get_timeout = getattr(self, "queue_get_timeout", 0.1) or 0.1  # 秒
+
+        while True:
+            # 支持优雅停机
+            if stop_flag and stop_flag.is_set():
+                break
+
             try:
-                task_list = self.batch_queue.get(timeout=0.1)
-
-                with self.inflight_lock:
-                    self.inflight_count += 1
-
-                try:
-                    worker_result = self.model_runner.run_batched_task(task_list)
-                except Exception as e:
-                    worker_result = self._synthesize_error_result(task_list, e)
-
-                worker_result.batch_id = task_list.batch_id
-                worker_result.model_id = task_list.model_id
-                worker_result.worker_id = self.config.worker_id
-
-                try:
-                    self.result_emitter(worker_result)
-                except Exception as e:
-                    print(f"Error emitting result: {e}")
-
-                finally:
-                    with self.inflight_lock:
-                        self.inflight_count -= 1
-
+                # 只要没有拿到任务，绝不增/减 inflight
+                task_list = self.batch_queue.get(timeout=get_timeout)
             except queue.Empty:
                 continue
             except Exception as e:
-                print(f"Error in consume loop: {e}")
+                # 取任务本身异常（极少），记录后继续
+                logger.exception("[Worker] batch_queue.get() failed: %s", e)
+                continue
+
+            # === 从这里开始才算“在途” ===
+            start_ts = time.time()
+            with self.inflight_lock:
+                self.inflight_count += 1
+
+            try:
+                try:
+                    # 运行模型
+                    result = self.model_runner.run_batched_task(task_list)
+                except Exception as run_err:
+                    # 兜底：生成错误结果，尽量复用你的现有方法
+                    logger.exception(
+                        "[Worker] run_batched_task failed for batch_id=%s: %s",
+                        getattr(task_list, "batch_id", "?"), run_err
+                    )
+                    if hasattr(self, "_synthesize_error_result"):
+                        result = self._synthesize_error_result(task_list, run_err)
+                    else:
+                        # 最小兜底：构造一个带错误信息的结果对象/字典
+                        try:
+                            # 如果有 DDS_All 类型可用，就尽量用它
+                            from DDS_All import WorkerResult
+                            result = WorkerResult()
+                            result.batch_id = getattr(task_list, "batch_id", "")
+                            result.worker_id = getattr(getattr(self, "config", object()), "worker_id", "")
+                            # 不同 IDL 字段名可能不同，尽量宽松处理
+                            setattr(result, "status", "ERROR")
+                            setattr(result, "error_msg", f"runner exception: {run_err}")
+                        except Exception:
+                            # 退回到 dict（写入时你的 writer 可能不接受 dict，但至少不至于空对象）
+                            result = {
+                                "batch_id": getattr(task_list, "batch_id", ""),
+                                "worker_id": getattr(getattr(self, "config", object()), "worker_id", ""),
+                                "status": "ERROR",
+                                "error_msg": f"{run_err}",
+                            }
+
+                # 写回结果
+                try:
+                    self.result_writer.write(result)
+                except Exception as write_err:
+                    logger.exception(
+                        "[Worker] result_writer.write failed for batch_id=%s: %s",
+                        getattr(task_list, "batch_id", "?"), write_err
+                    )
+
+            finally:
+                # 无论成功/失败，都配对自减 + task_done
                 with self.inflight_lock:
                     self.inflight_count -= 1
+                    # 保底不让内部计数为负（外部上报再取 max(0, ...)）
+                    if self.inflight_count < 0:
+                        self.inflight_count = 0
+
+                # 队列配对完成
+                try:
+                    self.batch_queue.task_done()
+                except Exception:
+                    pass
+
+                # 统计与可观测性
+                dur_ms = (time.time() - start_ts) * 1000.0
+                try:
+                    qsize = self.batch_queue.qsize()
+                except Exception:
+                    qsize = -1
+                logger.info(
+                    "[Worker] finished batch_id=%s in %.1f ms | inflight=%d | qsize=%s",
+                    getattr(task_list, "batch_id", "?"),
+                    dur_ms,
+                    getattr(self, "inflight_count", -1),
+                    qsize,
+                )
+
+        # 退出前的收尾日志
+        logger.info("[Worker] consume loop exited")
+
 
     def _synthesize_error_result(self, task_list: TaskList, error: Exception) -> WorkerResult:
         """Create error result for failed batch"""
@@ -550,6 +625,11 @@ class OpenBatchListener(DataReaderListener):
 
         except Exception as e:
             print(f"[Worker] Error processing: {e}")
+        finally:
+            try:
+                reader.return_loan(data_seq, info_seq)
+            except Exception:
+                pass
 
 class TaskListListener(DataReaderListener):
     """Listener for TaskList messages"""
@@ -580,6 +660,11 @@ class TaskListListener(DataReaderListener):
 
         except Exception as e:
             print(f"[Worker] Error processing: {e}")
+        finally:
+            try:
+                reader.return_loan(data_seq, info_seq)
+            except Exception:
+                pass
 
     # def on_process_sample(self, reader: DataReader, sample: TaskList, info) -> None:
     #     if sample:

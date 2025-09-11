@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 import DDS_All as dds
-from zrdds_allgatherBaseline import ZrddsAllgather
+from ZrddsDenseBroadcast import ZrddsDenseBroadcast
 from dgc_stepperBaseline import DDPDGCStepper
 from compressionBaseline import Int8Compressor
 from memoryBaseline import Int8SGDMemory
@@ -13,7 +13,7 @@ from dgc_evalBaseline import ddp_evaluate_top1
 from dds_barrier_verboseBaseline import ddp_barrier_verbose
 
 # ---- 环境参数（也可从命令行传入）
-RANK      = int(os.environ.get("RANK", "1"))
+RANK      = int(os.environ.get("RANK", "0"))
 WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
 GROUP     = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
@@ -48,7 +48,7 @@ def make_loaders(data_dir, batch_size, device):
     return train_loader, val_loader
 
 # ---- 在这里给 ZrddsAllgather 添加轮询函数
-def wait_for_discovery(ag: ZrddsAllgather, world:int, timeout_ms:int=10000, include_self:bool=True, poll_ms:int=200):
+def wait_for_discovery(ag: ZrddsDenseBroadcast, world:int, timeout_ms:int=10000, include_self:bool=True, poll_ms:int=200):
     """阻塞直到 discovery 匹配完成"""
     deadline = time.time() + timeout_ms/1000.0
     target = world if include_self else max(0, world-1)
@@ -81,7 +81,7 @@ def main():
     dds.register_all_types(dp)
 
     # 通信引擎
-    ag = ZrddsAllgather(dp, topic="ddp/allgather_blob")
+    ag = ZrddsDenseBroadcast(dp, topic="ddp/allgather_blob")
 
     # ---- ★ 在 barrier 之前先确保 discovery 已完成
     wait_for_discovery(ag, world=WORLD, timeout_ms=100000, include_self=True)

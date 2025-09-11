@@ -4,7 +4,18 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
+<<<<<<< HEAD
     <list default="true" id="7abc258a-df1c-4709-b9e9-57e3210de8dd" name="Changes" comment="" />
+=======
+    <list default="true" id="7abc258a-df1c-4709-b9e9-57e3210de8dd" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/patcher/Patcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/patcher/Patcher.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/patcher/TaskClassifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/patcher/TaskClassifier.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/spliter/Spliter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/spliter/Spliter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/state_monitor/stateMonitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/state_monitor/stateMonitor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/worker/model_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_runner.py" afterDir="false" />
+    </list>
+>>>>>>> 5656f6ada25a0ed7d2c3044afeff7ed8d59fb9dd
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -24,6 +35,7 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
+<<<<<<< HEAD
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
@@ -40,6 +52,60 @@
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
+=======
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.Patcher.executor": "Run",
+    "Application.Spliter.executor": "Run",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "E:/distributed-dds-ai-serving-system/DDSProfiler",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RunManager" selected="Application.Spliter">
+    <configuration name="Patcher" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="patcher.Patcher" />
+      <module name="inference_backend" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="patcher.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Spliter" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="spliter.Spliter" />
+      <module name="inference_backend" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="spliter.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Application.Spliter" />
+        <item itemvalue="Application.Patcher" />
+      </list>
+    </recent_temporary>
+  </component>
+>>>>>>> 5656f6ada25a0ed7d2c3044afeff7ed8d59fb9dd
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
@@ -52,7 +118,11 @@
       <workItem from="1757468943510" duration="428000" />
       <workItem from="1757474208132" duration="395000" />
       <workItem from="1757551878416" duration="2727000" />
+<<<<<<< HEAD
       <workItem from="1757559576059" duration="12287000" />
+=======
+      <workItem from="1757559576059" duration="7959000" />
+>>>>>>> 5656f6ada25a0ed7d2c3044afeff7ed8d59fb9dd
     </task>
     <servers />
   </component>

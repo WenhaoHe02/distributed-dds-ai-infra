@@ -18,6 +18,7 @@ from threading import Event, Lock, RLock
 import signal
 import json
 from pathlib import Path
+import logging
 
 import DDS_All
 from DDS_All import *
@@ -34,6 +35,18 @@ from DDS_All import (
 
 from model_runner import ModelRunner
 
+log_dir = './logs/'
+log_file = os.path.join(log_dir, 'workerlog.txt')
+
+# 如果目录不存在就创建
+os.makedirs(log_dir, exist_ok=True)
+
+logging.basicConfig(
+    level=logging.INFO,                 # 日志级别
+    format='%(asctime)s - %(levelname)s -[Worker]- %(message)s',  # 日志格式
+    filename=log_dir+'workerlog.txt',                 # 日志文件名
+    filemode='a'                        # 'w' 会覆盖日志，'a' 会追加
+)
 
 def load_worker_config(model_id: str, base_dir: str = "configs") -> dict:
     """
@@ -56,7 +69,7 @@ def load_worker_config(model_id: str, base_dir: str = "configs") -> dict:
     if "model_id" not in cfg:
         cfg["model_id"] = model_id
     if cfg["model_id"] != model_id:
-        print(f"[WARN] model_id in config({cfg['model_id']}) != worker model_id({model_id}), using worker's model_id.")
+        logging.warning(f"model_id in config({cfg['model_id']}) != worker model_id({model_id}), using worker's model_id.")
         cfg["model_id"] = model_id
 
     if "model_config" not in cfg:
@@ -185,7 +198,7 @@ class Worker:
             # 1.从工厂创建DomainParticipant
             dpf = DomainParticipantFactory.get_instance()
             if not dpf:
-                print("DomainParticipantFactory.get_instance() failed")
+                logging.error("DomainParticipantFactory.get_instance() failed")
                 return False
 
             self.dp = dpf.create_participant(
@@ -193,9 +206,9 @@ class Worker:
                 DDS_All.DOMAINPARTICIPANT_QOS_DEFAULT, None, 0
             )
             if not self.dp:
-                print("create_participant failed")
+                logging.error("create_participant failed")
                 return False
-            print("成功创建DomainParticipant")
+            logging.debug("成功创建DomainParticipant")
 
             # 2.注册类型
             DDS_All.register_all_types(self.dp)
@@ -205,9 +218,9 @@ class Worker:
             self.sub = self.dp.create_subscriber(-1, None, 0)
 
             if not self.pub or not self.sub:
-                print("create_publisher/subscriber failed")
+                logging.error("create_publisher/subscriber failed")
                 return False
-            print("成功创建Publisher和Subscriber")
+            logging.debug("成功创建Publisher和Subscriber")
 
             # 4.创建Topic
             self.open_topic = self.dp.create_topic(
@@ -246,9 +259,9 @@ class Worker:
                 0
             )
             if not all([self.open_topic, self.claim_topic, self.task_topic, self.result_topic, self.heartbeat_topic]):
-                print("create_topic failed")
+                logging.error("create_topic failed")
                 return False
-            print("成功创建Topic")
+            logging.debug("成功创建Topic")
 
             # 5.创建DataWriter
             mask = StatusKind.DATA_AVAILABLE_STATUS | StatusKind.SUBSCRIPTION_MATCHED_STATUS
@@ -265,9 +278,9 @@ class Worker:
             )
 
             if not all([self.claim_writer, self.result_writer, self.heartbeat_writer]):
-                print("create_datawriter failed")
+                logging.error("create_datawriter failed")
                 return False
-            print("成功创建Writers")
+            logging.debug("成功创建Writers")
 
             # 6.创建DataReader
             self.openbatch_reader = self.sub.create_datareader(
@@ -285,10 +298,10 @@ class Worker:
             )
 
             if not self.openbatch_reader or not self.tasklist_reader:
-                print("create_datareader failed")
+                logging.error("create_datareader failed")
                 return False
 
-            print("成功创建Readers")
+            logging.debug("成功创建Readers")
 
             self.openbatch_listener = OpenBatchListener(self)
             self.tasklist_listener = TaskListListener(self)
@@ -305,45 +318,43 @@ class Worker:
             )
 
             if not (rtn_open == DDS_All.DDS_ReturnCode_t.OK and rtn_task == DDS_All.DDS_ReturnCode_t.OK):
-                print("associate listener failed")
+                logging.error("associate listener failed")
                 return False
-            print("成功绑定listener")
+            logging.debug("成功绑定listener")
 
             return True
 
         except Exception as e:
-            print(f"Exception during DDS initialization: {e}")
-            import traceback
-            traceback.print_exc()
+            logging.error(f"Exception during DDS initialization: {e}")
             return False
 
     def claim_emitter(self, claim: Claim) -> None:
         rc = self._write_with_best_effort(self.claim_writer, claim)
         if rc != DDS_All.DDS_ReturnCode_t.OK:
-            print(f"[WorkerMain] claim write rc={rc}")
+            logging.warning(f"claim write rc={rc}")
         else:
-            print("[Worker]成功发送claim batch_id:", claim.batch_id,
+            logging.info("成功发送claim batch_id:", claim.batch_id,
                   " worker_id:", claim.worker_id, " queue_length:", claim.queue_length)
 
     def result_emitter(self, worker_result: WorkerResult) -> None:
         rc = self._write_with_best_effort(self.result_writer, worker_result)
         if rc != DDS_All.DDS_ReturnCode_t.OK:
-            print(f"[WorkerMain] result write rc={rc}")
+            logging.warning(f" result write rc={rc}")
         else:
-            print("[Worker]成功发送WorkerResult")
+            logging.info("成功发送WorkerResult")
 
     def on_open_batch(self, open_batch: OpenBatch) -> None:
         """Handle OpenBatch message"""
         if not open_batch or open_batch.model_id != self.config.model_id:
-            print("[Worker]模型不符")
+            logging.warning("模型不符")
             return
 
         if self.current_depth() >= self.config.max_inflight_batches:
-            print("[Worker]队列不足")
+            logging.warning("队列不足")
             return
 
         if open_batch.batch_id in self.claimed_lru:
-            print("[Worker]batch已存在")
+            logging.warning("batch已存在")
             return
 
         self.claimed_lru[open_batch.batch_id] = True
@@ -353,13 +364,13 @@ class Worker:
         claim.worker_id = self.config.worker_id
         claim.queue_length = self.current_depth()
 
-        print("[Worker]get batch batch_id:", claim.batch_id,
+        logging.info("get batch batch_id:", claim.batch_id,
               " worker_id:", claim.worker_id, " queue_length:", claim.queue_length)
 
         try:
             self.claim_emitter(claim)
         except Exception as e:
-            print(f"Error emitting claim: {e}")
+            logging.error(f"Error emitting claim: {e}")
 
     def on_task_list(self, task_list: TaskList) -> None:
         """Handle TaskList message"""
@@ -374,7 +385,7 @@ class Worker:
                 return
             self.seen_task_list.add(task_list.batch_id)
 
-        print("[Worker]get tasklist worker_id:", task_list.assigned_worker_id,
+        logging.info("get tasklist worker_id:", task_list.assigned_worker_id,
               " batch_id:", task_list.batch_id, " model_id:", task_list.model_id)
         try:
             self.batch_queue.put_nowait(task_list)
@@ -435,12 +446,12 @@ class Worker:
                 try:
                     self.result_emitter(worker_result)
                 except Exception as e:
-                    print(f"Error emitting result: {e}")
+                    logging.error(f"Error emitting result: {e}")
 
             except queue.Empty:
                 continue
             except Exception as e:
-                print(f"Error in consume loop: {e}")
+                logging.error(f"Error in consume loop: {e}")
             finally:
                 with self.inflight_lock:
                     if self.inflight_count > 0:
@@ -504,12 +515,12 @@ class Worker:
                     self._send_heartbeat()
                     time.sleep(self.config.heartbeat_interval_seconds)
                 except Exception as e:
-                    print(f"Error in heartbeat loop: {e}")
+                    logging.error(f"Error in heartbeat loop: {e}")
                     if not self.heartbeat_enabled.is_set():
                         break
 
         self.heartbeat_executor.submit(heartbeat_loop)
-        print(f"[Worker] Heartbeat started, interval: {self.config.heartbeat_interval_seconds} seconds")
+        logging.info(f"Heartbeat started, interval: {self.config.heartbeat_interval_seconds} seconds")
 
     def _stop_heartbeat(self) -> None:
         """Stop heartbeat sending"""
@@ -519,7 +530,7 @@ class Worker:
             self.heartbeat_executor.shutdown(wait=True)
             self.heartbeat_executor = None
 
-        print("[Worker] Heartbeat stopped")
+        logging.info("Heartbeat stopped")
 
     def _send_heartbeat(self) -> None:
         """Send heartbeat signal"""
@@ -537,7 +548,7 @@ class Worker:
             self._write_with_best_effort(self.heartbeat_writer, heartbeat)
 
         except Exception as e:
-            print(f"[Worker] Error sending heartbeat: {e}")
+            logging.error(f"Error sending heartbeat: {e}")
 
 
 class OpenBatchListener(DataReaderListener):
@@ -568,7 +579,7 @@ class OpenBatchListener(DataReaderListener):
                             self.worker.on_open_batch(openbatch)
 
         except Exception as e:
-            print(f"[Worker] Error processing: {e}")
+            logging.error(f"Error processing: {e}")
         finally:
             try:
                 reader.return_loan(data_seq, info_seq)
@@ -604,7 +615,7 @@ class TaskListListener(DataReaderListener):
                             self.worker.on_task_list(tasklist)
 
         except Exception as e:
-            print(f"[Worker] Error processing: {e}")
+            logging.error(f"Error processing: {e}")
         finally:
             try:
                 reader.return_loan(data_seq, info_seq)
@@ -641,11 +652,11 @@ def main():
                 worker.stop()
         except Exception:
             pass
-        print("Worker stopped.")
+        logging.info("Worker stopped.")
 
     def signal_handler(signum, frame):
         """Signal handler for graceful shutdown"""
-        print(f"\nReceived signal {signum}, shutting down...")
+        logging.info(f"\nReceived signal {signum}, shutting down...")
         cleanup()
         sys.exit(0)
 
@@ -667,28 +678,24 @@ def main():
 
         res = worker._initialize_dds()
         if not res:
-            print("worker dds initialize failed")
-        print("worker dds环境初始化成功")
+            logging.error("worker dds initialize failed")
+        logging.debug("worker dds环境初始化成功")
 
         # Start worker
         worker.start()
 
-        print("=" * 50)
-        print(f"Worker started. worker_id={worker_id} model_id={model_id}")
-        print(f"Sub: {Worker.TOPIC_OPEN_BATCH}, {Worker.TOPIC_TASK_LIST}")
-        print(f"Pub: {Worker.TOPIC_CLAIM}, {Worker.TOPIC_WORKER_RESULT}")
-        print(f"Heartbeat enabled: {config.enable_heartbeat} (interval: {config.heartbeat_interval_seconds}s)")
-        print("Press ENTER to exit...")
-        print("=" * 50)
+        logging.info("=" * 50)
+        logging.info(f"Worker started. worker_id={worker_id} model_id={model_id}")
+        logging.info(f"Sub: {Worker.TOPIC_OPEN_BATCH}, {Worker.TOPIC_TASK_LIST}")
+        logging.info(f"Pub: {Worker.TOPIC_CLAIM}, {Worker.TOPIC_WORKER_RESULT}")
+        logging.info(f"Heartbeat enabled: {config.enable_heartbeat} (interval: {config.heartbeat_interval_seconds}s)")
+        logging.info("=" * 50)
 
-        input()  # Wait for user input
+        while True:
+            time.sleep(10)
 
-    except KeyboardInterrupt:
-        print("\nShutdown requested by user")
     except Exception as e:
-        print(f"Error in main: {e}")
-        import traceback
-        traceback.print_exc()
+        logging.error(f"Error in main: {e}")
     finally:
         cleanup()
 

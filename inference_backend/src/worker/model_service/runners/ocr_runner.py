@@ -3,6 +3,7 @@ from __future__ import annotations
 from rapidocr import RapidOCR
 from pathlib import Path
 from typing import List, Tuple, Union, Dict, Any
+from typing import List, Tuple, Union
 from PIL import Image
 import io
 
@@ -25,12 +26,26 @@ def resolve_model_path(path, suffix: str = ".onnx", return_dir: bool = False) ->
         return cands[0]
     raise FileNotFoundError(f"路径无效：{p}")
 
+def _save_ocr_outputs(result, out_dir: Path, stem: str):
+    """统一输出：<stem>.jpg（可视化），<stem>.txt（文本）"""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    vis_path = out_dir / f"{stem}.jpg"
+    txt_path = out_dir / f"{stem}.txt"
+    # RapidOCR 的结果对象通常提供 vis()/txts
+    if hasattr(result, "vis"):
+        result.vis(str(vis_path))
+    if hasattr(result, "txts"):
+        with open(txt_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(result.txts))
+
 def _to_pil(img: Union[bytes, bytearray, memoryview, Image.Image, str, Path]) -> Image.Image:
-    """bytes / 路径 / PIL -> PIL.Image"""
+
+    """将多种输入转换为 PIL.Image（支持 bytes / 文件路径 / PIL.Image）"""
     if isinstance(img, Image.Image):
         return img.convert("RGB")
     if isinstance(img, (bytes, bytearray, memoryview)):
         return Image.open(io.BytesIO(bytes(img))).convert("RGB")
+    # 字符串或 Path 视为文件路径
     p = Path(img)
     return Image.open(p).convert("RGB")
 
@@ -89,43 +104,41 @@ def _save_vis_or_original(result: Any, out_dir: Path, stem: str, source_img: Ima
 # -----------------------
 # Runner
 # -----------------------
-
-def run_ocr(task_config: dict) -> Dict[str, List[str]]:
+def run_ocr(task_config: dict):
     """
     统一入口（由 TaskRunner 调用）
-    要求：
-      - task_config['parameter']: OCR 模型目录（包含 det.onnx / rec.onnx / 可选 cls.onnx）
-      - task_config['output']   : 输出目录
-    支持两种数据来源：
-      A) 内存批处理（推荐用于 DDS）：
-         task_config['batch'] = True
-         task_config['images'] = [(task_id, bytes|path|PIL), ...]  或
-                                 [{'task_id':..., 'bytes'|'image':...}, ...]
-         （可选）task_config['output_names']：与 images 对应的输出名
-      B) 目录/单文件模式（兼容旧逻辑）：
-         task_config['input'] = <dir|file>
+    task_config 至少包含：
+      parameter: OCR 模型目录或文件（目录下含 det.onnx / rec.onnx / 可选 cls.onnx）
+      output: 输出目录
 
-    返回：
-      Dict[str, List[str]] : { 输出名(通常为 task_id) : 识别出的字符串数组 }
-      ——用于上层把它写入 DDS 的 sequence<string> 字段。
+    支持两种数据来源（二选一）：
+      A) 目录/单文件模式：
+         input: 输入目录或单文件路径
+      B) 内存批处理模式（推荐用于 DDS）：
+         batch: true
+         images: List[Tuple[task_id, bytes]] 或 List[dict{task_id, bytes}]
+                 也兼容 List[Tuple[task_id, file_path]]
+         （可选）output_names: 与 images 对应的输出名；不提供则使用 task_id
     """
-    # 1) 装载模型（目录形式 + params 覆盖）
+    # 1) 解析模型
     model_dir = resolve_model_path(task_config["parameter"], suffix=".onnx", return_dir=True)
     det_model = model_dir / "det.onnx"
     rec_model = model_dir / "rec.onnx"
-    cls_model = model_dir / "cls.onnx"
+    cls_model = model_dir / "cls.onnx"  # 可选
 
     if not det_model.exists() or not rec_model.exists():
         raise FileNotFoundError(f"缺少 OCR 模型文件：{det_model} 或 {rec_model}")
 
     params = {
-        "Det.model_path": str(det_model),
-        "Rec.model_path": str(rec_model),
-        "Cls.model_path": str(cls_model) if cls_model.exists() else "",
-        "Global.use_cls": cls_model.exists(),
-        "Global.log_level": "INFO",
+        "Det.model_path": det_model,
+        "Rec.model_path": rec_model,
+        "Cls.model_path": cls_model if Path(cls_model).exists() else "",
+        "Global.use_cls": Path(cls_model).exists(),
+        "Global.log_level": "INFO"
     }
+
     # RapidOCR 支持通过 params（以及 config_path）注入引擎与模型；详见 PyPI/示例。:contentReference[oaicite:3]{index=3}
+
     engine = RapidOCR(params=params)
 
     out_dir = Path(task_config["output"])
@@ -133,9 +146,9 @@ def run_ocr(task_config: dict) -> Dict[str, List[str]]:
 
     texts_map: Dict[str, List[str]] = {}
 
-    # 2) 内存批处理
     if task_config.get("batch") and "images" in task_config:
         raw_images = task_config["images"]
+        # 允许两种格式：[(task_id, bytes), ...] 或 [{"task_id":..., "bytes":...}, ...]
         images: List[Tuple[str, Union[bytes, bytearray, memoryview, str, Path, Image.Image]]] = []
 
         for item in raw_images:
@@ -145,7 +158,8 @@ def run_ocr(task_config: dict) -> Dict[str, List[str]]:
                 task_id = item["task_id"]
                 buff = item.get("bytes", item.get("image"))
             else:
-                raise ValueError("images 元素需为 (task_id, bytes/path/PIL) 或 {'task_id':..., 'bytes'|'image':...}")
+                raise ValueError("images 元素需为 (task_id, bytes) 或 {'task_id':..., 'bytes':...}")
+
             images.append((str(task_id), buff))
 
         names = task_config.get("output_names")
@@ -161,13 +175,14 @@ def run_ocr(task_config: dict) -> Dict[str, List[str]]:
                 texts_map[stem] = _parse_texts(result)
                 # 图片（可视化或原图）
                 _save_vis_or_original(result, out_dir, stem=stem, source_img=img)
+                _save_ocr_outputs(result, out_dir, stem=stem)
             except Exception as e:
                 print(f"[ERROR] task {task_id} 处理失败: {e}")
                 texts_map[stem] = []
         print(f"[INFO] OCR batch 完成（内存模式），输出：{out_dir}")
         return texts_map
 
-    # 3) 目录/单文件模式（兼容）
+    # 3) 兼容旧的目录/单文件模式（需要提前把 DDS 字节落盘到 input 目录）
     input_path = Path(task_config["input"])
     if not input_path.exists():
         print(f"[ERROR] 输入路径不存在: {input_path}")
@@ -185,6 +200,8 @@ def run_ocr(task_config: dict) -> Dict[str, List[str]]:
             result = engine(img)
             texts_map[stem] = _parse_texts(result)
             _save_vis_or_original(result, out_dir, stem=stem, source_img=img)
+            stem = img_path.stem
+            _save_ocr_outputs(result, out_dir, stem=stem)
         except Exception as e:
             print(f"[ERROR] 图像 {img_path} 处理失败: {e}")
             texts_map[stem] = []

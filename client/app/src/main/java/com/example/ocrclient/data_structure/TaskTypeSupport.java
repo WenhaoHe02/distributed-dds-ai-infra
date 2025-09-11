@@ -66,11 +66,7 @@ public class TaskTypeSupport extends TypeSupport {
         else{
             System.out.println("sample.client_id: null");
         }
-        int payloadTmpLen = sample.payload.length();
-        System.out.println("sample.payload.length():" +payloadTmpLen);
-        for (int i = 0; i < payloadTmpLen; ++i){
-            System.out.println("sample.payload.get_at(" + i + "):" + sample.payload.get_at(i));
-        }
+        BytesTypeSupport.get_instance().print_sample(sample.payload);
         return 0;
     }
 
@@ -79,11 +75,11 @@ public class TaskTypeSupport extends TypeSupport {
     }
 
     public int get_max_sizeI(){
-        return 1039;
+        return 0xffffffff;
     }
 
     public int get_max_key_sizeI(){
-        return 1039;
+        return 0xffffffff;
     }
 
     public boolean has_keyI(){
@@ -113,11 +109,7 @@ public class TaskTypeSupport extends TypeSupport {
 
         offset += CDRSerializer.get_string_size(sample.client_id == null ? 0 : sample.client_id.getBytes().length, offset);
 
-        offset += CDRSerializer.get_untype_size(4, offset);
-        int payloadLen = sample.payload.length();
-        if (payloadLen != 0){
-            offset += 1 * payloadLen;
-        }
+        offset += BytesTypeSupport.get_instance().get_sizeI(sample.payload, cdr, offset);
 
         return offset - initialAlignment;
     }
@@ -140,15 +132,9 @@ public class TaskTypeSupport extends TypeSupport {
             return -2;
         }
 
-        if (!CDRSerializer.put_int(cdr, sample.payload.length())){
-            System.out.println("serialize length of sample.payload failed.");
+        if (BytesTypeSupport.get_instance().serializeI(sample.payload,cdr) < 0){
+            System.out.println("serialize sample.payloadfailed.");
             return -2;
-        }
-        if (sample.payload.length() != 0){
-            if (!CDRSerializer.put_byte_array(cdr, sample.payload.get_contiguous_buffer(), sample.payload.length())){
-                System.out.println("serialize sample.payload failed.");
-                return -2;
-            }
         }
 
         return 0;
@@ -174,15 +160,7 @@ public class TaskTypeSupport extends TypeSupport {
             return -3;
         }
 
-        if (!CDRDeserializer.get_int_array(cdr, tmp_int_obj, 1)){
-            System.out.println("deserialize length of sample.payload failed.");
-            return -2;
-        }
-        if (!sample.payload.ensure_length(tmp_int_obj[0], tmp_int_obj[0])){
-            System.out.println("Set maxiumum member sample.payload failed.");
-            return -3;
-        }
-        if (!CDRDeserializer.get_byte_array(cdr, sample.payload.get_contiguous_buffer(), sample.payload.length())){
+        if (BytesTypeSupport.get_instance().deserializeI(sample.payload, cdr) < 0){
             System.out.println("deserialize sample.payload failed.");
             return -2;
         }
@@ -222,7 +200,7 @@ public class TaskTypeSupport extends TypeSupport {
         TypeCodeImpl memberTc = new TypeCodeImpl();
         TypeCodeImpl eleTc = new TypeCodeImpl();
 
-        memberTc = factory.create_string_TC(255);
+        memberTc = factory.create_string_TC(0xffffffff);
         if (memberTc == null){
             System.out.println("Get Member request_id TypeCode failed.");
             factory.delete_TC(s_typeCode);
@@ -244,7 +222,7 @@ public class TaskTypeSupport extends TypeSupport {
             return null;
         }
 
-        memberTc = factory.create_string_TC(255);
+        memberTc = factory.create_string_TC(0xffffffff);
         if (memberTc == null){
             System.out.println("Get Member task_id TypeCode failed.");
             factory.delete_TC(s_typeCode);
@@ -266,7 +244,7 @@ public class TaskTypeSupport extends TypeSupport {
             return null;
         }
 
-        memberTc = factory.create_string_TC(255);
+        memberTc = factory.create_string_TC(0xffffffff);
         if (memberTc == null){
             System.out.println("Get Member client_id TypeCode failed.");
             factory.delete_TC(s_typeCode);
@@ -288,11 +266,7 @@ public class TaskTypeSupport extends TypeSupport {
             return null;
         }
 
-        memberTc = factory.get_primitive_TC(TypeCodeKind.DDS_TK_UCHAR);
-        if (memberTc != null)
-        {
-            memberTc = factory.create_sequence_TC(255, memberTc);
-        }
+        memberTc = (TypeCodeImpl)BytesTypeSupport.get_instance().get_typecode();
         if (memberTc == null){
             System.out.println("Get Member payload TypeCode failed.");
             factory.delete_TC(s_typeCode);
@@ -306,7 +280,6 @@ public class TaskTypeSupport extends TypeSupport {
             memberTc,
             false,
             false);
-        factory.delete_TC(memberTc);
         if (ret < 0)
         {
             factory.delete_TC(s_typeCode);

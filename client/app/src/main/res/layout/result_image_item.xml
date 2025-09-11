@@ -96,6 +96,19 @@
 
                 </FrameLayout>
 
+                <!-- OCR文字显示区域 -->
+                <TextView
+                    android:id="@+id/ocr_text"
+                    android:layout_width="150dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textSize="12sp"
+                    android:visibility="gone"
+                    android:background="@android:color/white"
+                    android:padding="4dp"
+                    android:maxLines="10"
+                    android:scrollbars="vertical" />
+
             </LinearLayout>
 
         </LinearLayout>

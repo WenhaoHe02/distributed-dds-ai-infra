@@ -79,11 +79,11 @@ public class WorkerResultTypeSupport extends TypeSupport {
     }
 
     public int get_max_sizeI(){
-        return 332283;
+        return 0xffffffff;
     }
 
     public int get_max_key_sizeI(){
-        return 332283;
+        return 0xffffffff;
     }
 
     public boolean has_keyI(){
@@ -229,7 +229,7 @@ public class WorkerResultTypeSupport extends TypeSupport {
         TypeCodeImpl memberTc = new TypeCodeImpl();
         TypeCodeImpl eleTc = new TypeCodeImpl();
 
-        memberTc = factory.create_string_TC(255);
+        memberTc = factory.create_string_TC(0xffffffff);
         if (memberTc == null){
             System.out.println("Get Member batch_id TypeCode failed.");
             factory.delete_TC(s_typeCode);
@@ -251,7 +251,7 @@ public class WorkerResultTypeSupport extends TypeSupport {
             return null;
         }
 
-        memberTc = factory.create_string_TC(255);
+        memberTc = factory.create_string_TC(0xffffffff);
         if (memberTc == null){
             System.out.println("Get Member model_id TypeCode failed.");
             factory.delete_TC(s_typeCode);
@@ -273,7 +273,7 @@ public class WorkerResultTypeSupport extends TypeSupport {
             return null;
         }
 
-        memberTc = factory.create_string_TC(255);
+        memberTc = factory.create_string_TC(0xffffffff);
         if (memberTc == null){
             System.out.println("Get Member worker_id TypeCode failed.");
             factory.delete_TC(s_typeCode);
@@ -298,7 +298,7 @@ public class WorkerResultTypeSupport extends TypeSupport {
         memberTc = (TypeCodeImpl)WorkerTaskResultTypeSupport.get_instance().get_typecode();
         if (memberTc != null)
         {
-            memberTc = factory.create_sequence_TC(255, memberTc);
+            memberTc = factory.create_sequence_TC(0xffffffff, memberTc);
         }
         if (memberTc == null){
             System.out.println("Get Member results TypeCode failed.");

@@ -2,6 +2,7 @@ package com.example.ocrclient;
 
 import android.util.Log;
 
+import com.example.ocrclient.data_structure.*;
 import com.example.ocrclient.data_structure.InferenceRequest;
 import com.example.ocrclient.data_structure.InferenceRequestDataWriter;
 import com.example.ocrclient.data_structure.InferenceRequestTypeSupport;

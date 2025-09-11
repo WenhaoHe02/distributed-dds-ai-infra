@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class ResultActivity extends AppCompatActivity implements ResultUpdateListener {
+public class ResultActivity extends AppCompatActivity {
     private static final String TAG = "ResultActivity";
 
     private String requestId;
@@ -56,8 +56,6 @@ public class ResultActivity extends AppCompatActivity implements ResultUpdateLis
         setContentView(R.layout.result_activity);
 
         resultDataManager = ResultDataManager.getInstance();
-        // 注册结果更新监听器
-        resultDataManager.addResultUpdateListener(this);
 
         // 设置Toolbar
         Toolbar toolbar = findViewById(R.id.toolbar);
@@ -203,6 +201,7 @@ public class ResultActivity extends AppCompatActivity implements ResultUpdateLis
             ImageView resultImage = itemView.findViewById(R.id.result_image);
             ProgressBar loadingProgress = itemView.findViewById(R.id.loading_progress);
             TextView waitingText = itemView.findViewById(R.id.waiting_text);
+            TextView ocrText = itemView.findViewById(R.id.ocr_text);
 
             // 这里应该根据任务ID获取对应的结果，暂时用索引代替（目前taskId是从1开始自增的）
             String taskId = String.valueOf(i + 1);
@@ -216,10 +215,27 @@ public class ResultActivity extends AppCompatActivity implements ResultUpdateLis
                     resultImage.setVisibility(View.VISIBLE);
                     loadingProgress.setVisibility(View.GONE);
                     waitingText.setVisibility(View.GONE);
+                    
+                    // 显示OCR文字（如果存在）
+                    Log.d(TAG, "OCR文字：" + resultItem.texts.toString());
+                    if (resultItem.texts.length() > 0) {
+                        Log.d(TAG, "OCR文字存在，OCR文字：" + resultItem.texts);
+                        StringBuilder textBuilder = new StringBuilder();
+                        for (int j = 0; j < resultItem.texts.length(); j++) {
+                            if (j > 0) textBuilder.append("\n");
+                            textBuilder.append(resultItem.texts.get_at(j));
+                        }
+                        ocrText.setText(textBuilder.toString());
+                        ocrText.setVisibility(View.VISIBLE);
+                    } else {
+                        Log.d(TAG, "OCR文字不存在");
+                        ocrText.setVisibility(View.GONE);
+                    }
                 } else {
                     resultImage.setVisibility(View.GONE);
                     loadingProgress.setVisibility(View.VISIBLE);
                     waitingText.setVisibility(View.GONE);
+                    ocrText.setVisibility(View.GONE);
                 }
             } else {
                 // 显示等待状态
@@ -232,16 +248,18 @@ public class ResultActivity extends AppCompatActivity implements ResultUpdateLis
                     loadingProgress.setVisibility(View.VISIBLE);
                     waitingText.setVisibility(View.GONE);
                 }
+                ocrText.setVisibility(View.GONE);
             }
         }
     }
 
     private Bitmap convertResultItemToBitmap(ResultItem resultItem) {
+        Log.i(TAG, "开始转换图片字节数组为bitmap");
         try {
-            if (resultItem.output_blob.length() > 0) {
-                byte[] byteArray = new byte[resultItem.output_blob.length()];
+            if (resultItem.output_blob.value.length() > 0) {
+                byte[] byteArray = new byte[resultItem.output_blob.value.length()];
                 for (int i = 0; i < byteArray.length; i++) {
-                    byteArray[i] = resultItem.output_blob.get_at(i);
+                    byteArray[i] = resultItem.output_blob.value.get_at(i);
                 }
                 return BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
             }
@@ -249,12 +267,6 @@ public class ResultActivity extends AppCompatActivity implements ResultUpdateLis
             Log.e(TAG, "转换结果图片失败", e);
         }
         return null;
-    }
-
-    private void releaseBitmap(Bitmap bitmap) {
-        if (bitmap != null && !bitmap.isRecycled()) {
-            bitmap.recycle();
-        }
     }
 
     /**
@@ -277,14 +289,6 @@ public class ResultActivity extends AppCompatActivity implements ResultUpdateLis
         }
     }
 
-    @Override
-    public void onResultUpdated(String requestId) {
-        // 确保是当前Activity关注的requestId
-        if (this.requestId != null && this.requestId.equals(requestId)) {
-            // 在主线程更新UI
-            runOnUiThread(this::updateUI);
-        }
-    }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -298,8 +302,6 @@ public class ResultActivity extends AppCompatActivity implements ResultUpdateLis
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // 取消注册结果更新监听器
-        resultDataManager.removeResultUpdateListener(this);
         stopPeriodicUpdate();
         Log.d(TAG, "ResultActivity onDestroy");
     }

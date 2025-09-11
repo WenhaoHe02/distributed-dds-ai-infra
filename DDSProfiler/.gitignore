@@ -1,7 +1,13 @@
 ### IntelliJ IDEA ###
+# 忽略所有.idea目录及其内容
+**/.idea/
+**/.idea/**
+.idea/
+.idea/**
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
+
 # 移除对src目录的忽略，确保src中的所有文件都被跟踪
 # **/src/**
 
@@ -30,11 +36,17 @@ bin/
 ### Mac OS ###
 .DS_Store
 
-/.idea
+### 日志文件 ###
+*.ddslog
+logs/
 
+### 库文件 ###
+lib/
+!**/src/main/**/lib/
+!**/src/test/**/lib/
+
+### 其他 ###
 *.pyd
 *.pyc
 __pycache__/
 .pytest_cache/
-
-python.exe.ddslog

@@ -48,6 +48,10 @@ public class ResultActivity extends AppCompatActivity {
     private static final int UPDATE_INTERVAL = 1000; // 1秒更新一次UI
 
     private boolean isRequestFinished = false;
+    
+    // 全屏图片查看相关
+    private View fullscreenLayout;
+    private ImageView fullscreenImage;
 
 
     @Override
@@ -123,6 +127,11 @@ public class ResultActivity extends AppCompatActivity {
             // 加载原图
             loadImageFromUri(allUris.get(i), originalImage);
 
+            // 设置点击事件，用于全屏查看图片
+            final int index = i;
+            originalImage.setOnClickListener(v -> showFullscreenImage(allUris.get(index)));
+            resultImage.setOnClickListener(v -> showResultImageFullscreen(index));
+
             imagesContainer.addView(itemView);
         }
     }
@@ -167,14 +176,14 @@ public class ResultActivity extends AppCompatActivity {
         if (requestState.updateAndGetCompletion()) {
             statusText.setText("处理完成");
             isRequestFinished = true;
-            // 清理已完成的请求
-            resultDataManager.cleanupRequest(requestId);
+//            // 清理已完成的请求
+//            resultDataManager.cleanupRequest(requestId);
             stopPeriodicUpdate();
         } else if (requestState.isTimeout()) {
             statusText.setText("处理超时");
             isRequestFinished = true;
-            // 清理超时的请求
-            resultDataManager.cleanupRequest(requestId);
+//            // 清理超时的请求
+//            resultDataManager.cleanupRequest(requestId);
             stopPeriodicUpdate();
         } else {
             statusText.setText("正在处理中");
@@ -289,6 +298,63 @@ public class ResultActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * 显示全屏图片
+     */
+    private void showFullscreenImage(Uri imageUri) {
+        // 创建全屏布局
+        fullscreenLayout = getLayoutInflater().inflate(R.layout.fullscreen_image, null);
+        fullscreenImage = fullscreenLayout.findViewById(R.id.fullscreen_image);
+        
+        // 设置点击事件，用于关闭全屏查看
+        fullscreenLayout.setOnClickListener(v -> closeFullscreenImage());
+        
+        // 添加到根布局
+        ViewGroup rootView = findViewById(android.R.id.content);
+        rootView.addView(fullscreenLayout);
+        
+        // 加载并显示图片
+        loadImageFromUri(imageUri, fullscreenImage);
+    }
+    
+    /**
+     * 显示结果图全屏
+     */
+    private void showResultImageFullscreen(int index) {
+        RequestState requestState = resultDataManager.getRequestState(requestId);
+        if (requestState == null) return;
+        
+        String taskId = String.valueOf(index + 1);
+        ResultItem resultItem = requestState.getResultItem(taskId);
+        if (resultItem == null) return;
+        
+        Bitmap bitmap = convertResultItemToBitmap(resultItem);
+        if (bitmap == null) return;
+        
+        // 创建全屏布局
+        fullscreenLayout = getLayoutInflater().inflate(R.layout.fullscreen_image, null);
+        fullscreenImage = fullscreenLayout.findViewById(R.id.fullscreen_image);
+        fullscreenImage.setImageBitmap(bitmap);
+        
+        // 设置点击事件，用于关闭全屏查看
+        fullscreenLayout.setOnClickListener(v -> closeFullscreenImage());
+        
+        // 添加到根布局
+        ViewGroup rootView = findViewById(android.R.id.content);
+        rootView.addView(fullscreenLayout);
+    }
+    
+    /**
+     * 关闭全屏图片查看
+     */
+    private void closeFullscreenImage() {
+        if (fullscreenLayout != null) {
+            ViewGroup rootView = findViewById(android.R.id.content);
+            rootView.removeView(fullscreenLayout);
+            fullscreenLayout = null;
+            fullscreenImage = null;
+        }
+    }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {

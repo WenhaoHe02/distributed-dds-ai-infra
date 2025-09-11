@@ -70,6 +70,13 @@
                     android:layout_width="150dp"
                     android:layout_height="150dp">
 
+                    <ProgressBar
+                        android:id="@+id/loading_progress"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:visibility="visible" />
+
                     <ImageView
                         android:id="@+id/result_image"
                         android:layout_width="150dp"
@@ -77,13 +84,6 @@
                         android:scaleType="centerCrop"
                         android:background="@android:color/darker_gray"
                         android:visibility="gone" />
-
-                    <ProgressBar
-                        android:id="@+id/loading_progress"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center"
-                        android:visibility="visible" />
 
                     <TextView
                         android:id="@+id/waiting_text"

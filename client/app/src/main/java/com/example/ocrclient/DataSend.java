@@ -55,7 +55,7 @@ public class DataSend {
         // 获取Android ID
         String androidId = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
         // 结合UUID和Android ID生成唯一的请求ID（会有一点长），并把优先级信息添加到request_id中
-        request.request_id = UUID.randomUUID() + "_" + androidId + "_priority" + selectedPriority;
+        request.request_id = UUID.randomUUID() + "_" + androidId + "_priority:" + selectedPriority;
 
         Log.d(TAG, "请求ID: " + request.request_id);
 

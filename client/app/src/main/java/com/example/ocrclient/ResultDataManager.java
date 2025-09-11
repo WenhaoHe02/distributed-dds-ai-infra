@@ -21,6 +21,8 @@ public class ResultDataManager {
     private final Map<String, RequestState> requestStates = new ConcurrentHashMap<>();
     // 存储已发送的请求ID和客户端ID的映射关系
     private final Map<String, String> sentRequests = new ConcurrentHashMap<>();
+    // 存储结果更新监听器
+    private final List<ResultUpdateListener> listeners = new CopyOnWriteArrayList<>();
     
     private static final String TAG = "ResultDataManager";
 
@@ -32,6 +34,32 @@ public class ResultDataManager {
             instance = new ResultDataManager();
         }
         return instance;
+    }
+
+    /**
+     * 添加结果更新监听器
+     * @param listener 监听器
+     */
+    public void addResultUpdateListener(ResultUpdateListener listener) {
+        listeners.add(listener);
+    }
+
+    /**
+     * 移除结果更新监听器
+     * @param listener 监听器
+     */
+    public void removeResultUpdateListener(ResultUpdateListener listener) {
+        listeners.remove(listener);
+    }
+
+    /**
+     * 通知所有监听器结果已更新
+     * @param requestId 更新的请求ID
+     */
+    private void notifyResultUpdated(String requestId) {
+        for (ResultUpdateListener listener : listeners) {
+            listener.onResultUpdated(requestId);
+        }
     }
 
     /**
@@ -66,6 +94,9 @@ public class ResultDataManager {
         }
         
         Log.d(TAG, "添加结果后，当前结果数: " + requestState.getReceivedResultCount());
+        
+        // 通知监听器结果已更新
+        notifyResultUpdated(requestId);
     }
     
     /**
@@ -99,7 +130,7 @@ public class ResultDataManager {
         sentRequests.put(requestId, clientId);
         Log.d(TAG, "添加已发送请求，requestId: " + requestId + ", clientId: " + clientId);
     }
-    
+
     /**
      * 注册请求状态
      * @param requestState 请求状态

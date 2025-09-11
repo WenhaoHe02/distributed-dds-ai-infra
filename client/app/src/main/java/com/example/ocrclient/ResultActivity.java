@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class ResultActivity extends AppCompatActivity {
+public class ResultActivity extends AppCompatActivity implements ResultUpdateListener {
     private static final String TAG = "ResultActivity";
 
     private String requestId;
@@ -56,6 +56,8 @@ public class ResultActivity extends AppCompatActivity {
         setContentView(R.layout.result_activity);
 
         resultDataManager = ResultDataManager.getInstance();
+        // 注册结果更新监听器
+        resultDataManager.addResultUpdateListener(this);
 
         // 设置Toolbar
         Toolbar toolbar = findViewById(R.id.toolbar);
@@ -235,7 +237,6 @@ public class ResultActivity extends AppCompatActivity {
     }
 
     private Bitmap convertResultItemToBitmap(ResultItem resultItem) {
-        Log.i(TAG, "开始转换图片字节数组为bitmap");
         try {
             if (resultItem.output_blob.length() > 0) {
                 byte[] byteArray = new byte[resultItem.output_blob.length()];
@@ -248,6 +249,12 @@ public class ResultActivity extends AppCompatActivity {
             Log.e(TAG, "转换结果图片失败", e);
         }
         return null;
+    }
+
+    private void releaseBitmap(Bitmap bitmap) {
+        if (bitmap != null && !bitmap.isRecycled()) {
+            bitmap.recycle();
+        }
     }
 
     /**
@@ -270,6 +277,14 @@ public class ResultActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onResultUpdated(String requestId) {
+        // 确保是当前Activity关注的requestId
+        if (this.requestId != null && this.requestId.equals(requestId)) {
+            // 在主线程更新UI
+            runOnUiThread(this::updateUI);
+        }
+    }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -283,6 +298,8 @@ public class ResultActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        // 取消注册结果更新监听器
+        resultDataManager.removeResultUpdateListener(this);
         stopPeriodicUpdate();
         Log.d(TAG, "ResultActivity onDestroy");
     }

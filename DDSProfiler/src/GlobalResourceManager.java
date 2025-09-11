@@ -1,9 +1,9 @@
 import java.io.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Supplier;
 
 public class GlobalResourceManager {
-    // 只有一线程读一线程写，故不再另外加锁，仅使用volatile
     private volatile String filePath;
     private volatile int requestCount = 0;
     private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
@@ -79,5 +79,23 @@ public class GlobalResourceManager {
 
     public void releaseWriteLock() {
         rwLock.writeLock().unlock();
+    }
+
+    public <T> T withReadLock(Supplier<T> action) {
+        rwLock.readLock().lock();
+        try {
+            return action.get();
+        } finally {
+            rwLock.readLock().unlock();
+        }
+    }
+
+    public <T> T withWriteLock(Supplier<T> action) {
+        rwLock.writeLock().lock();
+        try {
+            return action.get();
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
 }

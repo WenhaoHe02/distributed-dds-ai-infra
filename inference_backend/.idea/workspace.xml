@@ -5,12 +5,22 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7abc258a-df1c-4709-b9e9-57e3210de8dd" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../DDSProfiler/java.exe.ddslog" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/java.exe.ddslog" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDSProfiler/src/SendService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/src/SendService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../data_structure_idl/ai_infer.idl" beforeDir="false" afterPath="$PROJECT_DIR$/../data_structure_idl/ai_infer.idl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/DDS_All.pyd" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/DDS_All.pyd" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/model_service/runners/ocr_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_service/runners/ocr_runner.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/data_structure/Bytes.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/data_structure/Bytes.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/data_structure/ClaimTypeSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/data_structure/ClaimTypeSupport.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/data_structure/GrantTypeSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/data_structure/GrantTypeSupport.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/data_structure/InferenceRequestTypeSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/data_structure/InferenceRequestTypeSupport.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/data_structure/OpenBatchTypeSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/data_structure/OpenBatchTypeSupport.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/data_structure/ResultItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/data_structure/ResultItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/data_structure/ResultItemTypeSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/data_structure/ResultItemTypeSupport.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/data_structure/ResultUpdateTypeSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/data_structure/ResultUpdateTypeSupport.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/data_structure/SingleTaskTypeSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/data_structure/SingleTaskTypeSupport.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/data_structure/TaskListTypeSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/data_structure/TaskListTypeSupport.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/data_structure/TaskTypeSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/data_structure/TaskTypeSupport.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/data_structure/WorkerResultTypeSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/data_structure/WorkerResultTypeSupport.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/data_structure/WorkerTaskResult.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/data_structure/WorkerTaskResult.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/data_structure/WorkerTaskResultTypeSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/data_structure/WorkerTaskResultTypeSupport.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,7 +69,7 @@
       <workItem from="1757468943510" duration="428000" />
       <workItem from="1757474208132" duration="395000" />
       <workItem from="1757551878416" duration="2727000" />
-      <workItem from="1757559576059" duration="10521000" />
+      <workItem from="1757559576059" duration="11603000" />
     </task>
     <servers />
   </component>

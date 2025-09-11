@@ -86,6 +86,8 @@ module data_structure {
     string task_id;        
     string status;
     Bytes  output_blob;
+    sequence<string> texts; 
+    
   };
 
   struct ResultUpdate {

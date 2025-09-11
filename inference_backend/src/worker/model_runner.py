@@ -14,7 +14,6 @@ from typing import Optional, NamedTuple, List, Tuple, Callable, Any
 
 from DDS_All import TaskList, WorkerResult, WorkerTaskResult
 
-
 class RunPaths(NamedTuple):
     run_id: str
     root: Path

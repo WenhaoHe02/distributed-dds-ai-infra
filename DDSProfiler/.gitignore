@@ -7,6 +7,9 @@
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
+DDSProfiler.iml
+java.exe.ddslog
+java.exe.ddslog.bak
 
 # 移除对src目录的忽略，确保src中的所有文件都被跟踪
 # **/src/**

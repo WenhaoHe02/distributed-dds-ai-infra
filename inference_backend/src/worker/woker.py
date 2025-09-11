@@ -16,6 +16,8 @@ from typing import Optional, Callable, Dict, Set
 from dataclasses import dataclass
 from threading import Event, Lock,RLock
 import signal
+import json
+from pathlib import Path
 
 import DDS_All
 from DDS_All import *
@@ -31,6 +33,34 @@ from DDS_All import (
 )
 
 from model_runner import ModelRunner
+
+def load_worker_config(model_id: str, base_dir: str = "configs") -> dict:
+    """
+    从 worker/configs 读取 {model_id}_worker.conf.json；也支持 env 覆盖：
+    WORKER_CONFIG_FILE=/abs/path/to/xxx.json
+    """
+    override = os.environ.get("WORKER_CONFIG_FILE")
+    if override:
+        cfg_path = Path(override)
+    else:
+        cfg_path = Path(base_dir) / f"{model_id}_worker.conf.json"
+
+    if not cfg_path.exists():
+        raise FileNotFoundError(f"Worker config not found: {cfg_path}")
+
+    with open(cfg_path, "r", encoding="utf-8") as f:
+        cfg = json.load(f)
+
+    if "model_id" not in cfg:
+        cfg["model_id"] = model_id
+    if cfg["model_id"] != model_id:
+        print(f"[WARN] model_id in config({cfg['model_id']}) != worker model_id({model_id}), using worker's model_id.")
+        cfg["model_id"] = model_id
+
+    if "model_config" not in cfg or "parameter" not in cfg["model_config"]:
+        raise KeyError("config.model_config.parameter is required")
+
+    return cfg
 
 
 class LRUDict(OrderedDict):
@@ -593,10 +623,9 @@ def main():
         config = WorkerConfig(worker_id, model_id)
         config.enable_heartbeat = True
         config.heartbeat_interval_seconds = 5
-
-        model_runner=ModelRunner()
-
-        worker = Worker(config,model_runner)
+        base_model_config = load_worker_config(model_id, base_dir="configs")
+        model_runner = ModelRunner(base_model_config)
+        worker = Worker(WorkerConfig(worker_id, model_id), model_runner)
 
         res=worker._initialize_dds()
         if not res:
@@ -608,8 +637,8 @@ def main():
 
         print("=" * 50)
         print(f"Worker started. worker_id={worker_id} model_id={model_id}")
-        print(f"Sub: {Worker.TOPIC_OPEN_BATCH}, {Worker.TOPIC_TASK_LIST}")
-        print(f"Pub: {Worker.TOPIC_CLAIM}, {Worker.TOPIC_WORKER_RESULT}")
+        print(f"Sub: {Worker.TOPIC_OzzaPEN_BATCH}, {Worker.TOPIC_TASK_LIST}")
+        print(f"Pub: {Worker.TOPIC_CLAIM}, {Worker.TaOPIC_WORKER_RESULT}")
         print(f"Heartbeat enabled: {config.enable_heartbeat} (interval: {config.heartbeat_interval_seconds}s)")
         print("Press ENTER to exit...")
         print("=" * 50)

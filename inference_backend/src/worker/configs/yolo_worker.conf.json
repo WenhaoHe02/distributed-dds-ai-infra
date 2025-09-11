@@ -1,0 +1,10 @@
+{
+  "model_id": "yolo",
+  "model_config": {
+     "input": "",
+     "output": "",
+     "model_parameter": "models/parameter/yolov11.pt",
+     "conf": 0.5,
+     "iou": 0.45
+  }
+}

@@ -70,6 +70,8 @@ module data_structure {
     string client_id;      // 透传回 Spliter 用于路由
     string status;         // "OK" | "ERROR_*"
     Bytes  output_blob;    // 结果字节
+    sequence<string> texts; 
+
   };
 
   struct WorkerResult {

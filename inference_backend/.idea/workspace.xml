@@ -6,9 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="7abc258a-df1c-4709-b9e9-57e3210de8dd" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/../DDSProfiler/java.exe.ddslog" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/java.exe.ddslog" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDSProfiler/logs/send.log" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/logs/send.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDSProfiler/src/SendService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/src/SendService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../data_structure_idl/ai_infer.idl" beforeDir="false" afterPath="$PROJECT_DIR$/../data_structure_idl/ai_infer.idl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/patcher/Patcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/patcher/Patcher.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/worker/DDS_All.pyd" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/DDS_All.pyd" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/worker/model_service/runners/ocr_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_service/runners/ocr_runner.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -58,7 +59,7 @@
       <workItem from="1757468943510" duration="428000" />
       <workItem from="1757474208132" duration="395000" />
       <workItem from="1757551878416" duration="2727000" />
-      <workItem from="1757559576059" duration="8726000" />
+      <workItem from="1757559576059" duration="10521000" />
     </task>
     <servers />
   </component>

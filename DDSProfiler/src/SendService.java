@@ -42,7 +42,7 @@ public class SendService {
 
 
     // 默认请求数量
-    private static final int DEFAULT_REQUEST_COUNT = 1;
+    private static final int DEFAULT_REQUEST_COUNT = 2;
 
     private DomainParticipant dp;
     private Publisher pub;

@@ -25,3 +25,7 @@
 {"request_id":"e6684d57-1759-4624-a3ae-18510655e4dc_priority2","task_sum":2,"tasks":[{"task_id":"t001","model_id":"ocr","send_time":1757571247368},{"task_id":"t002","model_id":"ocr","send_time":1757571247368}],"client_id":"client-1oq1v45"}
 {"request_id":"9e85547c-2a3d-4e4e-915a-f357e1d92def_priority0","task_sum":2,"tasks":[{"task_id":"t001","model_id":"ocr","send_time":1757571876921},{"task_id":"t002","model_id":"ocr","send_time":1757571876921}],"client_id":"client-iyzqp5"}
 {"request_id":"b823ecb5-ed59-4e4d-9d98-ea753d0f24e1_priority1","task_sum":1,"tasks":[{"task_id":"t001","model_id":"ocr","send_time":1757571882896}],"client_id":"client-1q94yq7"}
+{"request_id":"c360a5f1-b3b9-496c-b893-5a9c3234dd6c_priority1","task_sum":1,"tasks":[{"task_id":"t001","model_id":"ocr","send_time":1757574769336}],"client_id":"client-k7b8s5"}
+{"request_id":"2b337245-310f-4087-a2bd-5644139d6bb3_priority1","task_sum":2,"tasks":[{"task_id":"t001","model_id":"ocr","send_time":1757574769439},{"task_id":"t002","model_id":"ocr","send_time":1757574769439}],"client_id":"client-k7b8s5"}
+{"request_id":"38b63e8b-3652-4107-bc30-cdb98e53ffcd_priority2","task_sum":1,"tasks":[{"task_id":"t001","model_id":"ocr","send_time":1757576821229}],"client_id":"client-xg4zir"}
+{"request_id":"5234a38e-cab7-4662-8e39-769ced6fa095_priority0","task_sum":2,"tasks":[{"task_id":"t001","model_id":"ocr","send_time":1757576821339},{"task_id":"t002","model_id":"ocr","send_time":1757576821339}],"client_id":"client-xg4zir"}

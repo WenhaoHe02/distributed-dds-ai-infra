@@ -6,8 +6,7 @@ import java.util.function.Supplier;
 public class GlobalResourceManager {
     private volatile String filePath;
     private volatile int requestCount = 0;
-    private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
-    private final ReentrantReadWriteLock filePathLock = new ReentrantReadWriteLock();
+    private final ReentrantReadWriteLock fileLock = new ReentrantReadWriteLock();
     private final ReentrantReadWriteLock requestCountLock = new ReentrantReadWriteLock();
 
     // 私有构造函数，外部不能 new
@@ -28,20 +27,20 @@ public class GlobalResourceManager {
 
     // ======= 变量访问 =======
     public String getFilePath() {
-        filePathLock.readLock().lock();
+        fileLock.readLock().lock();
         try {
             return filePath;
         } finally {
-            filePathLock.readLock().unlock();
+            fileLock.readLock().unlock();
         }
     }
 
     public void setFilePath(String filePath) {
-        filePathLock.writeLock().lock();
+        fileLock.writeLock().lock();
         try {
             this.filePath = filePath;
         } finally {
-            filePathLock.writeLock().unlock();
+            fileLock.writeLock().unlock();
         }
 
     }
@@ -66,36 +65,55 @@ public class GlobalResourceManager {
 
     // ======= 文件访问锁 =======
     public void acquireReadLock() {
-        rwLock.readLock().lock();
+        fileLock.readLock().lock();
     }
 
     public void releaseReadLock() {
-        rwLock.readLock().unlock();
+        fileLock.readLock().unlock();
     }
 
     public void acquireWriteLock() {
-        rwLock.writeLock().lock();
+        fileLock.writeLock().lock();
     }
 
     public void releaseWriteLock() {
-        rwLock.writeLock().unlock();
+        fileLock.writeLock().unlock();
     }
 
     public <T> T withReadLock(Supplier<T> action) {
-        rwLock.readLock().lock();
+        fileLock.readLock().lock();
         try {
             return action.get();
         } finally {
-            rwLock.readLock().unlock();
+            fileLock.readLock().unlock();
         }
     }
 
     public <T> T withWriteLock(Supplier<T> action) {
-        rwLock.writeLock().lock();
+        fileLock.writeLock().lock();
         try {
             return action.get();
         } finally {
-            rwLock.writeLock().unlock();
+            fileLock.writeLock().unlock();
         }
     }
+
+    public void withReadLock(Runnable action) {
+        fileLock.readLock().lock();
+        try {
+            action.run();
+        } finally {
+            fileLock.readLock().unlock();
+        }
+    }
+
+    public void withWriteLock(Runnable action) {
+        fileLock.writeLock().lock();
+        try {
+            action.run();
+        } finally {
+            fileLock.writeLock().unlock();
+        }
+    }
+
 }

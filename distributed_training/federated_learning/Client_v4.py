@@ -14,6 +14,8 @@ from typing import List, Optional
 
 import DDS_All as dds  # 你的 pybind11 绑定
 from cc_dds_barrier import *
+from normal_distributed.dist_train_ddp_dgc.dds_barrier_verbose import ddp_barrier_verbose
+from  normal_distributed.dist_train_ddp_dgc.zrdds_allgather import ZrddsAllgather
 
 # ---------------- Client_v3 (Python refactor of Java V3) ----------------
 class Client_v4:
@@ -122,6 +124,35 @@ class Client_v4:
             f"sparse_first_round={Client_v4.SPARSE_FIRST_ROUND} "
             + (f"init_model_path={Client_v4.INIT_MODEL_PATH}" if Client_v4.INIT_MODEL_PATH else "")
         )
+
+    def wait_for_discovery(self,ag: ZrddsAllgather, world: int, timeout_ms: int = 10000, include_self: bool = True,
+                           poll_ms: int = 200):
+        """阻塞直到 discovery 匹配完成"""
+        deadline = time.time() + timeout_ms / 1000.0
+        target = world if include_self else max(0, world - 1)
+
+        def _get_pub_count():
+            st = ag.writer.get_publication_matched_status()  # 直接返回 DDS_All.PublicationMatchedStatus
+            return int(getattr(st, "current_count", 0))
+
+        def _get_sub_count():
+            st = ag.reader.get_subscription_matched_status()
+            return int(getattr(st, "current_count", 0))
+
+        last_w = last_r = -1
+        while True:
+            cw, cr = _get_pub_count(), _get_sub_count()
+            if (cw >= target) and (cr >= target):
+                print(f"[ag][discovery] OK: writer={cw}, reader={cr}, target={target}")
+                return
+            if cw != last_w or cr != last_r:
+                print(f"[ag][discovery] waiting... writer={cw}, reader={cr}, target={target}")
+                last_w, last_r = cw, cr
+            if time.time() >= deadline:
+                raise TimeoutError(f"discovery timeout: writer={cw}, reader={cr}, target={target}, world={world}")
+            time.sleep(poll_ms / 1000.0)
+
+
     # ---------------- 启动 ----------------
     def start(self):
         try:
@@ -136,20 +167,33 @@ class Client_v4:
         # 注册类型
         dds.register_all_types(self.dp)
 
-        allgather, conn_manager = create_barrier_system(
-            node_role=NodeRole.CLIENT,
-            node_id=Client_v4.CLIENT_ID,  # client的id从1开始
-            world_size=Client_v4.NUM_CLIENTS,
-            domain_participant=self.dp,
-            type=NodeRole.CLIENT,
-            debug=True
-        )
+        # 通信引擎
+        ag = ZrddsAllgather(self.dp, topic="train_scripts/allgather_blob")
 
-        # 等待所有连接
-        if conn_manager.wait_for_all_connections(timeout_s=600):
-            print("Connected to all nodes, ready for training!")
-        else:
-            print("Connection failed!")
+        # ---- ★ 在 barrier 之前先确保 discovery 已完成
+        self.wait_for_discovery(ag, world=Client_v4.NUM_CLIENTS+1, timeout_ms=100000, include_self=True)
+
+        ok = ddp_barrier_verbose(ag, group_id='1', rank=Client_v4.CLIENT_ID, world=Client_v4.NUM_CLIENTS+1,
+                                 domain_id=Client_v4.DOMAIN_ID, topic_name="train_scripts/allgather_blob",
+                                 min_writer_matches=Client_v4.NUM_CLIENTS+1, min_reader_matches=Client_v4.NUM_CLIENTS+1,
+                                 match_timeout_s=150.0, barrier_timeout_s=600.0)
+        if not ok:
+            raise SystemExit("[barrier] failed; check missing ranks / matching logs")
+
+        # allgather, conn_manager = create_barrier_system(
+        #     node_role=NodeRole.CLIENT,
+        #     node_id=Client_v4.CLIENT_ID,  # client的id从1开始
+        #     world_size=Client_v4.NUM_CLIENTS,
+        #     domain_participant=self.dp,
+        #     type=NodeRole.CLIENT,
+        #     debug=True
+        # )
+        #
+        # # 等待所有连接
+        # if conn_manager.wait_for_all_connections(timeout_s=600):
+        #     print("Connected to all nodes, ready for training!")
+        # else:
+        #     print("Connection failed!")
 
         # Topics
         self.t_cmd = self.dp.create_topic("train_scripts/train_cmd", "TrainCmd", dds.TOPIC_QOS_DEFAULT, None, 0)

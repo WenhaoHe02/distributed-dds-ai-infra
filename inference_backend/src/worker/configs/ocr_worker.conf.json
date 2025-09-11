@@ -2,9 +2,8 @@
   "model_id": "ocr",
   "output": "results",
   "model_config": {
-       "input": "",
        "output": "",
-       "model_parameter": "",
+       "parameter": "E:\\distributed-dds-ai-serving-system\\inference_backend\\src\\worker\\parameter\\ocr",
        "lang": "ch",
        "det": true
   }

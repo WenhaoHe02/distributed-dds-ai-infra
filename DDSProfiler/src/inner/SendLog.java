@@ -20,7 +20,6 @@ public class SendLog {
     public String client_id = "";      // @ID(3)
 
     public SendLog(SendLog other) {
-        this();
         copy(other);
     }
 

@@ -12,9 +12,9 @@ import random
 import string
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional, Callable, Dict, Set
+from typing import Optional, Set
 from dataclasses import dataclass
-from threading import Event, Lock,RLock
+from threading import Event, Lock, RLock
 import signal
 import json
 from pathlib import Path
@@ -29,10 +29,11 @@ from DDS_All import Subscriber
 # Data structure imports
 from DDS_All import (
     OpenBatch, Claim, TaskList, WorkerResult, WorkerTaskResult,
-    WorkerResultDataWriter, WorkerTaskResultSeq,Task
+    WorkerResultDataWriter, Task
 )
 
 from model_runner import ModelRunner
+
 
 def load_worker_config(model_id: str, base_dir: str = "configs") -> dict:
     """
@@ -51,14 +52,24 @@ def load_worker_config(model_id: str, base_dir: str = "configs") -> dict:
     with open(cfg_path, "r", encoding="utf-8") as f:
         cfg = json.load(f)
 
+    # 校正 model_id
     if "model_id" not in cfg:
         cfg["model_id"] = model_id
     if cfg["model_id"] != model_id:
         print(f"[WARN] model_id in config({cfg['model_id']}) != worker model_id({model_id}), using worker's model_id.")
         cfg["model_id"] = model_id
 
-    if "model_config" not in cfg or "model_parameter" not in cfg["model_config"]:
-        raise KeyError("config.model_config.model_parameter is required")
+    if "model_config" not in cfg:
+        raise KeyError("config.model_config is required")
+
+    mc = cfg["model_config"]
+    # 同时兼容 parameter / model_parameter
+    parameter = mc.get("parameter") or mc.get("model_parameter")
+    if not parameter:
+        raise KeyError("config.model_config.parameter (or model_parameter) is required")
+
+    mc["parameter"] = parameter
+    mc["model_parameter"] = parameter  # 兼容旧字段
 
     return cfg
 
@@ -148,12 +159,25 @@ class Worker:
         self.openbatch_reader: Optional[OpenBatchDataReader] = None
         self.tasklist_reader: Optional[TaskListDataReader] = None
 
-        self.openbatch_listener: Optional[OpenBatchListener] = None
-        self.tasklist_listener: Optional[TaskListListener] = None
+        self.openbatch_listener: Optional["OpenBatchListener"] = None
+        self.tasklist_listener: Optional["TaskListListener"] = None
 
         # Heartbeat
         self.heartbeat_enabled = Event()
         self.heartbeat_executor: Optional[ThreadPoolExecutor] = None
+
+    # --- 通用写入包装器：兼容两种pybind签名 ---
+    @staticmethod
+    def _write_with_best_effort(writer, sample):
+        """
+        兼容两种绑定：
+          A) write(sample, list)  —— 可能用于 result/claim writer
+          B) write(sample)        —— 可能用于 heartbeat writer
+        """
+        try:
+            return writer.write(sample, [])
+        except TypeError:
+            return writer.write(sample)
 
     def _initialize_dds(self) -> bool:
         """初始化DDS组件"""
@@ -226,14 +250,13 @@ class Worker:
                 return False
             print("成功创建Topic")
 
-            # 5.创建DateReadeer 和 DateWriter
+            # 5.创建DataWriter
             mask = StatusKind.DATA_AVAILABLE_STATUS | StatusKind.SUBSCRIPTION_MATCHED_STATUS
             self.claim_writer = self.pub.create_datawriter(self.claim_topic, DDS_All.DATAWRITER_QOS_DEFAULT, None, mask)
             self.result_writer = self.pub.create_datawriter(self.result_topic, DDS_All.DATAWRITER_QOS_DEFAULT, None, mask)
 
             heartbeat_qos = DataWriterQos()
             self.pub.get_default_datawriter_qos(heartbeat_qos)
-
             self.heartbeat_writer = self.pub.create_datawriter(
                 self.heartbeat_topic,
                 heartbeat_qos,
@@ -246,7 +269,7 @@ class Worker:
                 return False
             print("成功创建Writers")
 
-            # Create data readers with listeners
+            # 6.创建DataReader
             self.openbatch_reader = self.sub.create_datareader(
                 self.open_topic,
                 DDS_All.DATAREADER_QOS_DEFAULT,
@@ -267,21 +290,21 @@ class Worker:
 
             print("成功创建Readers")
 
-            self.openbatch_listener=OpenBatchListener(self)
-            self.tasklist_listener=TaskListListener(self)
+            self.openbatch_listener = OpenBatchListener(self)
+            self.tasklist_listener = TaskListListener(self)
 
             # Set listeners
-            rtn_open=self.openbatch_reader.set_listener(
+            rtn_open = self.openbatch_reader.set_listener(
                 self.openbatch_listener,
                 StatusKind.DATA_AVAILABLE_STATUS
             )
 
-            rtn_task=self.tasklist_reader.set_listener(
+            rtn_task = self.tasklist_reader.set_listener(
                 self.tasklist_listener,
                 StatusKind.DATA_AVAILABLE_STATUS
             )
 
-            if not (rtn_open == DDS_All.DDS_ReturnCode_t.OK and rtn_task == DDS_All.DDS_ReturnCode_t.OK ):
+            if not (rtn_open == DDS_All.DDS_ReturnCode_t.OK and rtn_task == DDS_All.DDS_ReturnCode_t.OK):
                 print("associate listener failed")
                 return False
             print("成功绑定listener")
@@ -294,19 +317,20 @@ class Worker:
             traceback.print_exc()
             return False
 
-    def claim_emitter(self,claim: Claim) -> None:
-        rc = self.claim_writer.write(claim)
+    def claim_emitter(self, claim: Claim) -> None:
+        rc = self._write_with_best_effort(self.claim_writer, claim)
         if rc != DDS_All.DDS_ReturnCode_t.OK:
             print(f"[WorkerMain] claim write rc={rc}")
         else:
-            print("[Worker]成功发送claim batch_id: ",claim.batch_id," worker_id: ",claim.worker_id," queue_length: ",claim.queue_length)
+            print("[Worker]成功发送claim batch_id:", claim.batch_id,
+                  " worker_id:", claim.worker_id, " queue_length:", claim.queue_length)
 
-    def result_emitter(self,worker_result: WorkerResult) -> None:
-        rc = self.result_writer.write(worker_result)
+    def result_emitter(self, worker_result: WorkerResult) -> None:
+        rc = self._write_with_best_effort(self.result_writer, worker_result)
         if rc != DDS_All.DDS_ReturnCode_t.OK:
             print(f"[WorkerMain] result write rc={rc}")
         else:
-            print("[Worker]成功发送WokerResult")
+            print("[Worker]成功发送WorkerResult")
 
     def on_open_batch(self, open_batch: OpenBatch) -> None:
         """Handle OpenBatch message"""
@@ -325,12 +349,12 @@ class Worker:
         self.claimed_lru[open_batch.batch_id] = True
 
         claim = Claim()
-
         claim.batch_id = open_batch.batch_id
         claim.worker_id = self.config.worker_id
         claim.queue_length = self.current_depth()
 
-        print("[Worker]get batch batch_id: ",claim.batch_id," worker_id: ",claim.worker_id," queue_length: ",claim.queue_length)
+        print("[Worker]get batch batch_id:", claim.batch_id,
+              " worker_id:", claim.worker_id, " queue_length:", claim.queue_length)
 
         try:
             self.claim_emitter(claim)
@@ -339,7 +363,7 @@ class Worker:
 
     def on_task_list(self, task_list: TaskList) -> None:
         """Handle TaskList message"""
-        if  not task_list:
+        if not task_list:
             return
         if (task_list.assigned_worker_id != self.config.worker_id or
                 task_list.model_id != self.config.model_id):
@@ -350,9 +374,8 @@ class Worker:
                 return
             self.seen_task_list.add(task_list.batch_id)
 
-        print("[Worker]get tasklist worker_id: ", task_list.assigned_worker_id, " batch_id: ",
-              task_list.batch_id, " model_id: ", task_list.model_id)
-        #"tasks: ",task_list.tasks
+        print("[Worker]get tasklist worker_id:", task_list.assigned_worker_id,
+              " batch_id:", task_list.batch_id, " model_id:", task_list.model_id)
         try:
             self.batch_queue.put_nowait(task_list)
         except queue.Full:
@@ -389,111 +412,43 @@ class Worker:
     def _consume_loop(self):
         """
         取批 → 运行模型 → 回写结果 的工作线程主循环。
-        关键保证：
-          - 只有在成功 get 到任务后才递增 inflight_count；
-          - 自减在内层 finally，任何路径都能配对成功；
-          - 不对 queue.Empty 做“白减”；
-          - 对外上报/内部统计都不让 inflight 出现负数；
-          - 支持优雅停机（stop_event / _stop_event）。
         """
-        import time, queue, logging, traceback
+        import logging
         logger = getattr(self, "log", logging.getLogger("Worker"))
 
-        stop_flag = getattr(self, "stop_event", None) or getattr(self, "_stop_event", None)
-        get_timeout = getattr(self, "queue_get_timeout", 0.1) or 0.1  # 秒
-
-        while True:
-            # 支持优雅停机
-            if stop_flag and stop_flag.is_set():
-                break
-
+        while self.running.is_set():
             try:
-                # 只要没有拿到任务，绝不增/减 inflight
-                task_list = self.batch_queue.get(timeout=get_timeout)
+                task_list = self.batch_queue.get(timeout=0.1)
+
+                with self.inflight_lock:
+                    self.inflight_count += 1
+
+                try:
+                    worker_result = self.model_runner.run_batched_task(task_list)
+                except Exception as e:
+                    worker_result = self._synthesize_error_result(task_list, e)
+
+                worker_result.batch_id = task_list.batch_id
+                worker_result.model_id = task_list.model_id
+                worker_result.worker_id = self.config.worker_id
+
+                try:
+                    self.result_emitter(worker_result)
+                except Exception as e:
+                    print(f"Error emitting result: {e}")
+
             except queue.Empty:
                 continue
             except Exception as e:
-                # 取任务本身异常（极少），记录后继续
-                logger.exception("[Worker] batch_queue.get() failed: %s", e)
-                continue
-
-            # === 从这里开始才算“在途” ===
-            start_ts = time.time()
-            with self.inflight_lock:
-                self.inflight_count += 1
-
-            try:
-                try:
-                    # 运行模型
-                    result = self.model_runner.run_batched_task(task_list)
-                except Exception as run_err:
-                    # 兜底：生成错误结果，尽量复用你的现有方法
-                    logger.exception(
-                        "[Worker] run_batched_task failed for batch_id=%s: %s",
-                        getattr(task_list, "batch_id", "?"), run_err
-                    )
-                    if hasattr(self, "_synthesize_error_result"):
-                        result = self._synthesize_error_result(task_list, run_err)
-                    else:
-                        # 最小兜底：构造一个带错误信息的结果对象/字典
-                        try:
-                            # 如果有 DDS_All 类型可用，就尽量用它
-                            from DDS_All import WorkerResult
-                            result = WorkerResult()
-                            result.batch_id = getattr(task_list, "batch_id", "")
-                            result.worker_id = getattr(getattr(self, "config", object()), "worker_id", "")
-                            # 不同 IDL 字段名可能不同，尽量宽松处理
-                            setattr(result, "status", "ERROR")
-                            setattr(result, "error_msg", f"runner exception: {run_err}")
-                        except Exception:
-                            # 退回到 dict（写入时你的 writer 可能不接受 dict，但至少不至于空对象）
-                            result = {
-                                "batch_id": getattr(task_list, "batch_id", ""),
-                                "worker_id": getattr(getattr(self, "config", object()), "worker_id", ""),
-                                "status": "ERROR",
-                                "error_msg": f"{run_err}",
-                            }
-
-                # 写回结果
-                try:
-                    self.result_writer.write(result)
-                except Exception as write_err:
-                    logger.exception(
-                        "[Worker] result_writer.write failed for batch_id=%s: %s",
-                        getattr(task_list, "batch_id", "?"), write_err
-                    )
-
+                print(f"Error in consume loop: {e}")
             finally:
-                # 无论成功/失败，都配对自减 + task_done
                 with self.inflight_lock:
-                    self.inflight_count -= 1
-                    # 保底不让内部计数为负（外部上报再取 max(0, ...)）
-                    if self.inflight_count < 0:
-                        self.inflight_count = 0
-
-                # 队列配对完成
+                    if self.inflight_count > 0:
+                        self.inflight_count -= 1
                 try:
                     self.batch_queue.task_done()
                 except Exception:
                     pass
-
-                # 统计与可观测性
-                dur_ms = (time.time() - start_ts) * 1000.0
-                try:
-                    qsize = self.batch_queue.qsize()
-                except Exception:
-                    qsize = -1
-                logger.info(
-                    "[Worker] finished batch_id=%s in %.1f ms | inflight=%d | qsize=%s",
-                    getattr(task_list, "batch_id", "?"),
-                    dur_ms,
-                    getattr(self, "inflight_count", -1),
-                    qsize,
-                )
-
-        # 退出前的收尾日志
-        logger.info("[Worker] consume loop exited")
-
 
     def _synthesize_error_result(self, task_list: TaskList, error: Exception) -> WorkerResult:
         """Create error result for failed batch"""
@@ -502,19 +457,26 @@ class Worker:
         worker_result.model_id = task_list.model_id
         worker_result.worker_id = self.config.worker_id
 
-        results = WorkerTaskResultSeq()
-        n = task_list.tasks.length() if task_list.tasks else 0
-        results.ensure_length(n, n)
+        tasks = getattr(task_list, "tasks", None) or []
+        # 统一拿长度
+        try:
+            n = tasks.length()
+            get_at = tasks.get_at
+        except AttributeError:
+            n = len(tasks)
+            get_at = (lambda i: tasks[i])
 
+        # 使用 Python list 构造结果，避免与 pybind 绑定冲突
+        results = []
         for i in range(n):
-            task = task_list.tasks.get_at(i)
-            result = WorkerTaskResult()
-            result.request_id = task.request_id
-            result.task_id = task.task_id
-            result.client_id = task.client_id
-            result.status = "ERROR_RUNNER"
-            result.output_blob = b''
-            results.set_at(i, result)
+            task = get_at(i)
+            r = WorkerTaskResult()
+            r.request_id = getattr(task, "request_id", "")
+            r.task_id = getattr(task, "task_id", "")
+            r.client_id = getattr(task, "client_id", "")
+            r.status = "ERROR_RUNNER"
+            r.output_blob = b""
+            results.append(r)
 
         worker_result.results = results
         return worker_result
@@ -571,29 +533,11 @@ class Worker:
             heartbeat.model_id = self.config.model_id
             heartbeat.batch_id = f"HEARTBEAT_{int(time.time() * 1000)}"
 
-            # Send heartbeat
-            rc = self.heartbeat_writer.write(heartbeat)
-            # if rc == DDS_ReturnCode_t.OK:
-            #     print(f"[Worker] Heartbeat sent: {self.config.worker_id}")
-            # else:
-            #     print(f"[Worker] Failed to send heartbeat, rc={rc}")
+            # Send heartbeat（自动兼容两种写法）
+            self._write_with_best_effort(self.heartbeat_writer, heartbeat)
 
         except Exception as e:
             print(f"[Worker] Error sending heartbeat: {e}")
-
-
-def sys_or_env(sys_key: str, env_key: str, default_val: str) -> str:
-    """Get value from system property or environment variable"""
-    value = os.environ.get(sys_key.upper().replace('.', '_'))
-    if not value:
-        value = os.environ.get(env_key)
-    return value or default_val
-
-
-def generate_random_id() -> str:
-    """Generate random worker ID"""
-    random_part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
-    return f"worker-{random_part}-cpu"
 
 
 class OpenBatchListener(DataReaderListener):
@@ -603,7 +547,7 @@ class OpenBatchListener(DataReaderListener):
         super().__init__()
         self.worker = worker
 
-    def on_data_available(self, reader:DDS_All.OpenBatchDataReader):
+    def on_data_available(self, reader: DDS_All.OpenBatchDataReader):
         data_seq = OpenBatchSeq()
         info_seq = SampleInfoSeq()
 
@@ -631,6 +575,7 @@ class OpenBatchListener(DataReaderListener):
             except Exception:
                 pass
 
+
 class TaskListListener(DataReaderListener):
     """Listener for TaskList messages"""
 
@@ -638,7 +583,7 @@ class TaskListListener(DataReaderListener):
         super().__init__()
         self.worker = worker
 
-    def on_data_available(self, reader:DDS_All.TaskListDataReader):
+    def on_data_available(self, reader: DDS_All.TaskListDataReader):
         data_seq = TaskListSeq()
         info_seq = SampleInfoSeq()
 
@@ -666,15 +611,19 @@ class TaskListListener(DataReaderListener):
             except Exception:
                 pass
 
-    # def on_process_sample(self, reader: DataReader, sample: TaskList, info) -> None:
-    #     if sample:
-    #         try:
-    #             self.worker.on_task_list(sample)
-    #         except Exception as e:
-    #             print(f"Error processing TaskList: {e}")
-    #
-    # def on_data_arrived(self, reader: DataReader, sample, info) -> None:
-    #     pass
+
+def sys_or_env(sys_key: str, env_key: str, default_val: str) -> str:
+    """Get value from system property or environment variable"""
+    value = os.environ.get(sys_key.upper().replace('.', '_'))
+    if not value:
+        value = os.environ.get(env_key)
+    return value or default_val
+
+
+def generate_random_id() -> str:
+    """Generate random worker ID"""
+    random_part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+    return f"worker-{random_part}-cpu"
 
 
 def main():
@@ -690,7 +639,7 @@ def main():
         try:
             if worker:
                 worker.stop()
-        except:
+        except Exception:
             pass
         print("Worker stopped.")
 
@@ -705,14 +654,18 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
 
     try:
+        # 读取 worker 模板配置（只含静态字段：parameter/params等）
+        base_model_config = load_worker_config(model_id, base_dir="configs")
+        # 交给 ModelRunner；批次执行时由 ModelRunner 动态补充 batch/images/output 等字段
+        model_runner = ModelRunner(base_model_config)
+
         config = WorkerConfig(worker_id, model_id)
         config.enable_heartbeat = True
         config.heartbeat_interval_seconds = 5
-        base_model_config = load_worker_config(model_id, base_dir="configs")
-        model_runner = ModelRunner(base_model_config)
-        worker = Worker(WorkerConfig(worker_id, model_id), model_runner)
 
-        res=worker._initialize_dds()
+        worker = Worker(config, model_runner)
+
+        res = worker._initialize_dds()
         if not res:
             print("worker dds initialize failed")
         print("worker dds环境初始化成功")

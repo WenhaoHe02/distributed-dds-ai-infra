@@ -21,7 +21,7 @@ public class SendService {
     private static final String TOPIC_INFER_REQ = "inference/request";
 
     // 模型配置
-    private static final String[] MODELS = { "model_1" };
+    private static final String[] MODELS = { "ocr" };
 
     // 优先级配置
     private static final int[] PRIORITIES = { 0, 1, 2 };
@@ -42,7 +42,7 @@ public class SendService {
 
 
     // 默认请求数量
-    private static final int DEFAULT_REQUEST_COUNT = 10;
+    private static final int DEFAULT_REQUEST_COUNT = 1;
 
     private DomainParticipant dp;
     private Publisher pub;

@@ -15,9 +15,15 @@ import com.zrdds.subscription.Subscriber;
 
 import data_structure.*; // WorkerResult / WorkerTaskResult / WorkerTaskResultSeq / ResultUpdate / ResultItem / *TypeSupport
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.*;
+import java.util.logging.Formatter;
 
 /**
  * spliter.Spliter（服务端去重 + 微批聚合 + 空闲超时后的迟到丢弃）
@@ -74,6 +80,51 @@ public class Spliter {
             this.lastFlushTs    = now;
         }
     }
+
+    /* ===================== Log ===================== */
+    private static Logger logger = Logger.getLogger("SpliterLogger");
+
+    static {
+        try {
+            // 日志目录和文件
+            String logDir = "./logs/";
+            String logFile = logDir + "spliterlog.txt";
+
+            // 如果目录不存在就创建
+            Path path = Paths.get(logDir);
+            if (!Files.exists(path)) {
+                Files.createDirectories(path);
+            }
+
+            // 创建 FileHandler，追加模式
+            FileHandler fileHandler = new FileHandler(logFile, true);
+            fileHandler.setLevel(Level.INFO);
+
+            // 日志格式
+            fileHandler.setFormatter(new Formatter() {
+                @Override
+                public String format(LogRecord record) {
+                    return String.format("%1$tF %1$tT - %2$s - [Spliter] - %3$s%n",
+                            record.getMillis(), record.getLevel(), record.getMessage());
+                }
+            });
+
+            // 添加 Handler
+            logger.addHandler(fileHandler);
+            logger.setUseParentHandlers(false); // 不打印到控制台，可选
+
+            // 设置日志级别
+            logger.setLevel(Level.INFO);
+
+        } catch (IOException e) {
+            getLogger().severe(e.getMessage());
+        }
+    }
+
+    public static Logger getLogger() {
+        return logger;
+    }
+
 
     /* ===================== Listener ===================== */
     private static class WorkerResultListener extends SimpleDataReaderListener<WorkerResult, WorkerResultSeq, WorkerResultDataReader> {
@@ -141,8 +192,7 @@ public class Spliter {
                 }
 
             } catch (Throwable t) {
-                System.err.println("[Spliter] on_process_sample error: " + t.getMessage());
-                t.printStackTrace();
+                getLogger().severe("on_process_sample error: " + t.getMessage());
             }
         }
 
@@ -193,9 +243,9 @@ public class Spliter {
 
             ReturnCode_t rc = updateWriter.write(upd, InstanceHandle_t.HANDLE_NIL_NATIVE);
             if (rc != ReturnCode_t.RETCODE_OK) {
-                System.err.println("[Spliter] write ResultUpdate failed: " + rc + " req=" + st.requestId + " items=" + m);
+                getLogger().severe("write ResultUpdate failed: " + rc + " req=" + st.requestId + " items=" + m);
             } else {
-                 System.out.println("[Spliter] flush req=" + st.requestId + " items=" + m);
+                getLogger().info("flush req=" + st.requestId + " items=" + m);
             }
 
             st.buffer.clear();
@@ -221,7 +271,7 @@ public class Spliter {
                 if (SEEN.remove(e.getKey(), e.getValue())) removed++;
             }
             if (removed > 0) {
-                System.out.println("[Spliter] dedup cleanup removed=" + removed + " scanned=" + scanned);
+                getLogger().info("dedup cleanup removed=" + removed + " scanned=" + scanned);
             }
         }
 
@@ -244,7 +294,7 @@ public class Spliter {
                 }
             }
             if (removed > 0) {
-                System.out.println("[Spliter] req-state cleanup removed=" + removed + " scanned=" + scanned);
+                getLogger().info("req-state cleanup removed=" + removed + " scanned=" + scanned);
             }
         }
 
@@ -297,14 +347,14 @@ public class Spliter {
             // 1) 初始化 DDS
             DomainParticipantFactory dpf = DomainParticipantFactory.get_instance();
             if (dpf == null) {
-                System.err.println("DDSIF.init failed");
+                getLogger().severe("DDSIF.init failed");
                 return;
             }
             DomainParticipant dp = dpf.create_participant(
                     DOMAIN_ID,
                     DomainParticipantFactory.PARTICIPANT_QOS_DEFAULT,
                     null, StatusKind.STATUS_MASK_NONE);
-            if (dp == null) { System.err.println("create dp failed"); return; }
+            if (dp == null) { getLogger().severe("create dp failed"); return; }
 
             // 2) 注册类型
             WorkerResultTypeSupport wrTS = (WorkerResultTypeSupport) WorkerResultTypeSupport.get_instance();
@@ -312,7 +362,7 @@ public class Spliter {
 
             if (wrTS.register_type(dp, null) != ReturnCode_t.RETCODE_OK
                     || upTS.register_type(dp, null) != ReturnCode_t.RETCODE_OK) {
-                System.err.println("register type failed");
+                getLogger().severe("register type failed");
                 return;
             }
 
@@ -332,7 +382,7 @@ public class Spliter {
             );
 
             if (wrTopic == null || upTopic == null) {
-                System.err.println("create topic failed");
+                getLogger().severe("create topic failed");
                 return;
             }
 
@@ -344,14 +394,14 @@ public class Spliter {
             ResultUpdateDataWriter upWriter = (ResultUpdateDataWriter)
                     pub.create_datawriter(upTopic, Publisher.DATAWRITER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
             if (upWriter == null) {
-                System.err.println("ResultUpdate writer creation failed");
+                getLogger().severe("ResultUpdate writer creation failed");
                 return;
             }
 
             WorkerResultDataReader wrReader = (WorkerResultDataReader)
                     sub.create_datareader(wrTopic, Subscriber.DATAREADER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
             if (wrReader == null) {
-                System.err.println("WorkerResult reader creation failed");
+                getLogger().severe("WorkerResult reader creation failed");
                 return;
             }
 
@@ -359,15 +409,21 @@ public class Spliter {
             listener = new WorkerResultListener(upWriter);
             wrReader.set_listener(listener, StatusKind.DATA_AVAILABLE_STATUS);
 
-            System.out.println("==================================================");
-            System.out.println("Spliter started (server-side dedup + micro-batching + idle-timeout drop)");
-            System.out.println("Microbatch: maxItems=" + MAX_ITEMS_PER_UPDATE + ", maxWaitMs=" + MAX_WAIT_MS +
+            getLogger().info("==================================================");
+            getLogger().info("Spliter started (server-side dedup + micro-batching + idle-timeout drop)");
+            getLogger().info("Microbatch: maxItems=" + MAX_ITEMS_PER_UPDATE + ", maxWaitMs=" + MAX_WAIT_MS +
                     ", maxBytes=" + MAX_BYTES_PER_UPDATE);
-            System.out.println("Idle-close: " + IDLE_CLOSE_MS + " ms");
-            System.out.println("Topics: " + TOPIC_WORKER_RESULT + " -> " + TOPIC_RESULT_UPDATE);
-            System.out.println("==================================================");
-            System.out.println("Press ENTER to exit...");
-            System.in.read();
+            getLogger().info("Idle-close: " + IDLE_CLOSE_MS + " ms");
+            getLogger().info("Topics: " + TOPIC_WORKER_RESULT + " -> " + TOPIC_RESULT_UPDATE);
+            getLogger().info("==================================================");
+            while (true) {
+                try {
+                    Thread.sleep(200); // 暂停 200 毫秒
+                } catch (InterruptedException e) {
+                    logger.severe("Thread interrupted: " + e.getMessage());
+                    break; // 可选：中断时退出循环
+                }
+            }
 
         } finally {
             if (listener != null) listener.shutdown();

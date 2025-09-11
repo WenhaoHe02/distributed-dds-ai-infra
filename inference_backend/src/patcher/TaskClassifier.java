@@ -2,9 +2,15 @@ package patcher;
 
 import data_structure.*; // SingleTask / InferenceRequest / Task / TaskSeq / OpenBatch / Grant / TaskList
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.*;
+import java.util.logging.Formatter;
 
 /**
  * TaskClassifier — per-model windowed batcher aligned to final ai.idl (Scheme B)
@@ -54,6 +60,50 @@ public class TaskClassifier {
         /** Keep recently served batches this long for safety (ms). */
         public long servedRetentionMs = 10_000L;
 
+    }
+
+    /* ===================== Log ===================== */
+    private static Logger logger = Logger.getLogger("TaskClassifierLogger");
+
+    static {
+        try {
+            // 日志目录和文件
+            String logDir = "./logs/";
+            String logFile = logDir + "patcherlog.txt";
+
+            // 如果目录不存在就创建
+            Path path = Paths.get(logDir);
+            if (!Files.exists(path)) {
+                Files.createDirectories(path);
+            }
+
+            // 创建 FileHandler，追加模式
+            FileHandler fileHandler = new FileHandler(logFile, true);
+            fileHandler.setLevel(Level.INFO);
+
+            // 日志格式
+            fileHandler.setFormatter(new Formatter() {
+                @Override
+                public String format(LogRecord record) {
+                    return String.format("%1$tF %1$tT - %2$s - [TaskClassifier] - %3$s%n",
+                            record.getMillis(), record.getLevel(), record.getMessage());
+                }
+            });
+
+            // 添加 Handler
+            logger.addHandler(fileHandler);
+            logger.setUseParentHandlers(false); // 不打印到控制台，可选
+
+            // 设置日志级别
+            logger.setLevel(Level.INFO);
+
+        } catch (IOException e) {
+            getLogger().severe(e.getMessage());
+        }
+    }
+
+    public static Logger getLogger() {
+        return logger;
     }
 
     /* -------------------- Internal types -------------------- */
@@ -163,7 +213,7 @@ public class TaskClassifier {
         // 解析 winner 是 CPU 还是 GPU，仅用于可观测性（不改变协议/行为）
         String dev = parseDevice(sb.assignedWorkerId);
         // 简单日志：你也可以替换成实际 logger
-        // System.out.println("[TaskClassifier] Grant batch=" + sb.batchId + " -> " + sb.assignedWorkerId + " (" + dev + ")");
+        //getLogger().info("Grant batch=" + sb.batchId + " -> " + sb.assignedWorkerId + " (" + dev + ")");
 
         emitTaskList(sb);
         servedRecently.addLast(sb);
@@ -235,7 +285,7 @@ public class TaskClassifier {
         // 注意：IDL若是int，这里仍按int写入；如需long请改IDL
         ob.create_ts_ms = (int) sb.createTs;
 
-        try { openBatchEmitter.emit(ob); } catch (Exception e){ e.printStackTrace(); }
+        try { openBatchEmitter.emit(ob); } catch (Exception e){ getLogger().severe(e.getMessage()); }
     }
 
     private void emitTaskList(StoredBatch sb){
@@ -244,7 +294,7 @@ public class TaskClassifier {
         tl.model_id = sb.modelId;
         tl.assigned_worker_id = sb.assignedWorkerId;
         tl.tasks = sb.tasks;
-        try { taskListEmitter.emit(tl); } catch (Exception e){ e.printStackTrace(); }
+        try { taskListEmitter.emit(tl); } catch (Exception e){ getLogger().severe(e.getMessage());  }
     }
 
     private void cleanupServed(){

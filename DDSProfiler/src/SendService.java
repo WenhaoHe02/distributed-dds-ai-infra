@@ -21,14 +21,14 @@ public class SendService {
     private static final String TOPIC_INFER_REQ = "inference/request";
 
     // 模型配置
-    private static final String[] MODELS = { "model_0", "model_1" };
+    private static final String[] MODELS = { "model_1" };
 
     // 优先级配置
     private static final int[] PRIORITIES = { 0, 1, 2 };
 
     // 任务数量配置（现在作为实例变量，可以被构造函数覆盖）
-    private int minTasksPerRequest = 5;
-    private int maxTasksPerRequest = 20;
+    private int minTasksPerRequest = 1;
+    private int maxTasksPerRequest = 2;
 
     // 图片数据配置
     private static final int MIN_IMAGE_WIDTH = 224;
@@ -38,13 +38,15 @@ public class SendService {
 
     // 请求间隔配置（现在作为实例变量，可以被构造函数覆盖）
     private int minRequestIntervalMs = 50;
-    private int maxRequestIntervalMs = 500;
+    private int maxRequestIntervalMs = 60;
+
 
     // 默认请求数量
-    private static final int DEFAULT_REQUEST_COUNT = 20;
+    private static final int DEFAULT_REQUEST_COUNT = 10;
 
     private DomainParticipant dp;
     private Publisher pub;
+    private Topic topic; // 添加Topic字段
     private InferenceRequestDataWriter requestWriter;
     private PrintWriter logWriter;
     private String clientId;
@@ -82,6 +84,7 @@ public class SendService {
         if (dp == null) {
             throw new RuntimeException("create_participant failed");
         }
+        dp.enable();
 
         // 注册类型
         if (InferenceRequestTypeSupport.get_instance().register_type(dp, null) != ReturnCode_t.RETCODE_OK) {
@@ -89,30 +92,33 @@ public class SendService {
         }
 
         // 创建主题
-        Topic reqTopic = dp.create_topic(TOPIC_INFER_REQ,
+        topic = dp.create_topic(TOPIC_INFER_REQ,
                 InferenceRequestTypeSupport.get_instance().get_type_name(),
                 DomainParticipant.TOPIC_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
-        if (reqTopic == null) {
+        if (topic == null) {
             throw new RuntimeException("create_topic failed");
         }
+        topic.enable();
 
         // 创建发布者
         pub = dp.create_publisher(DomainParticipant.PUBLISHER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
         if (pub == null) {
             throw new RuntimeException("create_publisher failed");
         }
+        pub.enable();
 
         // 创建数据写入器
         requestWriter = (InferenceRequestDataWriter) pub.create_datawriter(
-                reqTopic, Publisher.DATAWRITER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
+                topic, Publisher.DATAWRITER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
         if (requestWriter == null) {
             throw new RuntimeException("create_datawriter failed");
         }
+        requestWriter.enable();
     }
 
     public void sendRequest(String requestId, int taskCount, int priority) throws Exception {
         // 创建请求，包含优先级信息
-        String requestIdWithPriority = requestId + "-priority" + priority;
+        String requestIdWithPriority = java.util.UUID.randomUUID().toString() + "_priority" + priority;
         InferenceRequest request = new InferenceRequest();
         request.request_id = requestIdWithPriority;
 
@@ -179,7 +185,7 @@ public class SendService {
     // 发送多种不同类型的任务
     public void sendMixedRequests(int count) throws Exception {
         for (int i = 1; i <= count; i++) {
-            String requestId = "r" + String.format("%03d", i);
+            String requestId = clientId;
 
             // 随机任务数量
             int taskCount = random.nextInt(maxTasksPerRequest - minTasksPerRequest + 1) + minTasksPerRequest;
@@ -264,19 +270,13 @@ public class SendService {
                 logWriter.close();
             }
 
-            // 清理DDS资源
-            if (requestWriter != null) {
-                pub.delete_datawriter(requestWriter);
-            }
-            if (pub != null) {
-                dp.delete_publisher(pub);
-            }
             if (dp != null) {
-                DomainParticipantFactory dpf = DomainParticipantFactory.get_instance();
-                dpf.delete_participant(dp);
+                dp.delete_contained_entities() ;
+                dp = null;
             }
-            DDSIF.Finalize();
+
         } catch (Exception e) {
+            System.err.println("Error during resource cleanup: " + e.getMessage());
             e.printStackTrace();
         }
     }

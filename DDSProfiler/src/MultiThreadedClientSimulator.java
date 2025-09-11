@@ -9,7 +9,7 @@ public class MultiThreadedClientSimulator {
     //---------------------------配-置-区-域------------------------------
 
     // 线程数
-    private static final int DEFAULT_THREAD_COUNT = 2;
+    private static final int DEFAULT_THREAD_COUNT = 5;
     // 每个线程发送的请求数
     private static final int DEFAULT_REQUEST_COUNT_PER_THREAD = 5;
     // 任务数范围

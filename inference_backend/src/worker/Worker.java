@@ -189,7 +189,7 @@ public class Worker {
 
     public static void main(String[] args) throws Exception {
         String workerId = sysOrEnv("worker.id", "WORKER_ID",
-                "worker-" + Integer.toUnsignedString(new Random().nextInt(), 36) + "-cpu");
+                "worker-" + "12" + "-cpu");
         String modelId  = sysOrEnv("worker.model", "WORKER_MODEL", "model_0");
 
         DomainParticipant dp = null;
@@ -253,7 +253,8 @@ public class Worker {
             pub.get_default_datawriter_qos(heartbeatQos);
             heartbeatQos.liveliness.kind = LivelinessQosPolicyKind.MANUAL_BY_TOPIC_LIVELINESS_QOS;
             heartbeatQos.liveliness.lease_duration.sec = 10; // 10秒租约时间
-            heartbeatQos.liveliness.lease_duration.nanosec = 0;
+            //heartbeatQos.liveliness.lease_duration.nanosec = 0;
+
 
             heartbeatWriter = (WorkerResultDataWriter) pub.create_datawriter(
                     heartbeatTopic, heartbeatQos, null, StatusKind.STATUS_MASK_NONE);

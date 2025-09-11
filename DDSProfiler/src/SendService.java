@@ -4,6 +4,7 @@ import com.zrdds.domain.DomainParticipant;
 import com.zrdds.domain.DomainParticipantFactory;
 import com.zrdds.topic.Topic;
 import com.zrdds.publication.Publisher;
+import common.GlobalResourceManager;
 import data_structure.*;
 import java.io.*;
 import java.util.Random;

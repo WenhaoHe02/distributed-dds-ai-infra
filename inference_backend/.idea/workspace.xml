@@ -5,26 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7abc258a-df1c-4709-b9e9-57e3210de8dd" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/../DDSProfiler/DDSProfiler.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../DDSProfiler/java.exe.ddslog" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/worker/model_service/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/worker/model_service/runners/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/worker/parameter/ocr/cls.onnx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/worker/parameter/ocr/det.onnx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/worker/parameter/ocr/rec.onnx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/worker/parameter/yolo/yolov11n.pt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDSProfiler/logs/send.log" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/logs/send.log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDSProfiler/src/SendService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/src/SendService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDSProfiler/src/inner/SendLog.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/src/inner/SendLog.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/patcher/Patcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/patcher/Patcher.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/patcher/TaskClassifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/patcher/TaskClassifier.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/spliter/Spliter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/spliter/Spliter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/configs/ocr_worker.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/configs/ocr_worker.conf.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/configs/yolo_worker.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/configs/yolo_worker.conf.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/state_monitor/stateMonitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/state_monitor/stateMonitor.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/worker/model_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_runner.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/model_service/runners/ocr_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_service/runners/ocr_runner.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/model_service/runners/yolo_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_service/runners/yolo_runner.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/model_service/task_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_service/task_runner.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/woker.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/woker.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -47,6 +33,8 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Application.Patcher.executor": "Run",
+    "Application.Spliter.executor": "Run",
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
@@ -61,6 +49,40 @@
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
+  <component name="RunManager" selected="Application.Spliter">
+    <configuration name="Patcher" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="patcher.Patcher" />
+      <module name="inference_backend" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="patcher.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Spliter" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="spliter.Spliter" />
+      <module name="inference_backend" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="spliter.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Application.Spliter" />
+        <item itemvalue="Application.Patcher" />
+      </list>
+    </recent_temporary>
+  </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">

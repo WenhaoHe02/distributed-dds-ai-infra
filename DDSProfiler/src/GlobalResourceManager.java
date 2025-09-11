@@ -7,7 +7,6 @@ public class GlobalResourceManager {
     private volatile String filePath;
     private volatile int requestCount = 0;
     private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
-    private final ReentrantReadWriteLock filePathLock = new ReentrantReadWriteLock();
     private final ReentrantReadWriteLock requestCountLock = new ReentrantReadWriteLock();
 
     // 私有构造函数，外部不能 new
@@ -28,22 +27,11 @@ public class GlobalResourceManager {
 
     // ======= 变量访问 =======
     public String getFilePath() {
-        filePathLock.readLock().lock();
-        try {
-            return filePath;
-        } finally {
-            filePathLock.readLock().unlock();
-        }
+        return filePath;
     }
 
     public void setFilePath(String filePath) {
-        filePathLock.writeLock().lock();
-        try {
-            this.filePath = filePath;
-        } finally {
-            filePathLock.writeLock().unlock();
-        }
-
+        this.filePath = filePath;
     }
 
     public int getRequestCount() {

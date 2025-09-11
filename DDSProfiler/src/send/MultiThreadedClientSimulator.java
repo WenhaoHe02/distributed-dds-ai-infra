@@ -1,4 +1,4 @@
-import com.zrdds.simpleinterface.DDSIF;
+package send;
 
 import java.io.File;
 import java.util.ArrayList;

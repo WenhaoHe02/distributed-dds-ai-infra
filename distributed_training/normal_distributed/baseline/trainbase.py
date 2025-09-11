@@ -1,23 +1,23 @@
-# train_ddp_mnist.py
+# train_ddp_mnist_int8.py
 # -*- coding: utf-8 -*-
 import os, time, torch, torch.nn as nn, torch.optim as optim, torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 import DDS_All as dds
-from zrdds_allgather import ZrddsAllgather
-from dgc_stepper import DDPDGCStepper
-from compression import DGCCompressor
-from memory import DGCSGDMemory
-from dgc_eval import ddp_evaluate_top1   # 用你提供的 ddp_eval.py
-from dds_barrier_verbose import ddp_barrier_verbose
+from zrdds_allgatherBaseline import ZrddsAllgather
+from dgc_stepperBaseline import DDPDGCStepper
+from compressionBaseline import Int8Compressor
+from memoryBaseline import Int8SGDMemory
+from dgc_evalBaseline import ddp_evaluate_top1
+from dds_barrier_verboseBaseline import ddp_barrier_verbose
 
 # ---- 环境参数（也可从命令行传入）
 RANK      = int(os.environ.get("RANK", "1"))
 WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
 GROUP     = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
-DATA_DIR  = os.environ.get("DATA_DIR", "./data")
+DATA_DIR  = os.environ.get("DATA_DIR", "../data")
 
 # ---- 模型：自动扁平化 28x28 -> 784
 class MNISTNet(nn.Module):
@@ -84,7 +84,7 @@ def main():
     ag = ZrddsAllgather(dp, topic="ddp/allgather_blob")
 
     # ---- ★ 在 barrier 之前先确保 discovery 已完成
-    wait_for_discovery(ag, world=WORLD, timeout_ms=10000, include_self=True)
+    wait_for_discovery(ag, world=WORLD, timeout_ms=100000, include_self=True)
 
     ok = ddp_barrier_verbose(ag, group_id=GROUP, rank=RANK, world=WORLD,
                              domain_id=DOMAIN_ID, topic_name="ddp/allgather_blob",
@@ -98,9 +98,9 @@ def main():
     model = MNISTNet().to(device)
     opt = optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
 
-    # 压缩器
-    mem = DGCSGDMemory(momentum=0.9, nesterov=False, gradient_clipping=None, momentum_masking=True)
-    comp = DGCCompressor(compress_ratio=0.001, memory=mem, fp16_values=False, int32_indices=True, warmup_epochs=3)
+    # Int8 压缩器
+    mem = Int8SGDMemory(momentum=0.9, nesterov=False, gradient_clipping=None)
+    comp = Int8Compressor(memory=mem, warmup_epochs=3)
     stepper = DDPDGCStepper(model, comp, ag, GROUP, RANK, WORLD)
 
     # 数据
@@ -125,7 +125,7 @@ def main():
             loss = loss_fn(logits, yb)
             loss.backward()
 
-            stepper.finish_and_apply(timeout_s=10000)
+            stepper.finish_and_apply(timeout_s=100000)
             opt.step()
 
             if RANK == 0 and (global_step % 100 == 0):
@@ -138,7 +138,7 @@ def main():
                     model, val_loader, device,
                     zrdds=ag, group_id=GROUP,
                     epoch_or_step=metric_round,
-                    name="val.top1", rank=RANK, world=WORLD, timeout_s=10000.0
+                    name="val.top1", rank=RANK, world=WORLD, timeout_s=100000.0
                 )
                 if RANK == 0:
                     print(f"[VAL] step {global_step:05d} acc={acc*100:.2f}% ({g_correct}/{g_total})")

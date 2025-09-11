@@ -13,7 +13,7 @@ import argparse
 
 
 # 从train目录导入dist_train_v2模块
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'train'))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'train_scripts'))
 from dist_train_v2 import train_one_client, load_init_model, Net
 
 
@@ -132,7 +132,7 @@ class Client_v2:
         dds.register_all_types(self.dp)
 
         self.tCmd = self.dp.create_topic(
-            "train/train_cmd",
+            "train_scripts/train_cmd",
             "TrainCmd",
             dds.TOPIC_QOS_DEFAULT,
             None,
@@ -140,7 +140,7 @@ class Client_v2:
         )
 
         self.tUpd = self.dp.create_topic(
-            "train/client_update",
+            "train_scripts/client_update",
             "ClientUpdate",
             dds.TOPIC_QOS_DEFAULT,
             None,
@@ -148,7 +148,7 @@ class Client_v2:
         )
 
         self.tModel = self.dp.create_topic(
-            "train/model_blob",
+            "train_scripts/model_blob",
             "ModelBlob",
             dds.TOPIC_QOS_DEFAULT,
             None,
@@ -246,7 +246,7 @@ class Client_v2:
                         Client_v2.CLIENT_ID, seed, subset_size, epochs, lr, 
                         Client_v2.BATCH_SIZE, Client_v2.DATA_DIR, round_id)
                     t1 = int(time.time() * 1000)
-                    print(f"[Client_v2] local train+pack cost: {t1 - t0} ms")
+                    print(f"[Client_v2] local train_scripts+pack cost: {t1 - t0} ms")
 
                     upd = dds.ClientUpdate()
                     upd.client_id = Client_v2.CLIENT_ID

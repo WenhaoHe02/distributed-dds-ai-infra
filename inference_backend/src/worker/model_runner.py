@@ -32,8 +32,8 @@ class ModelRunner:
         """
         if "model_id" not in base_config or "model_config" not in base_config:
             raise KeyError("base_config must contain 'model_id' and 'model_config'")
-        if "parameter" not in base_config["model_config"]:
-            raise KeyError("base_config.model_config.parameter is required")
+        if "model_parameter" not in base_config["model_config"]:
+            raise KeyError("base_config.model_config.model_parameter is required")
 
         self.base_model_id = base_config["model_id"]
         # 拷贝一份作为模板，后面每个 batch 在此基础上补充 input/output/batch 等字段

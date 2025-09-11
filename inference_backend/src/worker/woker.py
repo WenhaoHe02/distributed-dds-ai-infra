@@ -57,8 +57,8 @@ def load_worker_config(model_id: str, base_dir: str = "configs") -> dict:
         print(f"[WARN] model_id in config({cfg['model_id']}) != worker model_id({model_id}), using worker's model_id.")
         cfg["model_id"] = model_id
 
-    if "model_config" not in cfg or "parameter" not in cfg["model_config"]:
-        raise KeyError("config.model_config.parameter is required")
+    if "model_config" not in cfg or "model_parameter" not in cfg["model_config"]:
+        raise KeyError("config.model_config.model_parameter is required")
 
     return cfg
 
@@ -680,7 +680,7 @@ class TaskListListener(DataReaderListener):
 def main():
     """Main function"""
     worker_id = sys_or_env("worker.id", "WORKER_ID", "worker1_cpu")
-    model_id = sys_or_env("worker.model", "WORKER_MODEL", "model_0")
+    model_id = sys_or_env("worker.model", "WORKER_MODEL", "ocr")
 
     worker = None
 
@@ -722,8 +722,8 @@ def main():
 
         print("=" * 50)
         print(f"Worker started. worker_id={worker_id} model_id={model_id}")
-        print(f"Sub: {Worker.TOPIC_OzzaPEN_BATCH}, {Worker.TOPIC_TASK_LIST}")
-        print(f"Pub: {Worker.TOPIC_CLAIM}, {Worker.TaOPIC_WORKER_RESULT}")
+        print(f"Sub: {Worker.TOPIC_OPEN_BATCH}, {Worker.TOPIC_TASK_LIST}")
+        print(f"Pub: {Worker.TOPIC_CLAIM}, {Worker.TOPIC_WORKER_RESULT}")
         print(f"Heartbeat enabled: {config.enable_heartbeat} (interval: {config.heartbeat_interval_seconds}s)")
         print("Press ENTER to exit...")
         print("=" * 50)

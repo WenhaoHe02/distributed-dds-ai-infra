@@ -26,17 +26,38 @@ def resolve_model_path(path, suffix: str = ".onnx", return_dir: bool = False) ->
         return cands[0]
     raise FileNotFoundError(f"路径无效：{p}")
 
-def _save_ocr_outputs(result, out_dir: Path, stem: str):
-    """统一输出：<stem>.jpg（可视化），<stem>.txt（文本）"""
+def _save_ocr_outputs(result: Any, out_dir: Path, stem: str):
+    """
+    统一输出：<stem>.jpg（可视化，若前面没保存过则尝试）、<stem>.txt（文本）
+    - 文本通过 _parse_texts(result) 解析，保证 join 的是可迭代
+    - 如果没有文本，写入空文件（或按需改成不落盘）
+    - 如果前面已经保存过可视化图，这里不再重复保存
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
     vis_path = out_dir / f"{stem}.jpg"
     txt_path = out_dir / f"{stem}.txt"
-    # RapidOCR 的结果对象通常提供 vis()/txts
-    if hasattr(result, "vis"):
-        result.vis(str(vis_path))
-    if hasattr(result, "txts"):
+
+    # —— 可视化图：若之前没保存过，这里尝试一次 —— #
+    if not vis_path.exists():
+        vis = getattr(result, "vis", None)
+        if callable(vis):
+            try:
+                vis(str(vis_path))
+            except Exception:
+                # 不影响文本输出
+                pass
+
+    # —— 文本：用你写好的解析器，永不对 None 调用 join —— #
+    texts = _parse_texts(result)  # 一定返回 list[str] 或 []
+    try:
         with open(txt_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(result.txts))
+            if texts:
+                f.write("\n".join(map(str, texts)))
+            else:
+                # 没有文本就写空，避免 join(None) 报错
+                f.write("")
+    except Exception as e:
+        print(f"[ERROR] 写入文本失败: {txt_path} -> {e}")
 
 def _to_pil(img: Union[bytes, bytearray, memoryview, Image.Image, str, Path]) -> Image.Image:
 

@@ -41,6 +41,7 @@ public class SendService {
     private int maxRequestIntervalMs = 60;
 
 
+    
     // 默认请求数量
     private static final int DEFAULT_REQUEST_COUNT = 2;
 

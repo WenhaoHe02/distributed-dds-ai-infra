@@ -95,16 +95,12 @@ public class Main {
             }
 
             System.out.println("[MAIN] 所有发送线程已完成");
-
-            // 此处可以选择：
-            // a) 一直保持接收端运行
-            //    可以用死循环 + sleep 或者 Scanner(System.in).nextLine()
             System.out.println("[MAIN] 接收端继续运行，等待数据...");
-            // 等待一段时间让接收端处理完所有数据，实际应用中可能需要更好的同步机制
-            while( true); // 等待10秒
+            while(!resourceManager.getTestEnd());
 
-            // b) 如果你希望发送完成后退出进程，可以跳出循环
-            // System.out.println("[MAIN] 所有任务完成，退出进程");
+//            while( true);
+
+            System.out.println("[MAIN] 所有任务完成，退出进程");
 
         } catch (InterruptedException e) {
             e.printStackTrace();

@@ -316,9 +316,6 @@ public class SendService {
                 dp.delete_contained_entities();
                 dp = null;
             }
-            
-            // 输出全局计数器的最终值以验证正确性
-            System.out.println("[send.SendService] Final global request count: " + resourceManager.getRequestCount());
 
         } catch (Exception e) {
             System.err.println("Error during resource cleanup: " + e.getMessage());

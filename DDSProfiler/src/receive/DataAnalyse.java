@@ -130,6 +130,7 @@ public class DataAnalyse {
         }
 
         System.out.println("[PROCESS_RESULT_UPDATE] ResultUpdate处理完成: request_id=" + resultUpdate.request_id);
+        GlobalResourceManager.getInstance().setTestEnd();
     }
 
     /**

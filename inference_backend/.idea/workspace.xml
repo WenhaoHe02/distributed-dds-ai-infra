@@ -5,26 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7abc258a-df1c-4709-b9e9-57e3210de8dd" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/../DDSProfiler/DDSProfiler.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../DDSProfiler/java.exe.ddslog" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/worker/model_service/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/worker/model_service/runners/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/worker/parameter/ocr/cls.onnx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/worker/parameter/ocr/det.onnx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/worker/parameter/ocr/rec.onnx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/worker/parameter/yolo/yolov11n.pt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDSProfiler/java.exe.ddslog" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/java.exe.ddslog" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../DDSProfiler/logs/send.log" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/logs/send.log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDSProfiler/src/SendService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/src/SendService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDSProfiler/src/inner/SendLog.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/src/inner/SendLog.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/spliter/Spliter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/spliter/Spliter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/configs/ocr_worker.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/configs/ocr_worker.conf.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/configs/yolo_worker.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/configs/yolo_worker.conf.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/model_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_runner.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/patcher/Patcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/patcher/Patcher.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/worker/model_service/runners/ocr_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_service/runners/ocr_runner.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/model_service/runners/yolo_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_service/runners/yolo_runner.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/model_service/task_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_service/task_runner.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/woker.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/woker.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -73,7 +58,7 @@
       <workItem from="1757468943510" duration="428000" />
       <workItem from="1757474208132" duration="395000" />
       <workItem from="1757551878416" duration="2727000" />
-      <workItem from="1757559576059" duration="7959000" />
+      <workItem from="1757559576059" duration="8726000" />
     </task>
     <servers />
   </component>

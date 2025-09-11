@@ -55,6 +55,16 @@ public class GlobalResourceManager {
         }
     }
 
+    // 增加指定数量到请求计数中
+    public void increaseRequestCount(int count) {
+        requestCountLock.writeLock().lock();
+        try {
+            this.requestCount += count;
+        } finally {
+            requestCountLock.writeLock().unlock();
+        }
+    }
+
     public void setRequestCount(int requestCount) {
         requestCountLock.writeLock().lock();
         try {

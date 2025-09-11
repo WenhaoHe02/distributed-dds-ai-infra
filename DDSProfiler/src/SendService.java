@@ -51,12 +51,21 @@ public class SendService {
     private PrintWriter logWriter;
     private String clientId;
     private Random random = new Random();
+    
+    // 获取全局资源管理器实例
+    private final GlobalResourceManager resourceManager = GlobalResourceManager.getInstance();
+
 
     public SendService(String clientId) throws Exception {
         this.clientId = clientId;
 
-        // 初始化日志文件
-        this.logWriter = new PrintWriter(new FileWriter("logs/send.log", true));
+        // 初始化日志文件，使用读写锁保护
+        resourceManager.acquireWriteLock();
+        try {
+            this.logWriter = new PrintWriter(new FileWriter("logs/send.log", true));
+        } finally {
+            resourceManager.releaseWriteLock();
+        }
 
         // 初始化DDS
         initDDS();
@@ -153,27 +162,34 @@ public class SendService {
 
         // 发送请求
         ReturnCode_t rc = requestWriter.write(request, InstanceHandle_t.HANDLE_NIL_NATIVE);
+
         long sendTimeMs = System.currentTimeMillis(); // 在发送后记录时间
         
-        // 记录完整的请求信息到日志 (使用新的JSON格式)
-        StringBuilder logEntry = new StringBuilder();
-        logEntry.append("{");
-        logEntry.append("\"request_id\":\"").append(requestIdWithPriority).append("\",");
-        logEntry.append("\"task_sum\":").append(taskCount).append(",");
-        logEntry.append("\"tasks\":[");
-        
-        for (int i = 0; i < taskLogs.size(); i++) {
-            if (i > 0) logEntry.append(",");
-            // 在此处插入实际发送时间
-            logEntry.append(String.format(taskLogs.get(i), sendTimeMs));
-        }
-        
-        logEntry.append("],");
-        logEntry.append("\"client_id\":\"").append(clientId).append("\"");
-        logEntry.append("}");
+        // 记录完整的请求信息到日志 (使用新的JSON格式)，使用读写锁保护
+        resourceManager.acquireWriteLock();
+        try {
+            // 记录完整的请求信息到日志 (使用新的JSON格式)
+            StringBuilder logEntry = new StringBuilder();
+            logEntry.append("{");
+            logEntry.append("\"request_id\":\"").append(requestIdWithPriority).append("\",");
+            logEntry.append("\"task_sum\":").append(taskCount).append(",");
+            logEntry.append("\"tasks\":[");
+            
+            for (int i = 0; i < taskLogs.size(); i++) {
+                if (i > 0) logEntry.append(",");
+                // 在此处插入实际发送时间
+                logEntry.append(String.format(taskLogs.get(i), sendTimeMs));
+            }
+            
+            logEntry.append("],");
+            logEntry.append("\"client_id\":\"").append(clientId).append("\"");
+            logEntry.append("}");
 
-        logWriter.println(logEntry.toString());
-        logWriter.flush();
+            logWriter.println(logEntry.toString());
+            logWriter.flush();
+        } finally {
+            resourceManager.releaseWriteLock();
+        }
 
         if (rc != ReturnCode_t.RETCODE_OK) {
             System.err.println("[SendService] request write failed, rc=" + rc);
@@ -184,6 +200,7 @@ public class SendService {
     }
     // 发送多种不同类型的任务
     public void sendMixedRequests(int count) throws Exception {
+        resourceManager.increaseRequestCount(count);
         for (int i = 1; i <= count; i++) {
             String requestId = clientId;
 
@@ -266,14 +283,23 @@ public class SendService {
 
     public void close() {
         try {
-            if (logWriter != null) {
-                logWriter.close();
+            resourceManager.acquireWriteLock();
+            try {
+                if (logWriter != null) {
+                    logWriter.close();
+                    logWriter = null;
+                }
+            } finally {
+                resourceManager.releaseWriteLock();
             }
 
             if (dp != null) {
-                dp.delete_contained_entities() ;
+                dp.delete_contained_entities();
                 dp = null;
             }
+            
+            // 输出全局计数器的最终值以验证正确性
+            System.out.println("[SendService] Final global request count: " + resourceManager.getRequestCount());
 
         } catch (Exception e) {
             System.err.println("Error during resource cleanup: " + e.getMessage());

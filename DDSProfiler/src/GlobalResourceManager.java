@@ -6,7 +6,7 @@ import java.util.function.Supplier;
 public class GlobalResourceManager {
     private volatile String filePath;
     private volatile int requestCount = 0;
-    private final ReentrantReadWriteLock fileLock = new ReentrantReadWriteLock();
+    private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
     private final ReentrantReadWriteLock requestCountLock = new ReentrantReadWriteLock();
 
     // 私有构造函数，外部不能 new
@@ -27,22 +27,11 @@ public class GlobalResourceManager {
 
     // ======= 变量访问 =======
     public String getFilePath() {
-        fileLock.readLock().lock();
-        try {
-            return filePath;
-        } finally {
-            fileLock.readLock().unlock();
-        }
+        return filePath;
     }
 
     public void setFilePath(String filePath) {
-        fileLock.writeLock().lock();
-        try {
-            this.filePath = filePath;
-        } finally {
-            fileLock.writeLock().unlock();
-        }
-
+        this.filePath = filePath;
     }
 
     public int getRequestCount() {
@@ -65,55 +54,36 @@ public class GlobalResourceManager {
 
     // ======= 文件访问锁 =======
     public void acquireReadLock() {
-        fileLock.readLock().lock();
+        rwLock.readLock().lock();
     }
 
     public void releaseReadLock() {
-        fileLock.readLock().unlock();
+        rwLock.readLock().unlock();
     }
 
     public void acquireWriteLock() {
-        fileLock.writeLock().lock();
+        rwLock.writeLock().lock();
     }
 
     public void releaseWriteLock() {
-        fileLock.writeLock().unlock();
+        rwLock.writeLock().unlock();
     }
 
     public <T> T withReadLock(Supplier<T> action) {
-        fileLock.readLock().lock();
+        rwLock.readLock().lock();
         try {
             return action.get();
         } finally {
-            fileLock.readLock().unlock();
+            rwLock.readLock().unlock();
         }
     }
 
     public <T> T withWriteLock(Supplier<T> action) {
-        fileLock.writeLock().lock();
+        rwLock.writeLock().lock();
         try {
             return action.get();
         } finally {
-            fileLock.writeLock().unlock();
+            rwLock.writeLock().unlock();
         }
     }
-
-    public void withReadLock(Runnable action) {
-        fileLock.readLock().lock();
-        try {
-            action.run();
-        } finally {
-            fileLock.readLock().unlock();
-        }
-    }
-
-    public void withWriteLock(Runnable action) {
-        fileLock.writeLock().lock();
-        try {
-            action.run();
-        } finally {
-            fileLock.writeLock().unlock();
-        }
-    }
-
 }

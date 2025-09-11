@@ -43,6 +43,19 @@ public class SendService {
 
     // 默认请求数量
     private static final int DEFAULT_REQUEST_COUNT = 1;
+    
+    // 为每个测试运行生成唯一的日志文件名
+    private static final String LOG_FILE_NAME = createLogFileName();
+    
+    // 创建日志文件名并确保目录存在
+    private static String createLogFileName() {
+        // 确保logs目录存在
+        File logsDir = new File("logs");
+        if (!logsDir.exists()) {
+            logsDir.mkdirs();
+        }
+        return "logs/send_" + System.currentTimeMillis() + ".log";
+    }
 
     private DomainParticipant dp;
     private Publisher pub;
@@ -62,7 +75,7 @@ public class SendService {
         // 初始化日志文件，使用读写锁保护
         resourceManager.acquireWriteLock();
         try {
-            this.logWriter = new PrintWriter(new FileWriter("logs/send.log", true));
+            this.logWriter = new PrintWriter(new FileWriter(LOG_FILE_NAME, true));
         } finally {
             resourceManager.releaseWriteLock();
         }
@@ -200,7 +213,9 @@ public class SendService {
     }
     // 发送多种不同类型的任务
     public void sendMixedRequests(int count) throws Exception {
+        // 增加全局请求计数
         resourceManager.increaseRequestCount(count);
+        
         for (int i = 1; i <= count; i++) {
             String requestId = clientId;
 
@@ -314,6 +329,8 @@ public class SendService {
                     Integer.toUnsignedString(new Random().nextInt(), 36));
 
             sender = new SendService(clientId);
+            sender.resourceManager.setFilePath(LOG_FILE_NAME);
+
 
             // 发送混合测试请求
             int requestCount = Integer

@@ -6,10 +6,6 @@ import data_structure.*; // InferenceRequest / OpenBatch / Claim / Grant / TaskL
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
-import java.io.IOException;
-import java.nio.file.*;
-import java.util.logging.*;
-import java.util.logging.Formatter;
 
 import com.zrdds.simpleinterface.DDSIF;
 import com.zrdds.domain.DomainParticipant;
@@ -59,51 +55,6 @@ public class Patcher {
         /** 同一批次的 Claim 收集窗口（毫秒）。0 表示来一条就立即授予。 */
         public long claimSelectWaitMs     = 2L;
     }
-
-    /* ===================== Log ===================== */
-    private static Logger logger = Logger.getLogger("PatcherLogger");
-
-    static {
-        try {
-            // 日志目录和文件
-            String logDir = "./logs/";
-            String logFile = logDir + "patcherlog.txt";
-
-            // 如果目录不存在就创建
-            Path path = Paths.get(logDir);
-            if (!Files.exists(path)) {
-                Files.createDirectories(path);
-            }
-
-            // 创建 FileHandler，追加模式
-            FileHandler fileHandler = new FileHandler(logFile, true);
-            fileHandler.setLevel(Level.INFO);
-
-            // 日志格式
-            fileHandler.setFormatter(new Formatter() {
-                @Override
-                public String format(LogRecord record) {
-                    return String.format("%1$tF %1$tT - %2$s - [Patcher] - %3$s%n",
-                            record.getMillis(), record.getLevel(), record.getMessage());
-                }
-            });
-
-            // 添加 Handler
-            logger.addHandler(fileHandler);
-            logger.setUseParentHandlers(false); // 不打印到控制台，可选
-
-            // 设置日志级别
-            logger.setLevel(Level.INFO);
-
-        } catch (IOException e) {
-            getLogger().severe(e.getMessage());
-        }
-    }
-
-    public static Logger getLogger() {
-        return logger;
-    }
-
 
     /* ===================== State ===================== */
     private final Config cfg;
@@ -254,7 +205,7 @@ public class Patcher {
             g.batch_id = batchId;
             g.winner_worker_id = best.worker_id;
 
-            try { grantEmitter.emit(g); } catch (Exception e) { getLogger().severe(e.toString()); }
+            try { grantEmitter.emit(g); } catch (Exception e) { e.printStackTrace(); }
 
             // 通知 TaskClassifier 发放 TaskList（assigned_worker_id = winner）
             classifier.onGrant(g);
@@ -333,10 +284,10 @@ public class Patcher {
         try {
             // 1) Participant
             DomainParticipantFactory dpf = DomainParticipantFactory.get_instance();
-            if (dpf == null) { getLogger().severe("DomainParticipantFactory.get_instance() failed"); return; }
+            if (dpf == null) { System.err.println("DomainParticipantFactory.get_instance() failed"); return; }
             dp = dpf.create_participant(DOMAIN_ID,
                     DomainParticipantFactory.PARTICIPANT_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
-            if (dp == null) { getLogger().severe("create_participant failed"); return; }
+            if (dp == null) { System.err.println("create_participant failed"); return; }
 
             // 2) 注册类型
             if (InferenceRequestTypeSupport.get_instance().register_type(dp, null) != ReturnCode_t.RETCODE_OK
@@ -344,7 +295,7 @@ public class Patcher {
                     || ClaimTypeSupport.get_instance().register_type(dp, null)            != ReturnCode_t.RETCODE_OK
                     || GrantTypeSupport.get_instance().register_type(dp, null)            != ReturnCode_t.RETCODE_OK
                     || TaskListTypeSupport.get_instance().register_type(dp, null)         != ReturnCode_t.RETCODE_OK) {
-                getLogger().severe("register_type failed");
+                System.err.println("register_type failed");
                 return;
             }
 
@@ -366,20 +317,20 @@ public class Patcher {
                     DomainParticipant.TOPIC_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
 
             if (reqTopic == null || openTopic == null || claimTopic == null || grantTopic == null || taskTopic == null) {
-                getLogger().severe("create_topic failed");
+                System.err.println("create_topic failed");
                 return;
             }
 
             // 4) Pub/Sub
             pub = dp.create_publisher(DomainParticipant.PUBLISHER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
             sub = dp.create_subscriber(DomainParticipant.SUBSCRIBER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
-            if (pub == null || sub == null) { getLogger().severe("create_publisher/subscriber failed"); return; }
+            if (pub == null || sub == null) { System.err.println("create_publisher/subscriber failed"); return; }
 
             // 5) Writers
             openWriter  = (OpenBatchDataWriter)  pub.create_datawriter(openTopic,  Publisher.DATAWRITER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
             taskWriter  = (TaskListDataWriter)   pub.create_datawriter(taskTopic,  Publisher.DATAWRITER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
             grantWriter = (GrantDataWriter)      pub.create_datawriter(grantTopic, Publisher.DATAWRITER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
-            if (openWriter == null || taskWriter == null || grantWriter == null) { getLogger().severe("create_datawriter failed"); return; }
+            if (openWriter == null || taskWriter == null || grantWriter == null) { System.err.println("create_datawriter failed"); return; }
 
             // 6) Patcher 实例（把 writer 封装进 emitter）
             final OpenBatchDataWriter fOpenW = openWriter;
@@ -390,11 +341,11 @@ public class Patcher {
             patcher = new Patcher(
                     cfg,
                     ob -> { ReturnCode_t rc = fOpenW.write(ob, InstanceHandle_t.HANDLE_NIL_NATIVE);
-                        if (rc != ReturnCode_t.RETCODE_OK) getLogger().info("openBatch write rc=" + rc); },
+                        if (rc != ReturnCode_t.RETCODE_OK) System.err.println("[PatcherMain] openBatch write rc=" + rc); },
                     tl -> { ReturnCode_t rc = fTaskW.write(tl, InstanceHandle_t.HANDLE_NIL_NATIVE);
-                        if (rc != ReturnCode_t.RETCODE_OK) getLogger().info("taskList write rc=" + rc); },
+                        if (rc != ReturnCode_t.RETCODE_OK) System.err.println("[PatcherMain] taskList write rc=" + rc); },
                     g  -> { ReturnCode_t rc = fGrantW.write(g, InstanceHandle_t.HANDLE_NIL_NATIVE);
-                        if (rc != ReturnCode_t.RETCODE_OK) getLogger().info("grant write rc=" + rc); }
+                        if (rc != ReturnCode_t.RETCODE_OK) System.err.println("[PatcherMain] grant write rc=" + rc); }
             );
 
             final Patcher fPatcher = patcher;
@@ -404,7 +355,7 @@ public class Patcher {
                     reqTopic, Subscriber.DATAREADER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
             claimReader = (ClaimDataReader) sub.create_datareader(
                     claimTopic, Subscriber.DATAREADER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
-            if (reqReader == null || claimReader == null) { getLogger().severe("create_datareader failed"); return; }
+            if (reqReader == null || claimReader == null) { System.err.println("create_datareader failed"); return; }
 
             // InferenceRequest → onInferenceRequest
             reqReader.set_listener(new SimpleDataReaderListener<InferenceRequest, InferenceRequestSeq, InferenceRequestDataReader>() {
@@ -417,11 +368,11 @@ public class Patcher {
                 public void on_process_sample(DataReader reader, InferenceRequest sample, SampleInfo info) {
                     if (sample == null || info == null || !info.valid_data) return;
                     try {
-                        getLogger().info("got InferenceRequest: request_id=" + sample.request_id
+                        System.out.println("[Patcher] got InferenceRequest: request_id=" + sample.request_id
                                 + " tasks=" + (sample.tasks==null?0:sample.tasks.length()));
                         fPatcher.onInferenceRequest(sample);
                     } catch (Throwable t) {
-                        getLogger().severe(t.getMessage());
+                        t.printStackTrace();
                     }
                 }
             }, StatusKind.DATA_AVAILABLE_STATUS /* 或 STATUS_MASK_ALL 更稳 */);
@@ -439,58 +390,51 @@ public class Patcher {
                 public void on_process_sample(DataReader reader, Claim sample, SampleInfo info) {
                     if (sample == null || info == null || !info.valid_data) return;
                     try {
-                        getLogger().info("got Claim: batch_id=" + sample.batch_id
+                        System.out.println("[Patcher] got Claim: batch_id=" + sample.batch_id
                                 + " worker_id=" + sample.worker_id + " qlen=" + sample.queue_length);
                         fPatcher.onClaim(sample);
                     } catch (Throwable t) {
-                        getLogger().severe(t.getMessage());
+                        t.printStackTrace();
                     }
                 }
             }, StatusKind.DATA_AVAILABLE_STATUS /* 或 STATUS_MASK_ALL */);
 
 
 
-            getLogger().info("==================================================");
-            getLogger().info("Patcher started.");
-            getLogger().info("Sub: " + TOPIC_INFER_REQ + ", " + TOPIC_CLAIM);
-            getLogger().info("Pub: " + TOPIC_OPEN_BATCH + ", " + TOPIC_GRANT + ", " + TOPIC_TASK_LIST);
-            getLogger().info("Press ENTER to exit...");
-            getLogger().info("==================================================");
+            System.out.println("==================================================");
+            System.out.println("Patcher started.");
+            System.out.println("Sub: " + TOPIC_INFER_REQ + ", " + TOPIC_CLAIM);
+            System.out.println("Pub: " + TOPIC_OPEN_BATCH + ", " + TOPIC_GRANT + ", " + TOPIC_TASK_LIST);
+            System.out.println("Press ENTER to exit...");
+            System.out.println("==================================================");
 //            SubscriptionMatchedStatus st = new  SubscriptionMatchedStatus();
 //                try {
 //                    while (true) {
 //                        ReturnCode_t rc = reqReader.get_subscription_matched_status(st);
 //                        if (rc != ReturnCode_t.RETCODE_OK) {
-//                            getLogger().info("get_publication_matched_status rc=" + rc);
+//                            System.out.println("get_publication_matched_status rc=" + rc);
 //                            break;
 //                        }
-//                         getLogger().info("PUB matched: current=" + st.current_count +
+//                        System.out.println("PUB matched: current=" + st.current_count +
 //                                " total=" + st.total_count +
 //                                " Δ=" + st.current_count_change +
 //                                " lastSub=" + (st.last_publication_handle != null ?
 //                                st.last_publication_handle.value : 0));
 //
 //                        if (st.current_count > 0) {
-//                             getLogger().info("已匹配到 Reader，可以安全发送数据");
+//                            System.out.println("已匹配到 Reader，可以安全发送数据");
 //                            break;
 //                        }
 //                        Thread.sleep(200); // 200ms 间隔轮询
 //                    }
 //                } catch (InterruptedException ignored) {}
 
-            while (true) {
-                try {
-                    Thread.sleep(200); // 暂停 200 毫秒
-                } catch (InterruptedException e) {
-                    logger.severe("Thread interrupted: " + e.getMessage());
-                    break; // 可选：中断时退出循环
-                }
-            }
+            System.in.read();
 
         } finally {
             try { if (patcher != null) patcher.shutdown(); } catch (Throwable ignored) {}
             try { DDSIF.Finalize(); } catch (Throwable ignored) {}
-            getLogger().info("Patcher stopped.");
+            System.out.println("Patcher stopped.");
         }
     }
 }

@@ -3,7 +3,16 @@ from pathlib import Path
 from typing import List, Tuple
 import io
 from PIL import Image
+import logging
+log_format = "%(asctime)s - %(levelname)s - %(message)s"
 
+# 2. 配置 logging
+logging.basicConfig(
+    level=logging.INFO,        # 设置日志级别：DEBUG < INFO < WARNING < ERROR < CRITICAL
+    format=log_format          # 设置输出格式
+)
+
+logging.basicConfig(level=logging.INFO)
 def _resolve_weight(path, suffix=".pt"):
     p = Path(path)
     if p.is_file():
@@ -56,7 +65,7 @@ def run_yolo(cfg: dict):
         results = model.predict(source=sources, conf=conf, iou=iou, save=False, stream=False)
         for name, res in zip(names, results):
             _save_result(res, out_dir, stem=name)
-        print(f"[INFO] YOLO 内存 batch 完成，输出：{out_dir}")
+        logging.info(f"[INFO] YOLO 内存 batch 完成，输出：%s",out_dir)
         return
 
     # --- 模式 2: 文件 batch ---
@@ -66,7 +75,7 @@ def run_yolo(cfg: dict):
         results = model.predict(source=input_files, conf=conf, iou=iou, save=False, stream=False)
         for name, res in zip(names, results):
             _save_result(res, out_dir, stem=name)
-        print(f"[INFO] YOLO 文件 batch 完成，输出：{out_dir}")
+        logging.info(f"[INFO] YOLO 文件 batch 完成，输出：%s",out_dir)
         return
 
     # --- 模式 3: 普通模式 (目录/文件) ---
@@ -77,4 +86,4 @@ def run_yolo(cfg: dict):
         for res in results:
             stem = Path(res.path).stem if res.path else f.stem
             _save_result(res, out_dir, stem=stem)
-    print(f"[INFO] YOLO 完成，输出：{out_dir}")
+    logging.info(f"[INFO] YOLO 完成，输出：%s",out_dir)

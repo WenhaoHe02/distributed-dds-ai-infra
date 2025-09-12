@@ -1,5 +1,6 @@
 package com.example.ocrclient.internal;
 
+import com.example.ocrclient.*;
 import com.example.ocrclient.data_structure.ResultItem;
 
 import java.util.Map;

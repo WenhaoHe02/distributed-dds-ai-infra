@@ -1,6 +1,14 @@
 import json, os, sys, importlib, argparse
 from typing import Union, Mapping
 sys.path.append(os.path.dirname(__file__))
+import logging
+log_format = "%(asctime)s - %(levelname)s - %(message)s"
+
+# 2. 配置 logging
+logging.basicConfig(
+    level=logging.INFO,        # 设置日志级别：DEBUG < INFO < WARNING < ERROR < CRITICAL
+    format=log_format          # 设置输出格式
+)
 
 class TaskRunner:
     def __init__(self, config_or_path: Union[str, Mapping]):
@@ -27,7 +35,7 @@ class TaskRunner:
         return importlib.import_module(name)
 
     def execute(self):
-        print(f"\n=== 开始任务: {self.model_id} ===")
+        logging.info(f"\n=== 开始任务: %s ===",self.model_id)
         module = self._import_runner(self.model_id)
         func = getattr(module, f"run_{self.model_id}", None)
         if not callable(func):
@@ -39,5 +47,5 @@ if __name__ == "__main__":
     p.add_argument("--config_file", required=True, help="path to config json")
     args = p.parse_args()
     if not os.path.exists(args.config_file):
-        print(f"[ERROR] not found: {args.config_file}"); sys.exit(1)
+        logging.error(f"not found: %s",args.config_file); sys.exit(1)
     TaskRunner(args.config_file).execute()

@@ -1,0 +1,33 @@
+2025-09-11 16:35:56 - INFO - [Spliter] - ==================================================
+2025-09-11 16:35:56 - INFO - [Spliter] - Spliter started (server-side dedup + micro-batching + idle-timeout drop)
+2025-09-11 16:35:56 - INFO - [Spliter] - Microbatch: maxItems=32, maxWaitMs=6, maxBytes=0
+2025-09-11 16:35:56 - INFO - [Spliter] - Idle-close: 300 ms
+2025-09-11 16:35:56 - INFO - [Spliter] - Topics: inference/worker_result -> inference/result_update
+2025-09-11 16:35:56 - INFO - [Spliter] - ==================================================
+2025-09-11 16:36:48 - INFO - [Spliter] - flush req=06dfc7e5-4677-4005-b963-c332b77d9bb7_priority1 items=1
+2025-09-11 16:36:49 - INFO - [Spliter] - flush req=ed3db004-283a-4769-9717-63a3ba7b89ce_priority2 items=2
+2025-09-11 16:36:56 - INFO - [Spliter] - req-state cleanup removed=2 scanned=2
+2025-09-11 16:37:56 - INFO - [Spliter] - dedup cleanup removed=3 scanned=3
+2025-09-11 16:44:28 - INFO - [Spliter] - flush req=4872a186-6d97-4213-85d3-09a0e4199fc9_priority0 items=2
+2025-09-11 16:44:29 - INFO - [Spliter] - flush req=f6ea5b10-9405-42af-ba94-018aa66e35df_priority2 items=2
+2025-09-11 16:44:54 - INFO - [Spliter] - flush req=a948eec2-bd88-4420-b1c2-9fc02afe2850_priority0 items=2
+2025-09-11 16:44:55 - INFO - [Spliter] - flush req=09bb9ce7-f84e-4d6b-a68c-930208deb022_priority2 items=1
+2025-09-11 16:44:56 - INFO - [Spliter] - req-state cleanup removed=4 scanned=4
+2025-09-11 16:45:24 - INFO - [Spliter] - flush req=5277e3f1-2138-4a44-b8d7-7c81e8d838e7_priority2 items=2
+2025-09-11 16:45:25 - INFO - [Spliter] - flush req=ed710a64-9923-4515-81c6-ad9ca95ae422_priority0 items=1
+2025-09-11 16:45:42 - INFO - [Spliter] - flush req=428a13dc-44b6-4db7-a9bc-8caa5f6ef665_priority2 items=2
+2025-09-11 16:45:43 - INFO - [Spliter] - flush req=69930c4c-1622-4e4a-bb81-54f70e092523_priority0 items=1
+2025-09-11 16:45:44 - INFO - [Spliter] - flush req=d9a793a5-b208-4333-bc5e-631a6266e2e5_priority0 items=2
+2025-09-11 16:45:45 - INFO - [Spliter] - flush req=d2e18b1e-593d-4f26-9552-46c430b195c3_priority1 items=2
+2025-09-11 16:45:56 - INFO - [Spliter] - req-state cleanup removed=6 scanned=6
+2025-09-11 16:45:56 - INFO - [Spliter] - dedup cleanup removed=7 scanned=17
+2025-09-11 16:46:56 - INFO - [Spliter] - dedup cleanup removed=10 scanned=10
+2025-09-11 16:49:09 - INFO - [Spliter] - flush req=c9f88149-b8ef-4e35-8fff-b8dba4e2f2f3_priority0 items=1
+2025-09-11 16:49:56 - INFO - [Spliter] - req-state cleanup removed=1 scanned=1
+2025-09-11 16:50:56 - INFO - [Spliter] - dedup cleanup removed=1 scanned=1
+2025-09-11 16:53:33 - INFO - [Spliter] - flush req=78241894-99d4-495a-a3da-07b31a93cd2d_priority0 items=1
+2025-09-11 16:53:56 - INFO - [Spliter] - req-state cleanup removed=1 scanned=1
+2025-09-11 16:54:53 - INFO - [Spliter] - flush req=bb3525cd-9821-4fd1-b8c0-3c38933f515c_priority2 items=2
+2025-09-11 16:54:56 - INFO - [Spliter] - dedup cleanup removed=1 scanned=3
+2025-09-11 16:54:56 - INFO - [Spliter] - req-state cleanup removed=1 scanned=1
+2025-09-11 16:55:56 - INFO - [Spliter] - dedup cleanup removed=2 scanned=2

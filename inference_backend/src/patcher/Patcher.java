@@ -25,7 +25,7 @@ import com.zrdds.subscription.DataReaderQos;
  *  - 接收 Claim（包含 queue_length）：在一个很短的收集窗口内择优（queue_length 最小者）授予 Grant。
  *  - 授予后调用 TaskClassifier.onGrant(grant)：发布带 assigned_worker_id 的 TaskList（独占给胜者）。
  *
- * 不包含：QoS/指标/重试（按你的要求暂不做）。
+
  */
 public class Patcher {
 
@@ -133,15 +133,30 @@ public class Patcher {
      */
     public void onClaim(Claim c) {
         if (c == null) return;
-        BatchState st = open.get(c.batch_id);
-        if (st == null) return; // 未知/已过期/已授予
+        final String bid = c.batch_id;
+        if (bid == null) return;
+
+        final String wid = c.worker_id;
+        final Integer qlen = c.queue_length;
+
+        BatchState st = open.get(bid);
+        if (st == null) return;
 
         ClaimAccumulator acc = accums.computeIfAbsent(c.batch_id, ClaimAccumulator::new);
         synchronized (acc) {
-            acc.add(c);
+            // 放“拷贝”进去，避免后面被 DDS 改写
+            Claim copy = new Claim();
+            copy.batch_id = bid;
+            copy.worker_id = wid;
+            copy.queue_length = qlen;
+            acc.add(copy);
+
             if (acc.selectTask == null) {
                 long wait = waitWindowMsByPriority();
-                acc.selectTask = scheduler.schedule(() -> selectAndGrant(c.batch_id), wait, TimeUnit.MILLISECONDS);
+                // 只闭包捕获“不可变的 bid”
+                acc.selectTask = scheduler.schedule(() -> selectAndGrant(bid), wait, TimeUnit.MILLISECONDS);
+                // 可选：日志
+                // System.out.println("[Patcher] scheduled select for " + bid);
             }
         }
     }
@@ -149,8 +164,9 @@ public class Patcher {
     /* ===================== Internal helpers ===================== */
 
     private void onOpenBatch(OpenBatch ob) {
+        long now = System.currentTimeMillis();
         // 记录 open 状态（Task 内容由 TaskClassifier 内部持有，不重复存储）
-        open.put(ob.batch_id, new BatchState(ob.batch_id, ob.model_id, ob.create_ts_ms));
+        open.put(ob.batch_id, new BatchState(ob.batch_id, ob.model_id, now));
     }
 
     /** 在收集窗口结束后，选择 queue_length 最小的 claim，并授予 Grant。 */

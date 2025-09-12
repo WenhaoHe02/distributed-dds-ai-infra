@@ -31,7 +31,6 @@ class Int8SGDMemory(Memory):
         self.error_feedback = {}  # 量化误差累积
 
     def initialize(self, named_parameters):
-        print("=> initializing int8 sgd memory")
         for name, p in named_parameters:
             if torch.is_tensor(p):
                 param_data = p.data

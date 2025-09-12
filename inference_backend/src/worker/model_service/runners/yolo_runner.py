@@ -4,6 +4,13 @@ from typing import List, Tuple
 import io
 from PIL import Image
 import logging
+log_format = "%(asctime)s - %(levelname)s - %(message)s"
+
+# 2. 配置 logging
+logging.basicConfig(
+    level=logging.INFO,        # 设置日志级别：DEBUG < INFO < WARNING < ERROR < CRITICAL
+    format=log_format          # 设置输出格式
+)
 
 logging.basicConfig(level=logging.INFO)
 def _resolve_weight(path, suffix=".pt"):

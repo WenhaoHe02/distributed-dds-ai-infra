@@ -6,7 +6,14 @@ from typing import List, Tuple, Union, Dict, Any
 from typing import List, Tuple, Union
 from PIL import Image
 import io
+import logging
+log_format = "%(asctime)s - %(levelname)s - %(message)s"
 
+# 2. 配置 logging
+logging.basicConfig(
+    level=logging.INFO,        # 设置日志级别：DEBUG < INFO < WARNING < ERROR < CRITICAL
+    format=log_format          # 设置输出格式
+)
 # -----------------------
 # Utils
 # -----------------------
@@ -57,7 +64,7 @@ def _save_ocr_outputs(result: Any, out_dir: Path, stem: str):
                 # 没有文本就写空，避免 join(None) 报错
                 f.write("")
     except Exception as e:
-        print(f"[ERROR] 写入文本失败: {txt_path} -> {e}")
+        logging.error(f"写入文本失败: {txt_path} -> {e}")
 
 def _to_pil(img: Union[bytes, bytearray, memoryview, Image.Image, str, Path]) -> Image.Image:
 
@@ -120,7 +127,7 @@ def _save_vis_or_original(result: Any, out_dir: Path, stem: str, source_img: Ima
         try:
             source_img.save(vis_path, format="JPEG")
         except Exception as e:
-            print(f"[ERROR] 保存占位图失败: {e}")
+            logging.error(f"保存占位图失败: {e}")
 
 # -----------------------
 # Runner
@@ -198,20 +205,20 @@ def run_ocr(task_config: dict):
                 _save_vis_or_original(result, out_dir, stem=stem, source_img=img)
                 _save_ocr_outputs(result, out_dir, stem=stem)
             except Exception as e:
-                print(f"[ERROR] task {task_id} 处理失败: {e}")
+                logging.error(f"task {task_id} 处理失败: {e}")
                 texts_map[stem] = []
-        print(f"[INFO] OCR batch 完成（内存模式），输出：{out_dir}")
+        logging.info(f"OCR batch 完成（内存模式），输出：{out_dir}")
         return texts_map
 
     # 3) 兼容旧的目录/单文件模式（需要提前把 DDS 字节落盘到 input 目录）
     input_path = Path(task_config["input"])
     if not input_path.exists():
-        print(f"[ERROR] 输入路径不存在: {input_path}")
+        logging.error(f"输入路径不存在: {input_path}")
         return texts_map
 
     files = [input_path] if input_path.is_file() else sorted(input_path.glob("*.*"))
     if not files:
-        print(f"[WARNING] 输入目录中未找到图像文件: {input_path}")
+        logging.warning(f"输入目录中未找到图像文件: {input_path}")
         return texts_map
 
     for img_path in files:
@@ -224,8 +231,8 @@ def run_ocr(task_config: dict):
             stem = img_path.stem
             _save_ocr_outputs(result, out_dir, stem=stem)
         except Exception as e:
-            print(f"[ERROR] 图像 {img_path} 处理失败: {e}")
+            logging.error(f"图像 {img_path} 处理失败: {e}")
             texts_map[stem] = []
 
-    print(f"[INFO] OCR 完成（目录模式），输出：{out_dir}")
+    logging.info(f"OCR 完成（目录模式），输出：{out_dir}")
     return texts_map

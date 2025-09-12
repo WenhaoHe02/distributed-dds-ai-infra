@@ -1,10 +1,12 @@
 package spliter;
 
 import com.zrdds.infrastructure.*;
+import com.zrdds.publication.DataWriterQos;
 import com.zrdds.simpleinterface.DDSIF;
 import com.zrdds.domain.DomainParticipant;
 import com.zrdds.domain.DomainParticipantFactory;
 import com.zrdds.subscription.DataReader;
+import com.zrdds.subscription.DataReaderQos;
 import com.zrdds.subscription.SimpleDataReaderListener;
 import com.zrdds.topic.Topic;
 import com.zrdds.publication.Publisher;
@@ -387,15 +389,27 @@ public class Spliter {
             Subscriber sub = dp.create_subscriber(DomainParticipant.SUBSCRIBER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
 
             // 5) Writer / Reader
+            DataWriterQos wq = new DataWriterQos();
+            pub.get_default_datawriter_qos(wq);
+            wq.reliability.kind = ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS;
+            wq.history.kind = HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS;
+            wq.history.depth = 2;
+
             ResultUpdateDataWriter upWriter = (ResultUpdateDataWriter)
-                    pub.create_datawriter(upTopic, Publisher.DATAWRITER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
+                    pub.create_datawriter(upTopic, wq, null, StatusKind.STATUS_MASK_NONE);
             if (upWriter == null) {
                 System.err.println("ResultUpdate writer creation failed");
                 return;
             }
 
+            DataReaderQos rq = new DataReaderQos();
+            sub.get_default_datareader_qos(rq);
+            rq.reliability.kind = ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS;
+            rq.history.kind = HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS;
+            rq.resource_limits.max_samples = 100;
+
             WorkerResultDataReader wrReader = (WorkerResultDataReader)
-                    sub.create_datareader(wrTopic, Subscriber.DATAREADER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
+                    sub.create_datareader(wrTopic, rq, null, StatusKind.STATUS_MASK_NONE);
             if (wrReader == null) {
                 System.err.println("WorkerResult reader creation failed");
                 return;

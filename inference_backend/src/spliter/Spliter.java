@@ -58,7 +58,7 @@ public class Spliter {
 
     private static final class ReqState {
         final String requestId;
-        final String clientId;
+        String clientId;
         final ArrayList<ResultItem> buffer = new ArrayList<>(MAX_ITEMS_PER_UPDATE);
         long lastActivityTs;  // 最近一次收到该 request 的结果时间
         long lastFlushTs;     // 最近一次 flush 时间
@@ -133,6 +133,9 @@ public class Spliter {
                     // 3) 写入微批缓冲
                     ResultItem it = toItem(r);  // 注意：Bytes 若会被上游复用，可在此复制一份
                     synchronized (st) {
+                        if (st.clientId == null && clientId != null && !clientId.isEmpty()) {
+                            st.clientId = clientId;
+                        }
                         st.buffer.add(it);
                         st.lastActivityTs = now;
                         if (MAX_BYTES_PER_UPDATE > 0) st.approxBytes += approxBytes(it);

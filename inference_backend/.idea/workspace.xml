@@ -4,129 +4,58 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-<<<<<<< HEAD
-    <list default="true" id="7abc258a-df1c-4709-b9e9-57e3210de8dd" name="Changes" comment="" />
-=======
-    <list default="true" id="7abc258a-df1c-4709-b9e9-57e3210de8dd" name="Changes" comment="">
+    <list default="true" id="e138a3a6-543a-47a0-9f7a-53f13e8e1cca" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/patcher/Patcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/patcher/Patcher.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/patcher/TaskClassifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/patcher/TaskClassifier.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/data_structure/ResultItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/data_structure/ResultItem.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/spliter/Spliter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/spliter/Spliter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/state_monitor/stateMonitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/state_monitor/stateMonitor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/model_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_runner.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/worker/DDS_All.pyd" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/DDS_All.pyd" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/worker/Worker.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/worker/woker.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/woker.py" afterDir="false" />
     </list>
->>>>>>> 5656f6ada25a0ed7d2c3044afeff7ed8d59fb9dd
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="Git.Settings">
-    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
-  </component>
   <component name="MacroExpansionManager">
-    <option name="directoryName" value="ze0pn2c9" />
+    <option name="directoryName" value="ltdhpst4" />
   </component>
-  <component name="ProjectColorInfo">{
-  &quot;associatedIndex&quot;: 6
-}</component>
-  <component name="ProjectId" id="32SBXV9GQ66TSqGRFu9I8bfsEn9" />
-  <component name="ProjectViewState">
-    <option name="hideEmptyMiddlePackages" value="true" />
-    <option name="showLibraryContents" value="true" />
-  </component>
-<<<<<<< HEAD
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;E:/distributed-dds-ai-serving-system/DDSProfiler&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
-  }
-}</component>
-=======
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "Application.Patcher.executor": "Run",
-    "Application.Spliter.executor": "Run",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "WebServerToolWindowFactoryState": "false",
     "git-widget-placeholder": "main",
-    "last_opened_file_path": "E:/distributed-dds-ai-serving-system/DDSProfiler",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "vue.rearranger.settings.migration": "true"
+    "node.js.selected.package.tslint": "(autodetect)"
   }
 }]]></component>
-  <component name="RunManager" selected="Application.Spliter">
-    <configuration name="Patcher" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="patcher.Patcher" />
-      <module name="inference_backend" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="patcher.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="Spliter" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="spliter.Spliter" />
-      <module name="inference_backend" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="spliter.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <recent_temporary>
-      <list>
-        <item itemvalue="Application.Spliter" />
-        <item itemvalue="Application.Patcher" />
-      </list>
-    </recent_temporary>
-  </component>
->>>>>>> 5656f6ada25a0ed7d2c3044afeff7ed8d59fb9dd
-  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
-    <task active="true" id="Default" summary="Default task">
-      <changelist id="7abc258a-df1c-4709-b9e9-57e3210de8dd" name="Changes" comment="" />
-      <created>1757404132466</created>
-      <option name="number" value="Default" />
-      <option name="presentableId" value="Default" />
-      <updated>1757404132466</updated>
-      <workItem from="1757404133522" duration="3584000" />
-      <workItem from="1757468943510" duration="428000" />
-      <workItem from="1757474208132" duration="395000" />
-      <workItem from="1757551878416" duration="2727000" />
-<<<<<<< HEAD
-      <workItem from="1757559576059" duration="12287000" />
-=======
-      <workItem from="1757559576059" duration="7959000" />
->>>>>>> 5656f6ada25a0ed7d2c3044afeff7ed8d59fb9dd
-    </task>
     <servers />
   </component>
-  <component name="TypeScriptGeneratedFilesManager">
-    <option name="version" value="3" />
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-method">
+          <url>file://$PROJECT_DIR$/src/patcher/Patcher.java</url>
+          <line>133</line>
+          <properties class="patcher.Patcher" method="onClaim">
+            <option name="EMULATED" value="true" />
+            <option name="WATCH_EXIT" value="false" />
+          </properties>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-method">
+          <url>file://$PROJECT_DIR$/src/patcher/Patcher.java</url>
+          <line>172</line>
+          <properties class="patcher.Patcher" method="selectAndGrant">
+            <option name="EMULATED" value="true" />
+            <option name="WATCH_EXIT" value="false" />
+          </properties>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/spliter/Spliter.java</url>
+          <line>159</line>
+          <option name="timeStamp" value="3" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

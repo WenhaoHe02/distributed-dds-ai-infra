@@ -21,7 +21,9 @@ public class ResultItem{
         this.task_id =  typedSrc.task_id;
         this.status =  typedSrc.status;
         this.output_blob.copy(typedSrc.output_blob);
-        this.texts.copy(typedSrc.texts);
+        if (typedSrc.texts != null) {
+            this.texts.copy(typedSrc.texts);
+        }
         return this;
     }
 }

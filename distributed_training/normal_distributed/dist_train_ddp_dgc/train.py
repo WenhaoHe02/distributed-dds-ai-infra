@@ -3,7 +3,7 @@
 import logging
 import os, time, torch, torch.nn as nn, torch.optim as optim, torch.nn.functional as F
 import datetime
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 
 import DDS_All as dds
@@ -32,7 +32,7 @@ class MNISTNet(nn.Module):
         )
     def forward(self, x): return self.net(x)
 
-def make_loaders(data_dir, batch_size, device):
+def make_loaders(data_dir, batch_size, device, subset_size:int = None):
     tfm = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,)),   # 标准 MNIST 归一化
@@ -40,11 +40,15 @@ def make_loaders(data_dir, batch_size, device):
     train_ds = datasets.MNIST(root=data_dir, train=True,  download=True, transform=tfm)
     val_ds   = datasets.MNIST(root=data_dir, train=False, download=True, transform=tfm)
 
+    # ✅ 子集调试（可选）
+    if subset_size is not None:
+        train_ds = Subset(train_ds, list(range(subset_size)))
+        val_ds   = Subset(val_ds, list(range(subset_size)))
+
     pin = (device.type == "cuda")
-    # Windows 下多进程 DataLoader 需要 spawn；不确定就先用 num_workers=0
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
                               pin_memory=pin, drop_last=True)
-    val_loader   = DataLoader(val_ds,   batch_size=1024,    shuffle=False,
+    val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False,
                               num_workers=0, pin_memory=pin)
     return train_loader, val_loader
 
@@ -108,11 +112,11 @@ def main():
     stepper = DDPDGCStepper(model, comp, ag, GROUP, RANK, WORLD)
 
     # 数据
-    train_loader, val_loader = make_loaders(DATA_DIR, batch_size=256, device=device)
+    train_loader, val_loader = make_loaders(DATA_DIR, batch_size=128, device=device, subset_size=6000)
     loss_fn = nn.CrossEntropyLoss()
 
     # 训练参数
-    epochs = 3
+    epochs = 10
     eval_every = 100
     EVAL_ROUND_OFFSET = 1_000_000_000
 

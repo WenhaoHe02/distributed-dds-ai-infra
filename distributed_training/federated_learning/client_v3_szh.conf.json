@@ -1,7 +1,7 @@
 {
   "domain_id": 200,
   "client_id": 1,
-  "num_clients": 1,
+  "num_clients": 2,
   "batch_size": 64,
 
   "python_exe": "C:/Users/32137/.conda/envs/dds/python.exe",

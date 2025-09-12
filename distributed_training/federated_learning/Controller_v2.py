@@ -398,7 +398,7 @@ def main():
 	ctrl = Controller_v2(config)
 	ctrl.init_dds()
 	for i in range(config.rounds):
-		ctrl.run_training_round(3000, 5, 0.01, 12345 + i)
+		ctrl.run_training_round(6000, 5, 0.01, 12345 + i)
 
 if __name__ == "__main__":
 	main()

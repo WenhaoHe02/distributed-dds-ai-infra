@@ -1,5 +1,6 @@
 # zrdds_allgather.py
 # -*- coding: utf-8 -*-
+import logging
 import struct, threading, time, traceback
 import DDS_All as dds
 from collections import defaultdict
@@ -8,7 +9,7 @@ MAGIC = b'AG1\0'
 # < little-endian: magic, gl, nl, part_id, rank, round_id, world, seq, seq_cnt, reserved
 HDR_FMT = "<4sH H H H I H H H H"
 HDR_SIZE = struct.calcsize(HDR_FMT)
-
+logging.basicConfig(level=logging.INFO)
 def pack_frame(group_id, round_id, tensor_name, part_id, rank, world, seq, seq_cnt, payload: bytes):
     g = group_id.encode('utf-8'); n = tensor_name.encode('utf-8')
     hdr = struct.pack(HDR_FMT, MAGIC, len(g), len(n), part_id, rank, round_id, world, seq, seq_cnt, 0)
@@ -29,14 +30,14 @@ class ZrddsAllgather:
       - 每个 rank 把自己的分片广播出去
       - 每个 rank 同时收集所有 rank 的同名分片，收齐后返回
     """
-    def __init__(self, dp, topic="ddp/allgather_blob", history_depth=10, debug=True):
+    def __init__(self, dp, topic="ddp/allgather_blob", history_depth=4, debug=True):
         self.dp = dp
         self.debug = debug
 
         # Topic
         self.topic = dp.create_topic(topic, "ModelBlob", dds.TOPIC_QOS_DEFAULT, None, 0)
         if self.debug:
-            print(f"[ag] topic created: name={topic}, type=ModelBlob")
+            logging.info(f"[ag] topic created: name={topic}, type=ModelBlob")
 
         # Pub/Sub
         self.pub = dp.create_publisher(dds.PUBLISHER_QOS_DEFAULT, None, 0)
@@ -55,12 +56,14 @@ class ZrddsAllgather:
         self.sub.get_default_datareader_qos(rq)
         rq.reliability.kind = dds.ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS
         rq.history.kind = dds.HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS
-        rq.history.depth = 32
+        rq.history.depth = 4
 
 
         # Buckets / state
         self._buckets = defaultdict(lambda: defaultdict(list))  # key -> rank -> [(seq, bytes)...]
         self._done = {}
+        self._tx_bytes = 0  # 已发送
+        self._rx_bytes = 0  # 已接收
         self._lock = threading.Lock()
 
         # [DEBUG] Reader listener: 打印 subscription matched + 数据到达
@@ -71,10 +74,10 @@ class ZrddsAllgather:
             # 订阅匹配事件
             def on_subscription_matched(self, reader, status):
                 try:
-                    print(f"[ag][match][reader] current={status.current_count} "
+                    logging.info(f"[ag][match][reader] current={status.current_count} "
                           f"change={status.current_count_change} total={status.total_count}")
                 except Exception as e:
-                    print(f"[ag][match][reader] error printing status: {e}")
+                    logging.info(f"[ag][match][reader] error printing status: {e}")
 
             # 数据可读事件
             def on_data_available(self, r):
@@ -99,7 +102,7 @@ class ZrddsAllgather:
                             self.o._on_raw(data)
                     # 如果确实不一致，打个日志方便定位
                     if n_data != n_info:
-                        print(f"[ag][warn] data/info length mismatch: data={n_data}, info={n_info}")
+                        logging.info(f"[ag][warn] data/info length mismatch: data={n_data}, info={n_info}")
                 finally:
                     r.return_loan(seq, info)
 
@@ -112,7 +115,7 @@ class ZrddsAllgather:
         )
 
         if self.debug:
-            print("[ag] ZrddsAllgather ready: RELIABLE, writer KEEP_LAST depth="
+            logging.info("[ag] ZrddsAllgather ready: RELIABLE, writer KEEP_LAST depth="
                   f"{history_depth}, reader KEEP_ALL")
 
     @staticmethod
@@ -124,9 +127,9 @@ class ZrddsAllgather:
         g, r, name, p, rank, world, seq, seq_cnt, payload = unpack_frame(raw)
         key = self._make_key(g, r, name, p)
 
-        if self.debug:
-            print(f"[ag][recv] key={key} from_rank={rank} seg={seq+1}/{seq_cnt} "
-                  f"len={len(payload)} world={world}")
+
+        logging.info(f"[ag][recv] key={key} from_rank={rank} seg={seq + 1}/{seq_cnt} "
+                f"len={len(payload)} frame={len(raw)} world={world} total_rx={self._rx_bytes}")
 
         with self._lock:
             self._buckets[key][rank].append((seq, payload))
@@ -136,7 +139,7 @@ class ZrddsAllgather:
                 self._buckets[key][rank] = [b for _, b in self._buckets[key][rank]]
                 if self.debug:
                     total_len = sum(len(b) for b in self._buckets[key][rank])
-                    print(f"[ag][recv] rank={rank} all segments arrived, merged_len={total_len}")
+                    logging.info(f"[ag][recv] rank={rank} all segments arrived, merged_len={total_len}")
 
             # 所有 rank 齐了就置完成
             ranks = self._buckets[key]
@@ -144,7 +147,7 @@ class ZrddsAllgather:
             if done:
                 if self.debug:
                     have = sorted(ranks.keys())
-                    print(f"[ag][done] key={key} collected from ranks={have}, world={world}")
+                    logging.info(f"[ag][done] key={key} collected from ranks={have}, world={world}")
                 if key in self._done:
                     self._done[key].set()
 
@@ -166,14 +169,17 @@ class ZrddsAllgather:
             mb.data = body
 
             self.writer.write(mb)
+            with self._lock:
+                self._tx_bytes += len(body)
             if self.debug:
-                print(f"[ag][send] key={key} rank={rank} seg={seq + 1}/{len(chunks)} len={len(ck)}")
+                logging.debug(f"[ag][send] key={key} rank={rank} seg={seq+1}/{len(chunks)} "
+                      f"len={len(ck)} (frame={len(body)}) total_tx={self._tx_bytes}")
 
         ev = self._done[key]
 
         def await_and_collect(timeout=None):
             if self.debug:
-                print(f"[ag][wait] key={key} waiting up to {timeout} ms")
+                logging.info(f"[ag][wait] key={key} waiting up to {timeout} ms")
             ok = ev.wait(None if timeout is None else (timeout/1000.0))
             if not ok:
                 raise TimeoutError(f"allgather timeout: {key}")
@@ -185,7 +191,7 @@ class ZrddsAllgather:
             if self.debug:
                 sizes = [len(x) for x in out]
                 ranks = sorted(mp.keys())
-                print(f"[ag][wait] key={key} done: ranks={ranks} sizes={sizes}")
+                logging.info(f"[ag][wait] key={key} done: ranks={ranks} sizes={sizes}")
             return out
 
         return (key, await_and_collect)
@@ -223,11 +229,11 @@ class ZrddsAllgather:
             cw = _get_pub_count()
             cr = _get_sub_count()
             if (cw >= target) and (cr >= target):
-                print(f"[ag][discovery] OK: writer={cw}, reader={cr}, target={target}")
+                logging.info(f"[ag][discovery] OK: writer={cw}, reader={cr}, target={target}")
                 return
             # 变化时打印一条
             if cw != last_w or cr != last_r:
-                print(f"[ag][discovery] waiting... writer={cw}, reader={cr}, target={target}")
+                logging.info(f"[ag][discovery] waiting... writer={cw}, reader={cr}, target={target}")
                 last_w, last_r = cw, cr
             if time.time() >= deadline:
                 raise TimeoutError(f"discovery timeout: writer={cw}, reader={cr}, target={target}, world={world}")

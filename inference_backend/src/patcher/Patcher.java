@@ -1,6 +1,7 @@
 package patcher;
 
 import com.zrdds.infrastructure.*;
+import com.zrdds.publication.DataWriterQos;
 import data_structure.*; // InferenceRequest / OpenBatch / Claim / Grant / TaskList
 
 import java.util.*;
@@ -342,10 +343,16 @@ public class Patcher {
             sub = dp.create_subscriber(DomainParticipant.SUBSCRIBER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
             if (pub == null || sub == null) { System.err.println("create_publisher/subscriber failed"); return; }
 
+            DataWriterQos wq = new DataWriterQos();
+            pub.get_default_datawriter_qos(wq);
+            wq.reliability.kind = ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS;
+            wq.history.kind = HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS;
+            wq.history.depth = 2;
+
             // 5) Writers
-            openWriter  = (OpenBatchDataWriter)  pub.create_datawriter(openTopic,  Publisher.DATAWRITER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
-            taskWriter  = (TaskListDataWriter)   pub.create_datawriter(taskTopic,  Publisher.DATAWRITER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
-            grantWriter = (GrantDataWriter)      pub.create_datawriter(grantTopic, Publisher.DATAWRITER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
+            openWriter  = (OpenBatchDataWriter)  pub.create_datawriter(openTopic,  wq, null, StatusKind.STATUS_MASK_NONE);
+            taskWriter  = (TaskListDataWriter)   pub.create_datawriter(taskTopic,  wq, null, StatusKind.STATUS_MASK_NONE);
+            grantWriter = (GrantDataWriter)      pub.create_datawriter(grantTopic, wq, null, StatusKind.STATUS_MASK_NONE);
             if (openWriter == null || taskWriter == null || grantWriter == null) { System.err.println("create_datawriter failed"); return; }
 
             // 6) Patcher 实例（把 writer 封装进 emitter）
@@ -366,11 +373,17 @@ public class Patcher {
 
             final Patcher fPatcher = patcher;
 
+            DataReaderQos rq = new DataReaderQos();
+            sub.get_default_datareader_qos(rq);
+            rq.reliability.kind = ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS;
+            rq.history.kind = HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS;
+            rq.history.depth = 100;
+
             // 7) Readers + Listeners
             reqReader = (InferenceRequestDataReader) sub.create_datareader(
-                    reqTopic, Subscriber.DATAREADER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
+                    reqTopic, rq, null, StatusKind.STATUS_MASK_NONE);
             claimReader = (ClaimDataReader) sub.create_datareader(
-                    claimTopic, Subscriber.DATAREADER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
+                    claimTopic, rq, null, StatusKind.STATUS_MASK_NONE);
             if (reqReader == null || claimReader == null) { System.err.println("create_datareader failed"); return; }
 
             // InferenceRequest → onInferenceRequest

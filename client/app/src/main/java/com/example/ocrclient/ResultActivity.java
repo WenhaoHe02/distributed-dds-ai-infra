@@ -214,7 +214,9 @@ public class ResultActivity extends AppCompatActivity {
 
             // 这里应该根据任务ID获取对应的结果，暂时用索引代替（目前taskId是从1开始自增的）
             String taskId = String.valueOf(i + 1);
+            Log.d(TAG, "任务ID：" + taskId);
             ResultItem resultItem = requestState.getResultItem(taskId);
+            Log.d(TAG, "结果项：" + resultItem);
 
             if (resultItem != null) {
                 // 显示结果图

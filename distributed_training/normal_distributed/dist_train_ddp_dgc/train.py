@@ -1,7 +1,11 @@
 # train_ddp_mnist.py
 # -*- coding: utf-8 -*-
+import logging
 import os, time, torch, torch.nn as nn, torch.optim as optim, torch.nn.functional as F
-from torch.utils.data import DataLoader
+import datetime
+
+from sympy.physics.units.definitions.dimension_definitions import information
+from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 
 import DDS_All as dds
@@ -11,14 +15,13 @@ from compression import DGCCompressor
 from memory import DGCSGDMemory
 from dgc_eval import ddp_evaluate_top1   # 用你提供的 ddp_eval.py
 from dds_barrier_verbose import ddp_barrier_verbose
-
 # ---- 环境参数（也可从命令行传入）
 RANK      = int(os.environ.get("RANK", "0"))
-WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
+WORLD     = int(os.environ.get("WORLD_SIZE", "1"))
 GROUP     = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
 DATA_DIR  = os.environ.get("DATA_DIR", "data")
-
+logging.basicConfig(level=logging.INFO)
 # ---- 模型：自动扁平化 28x28 -> 784
 class MNISTNet(nn.Module):
     def __init__(self, hidden=512, out_dim=10):
@@ -31,7 +34,7 @@ class MNISTNet(nn.Module):
         )
     def forward(self, x): return self.net(x)
 
-def make_loaders(data_dir, batch_size, device):
+def make_loaders(data_dir, batch_size, device, subset_size:int = None):
     tfm = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,)),   # 标准 MNIST 归一化
@@ -39,11 +42,15 @@ def make_loaders(data_dir, batch_size, device):
     train_ds = datasets.MNIST(root=data_dir, train=True,  download=True, transform=tfm)
     val_ds   = datasets.MNIST(root=data_dir, train=False, download=True, transform=tfm)
 
+    # ✅ 子集调试（可选）
+    if subset_size is not None:
+        train_ds = Subset(train_ds, list(range(min(subset_size, len(train_ds)))))
+        val_ds = Subset(val_ds, list(range(min(subset_size, len(val_ds)))))
+
     pin = (device.type == "cuda")
-    # Windows 下多进程 DataLoader 需要 spawn；不确定就先用 num_workers=0
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
                               pin_memory=pin, drop_last=True)
-    val_loader   = DataLoader(val_ds,   batch_size=1024,    shuffle=False,
+    val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False,
                               num_workers=0, pin_memory=pin)
     return train_loader, val_loader
 
@@ -65,10 +72,10 @@ def wait_for_discovery(ag: ZrddsAllgather, world:int, timeout_ms:int=10000, incl
     while True:
         cw, cr = _get_pub_count(), _get_sub_count()
         if (cw >= target) and (cr >= target):
-            print(f"[ag][discovery] OK: writer={cw}, reader={cr}, target={target}")
+            logging.info(f"[ag][discovery] OK: writer={cw}, reader={cr}, target={target}")
             return
         if cw != last_w or cr != last_r:
-            print(f"[ag][discovery] waiting... writer={cw}, reader={cr}, target={target}")
+            logging.info(f"[ag][discovery] waiting... writer={cw}, reader={cr}, target={target}")
             last_w, last_r = cw, cr
         if time.time() >= deadline:
             raise TimeoutError(f"discovery timeout: writer={cw}, reader={cr}, target={target}, world={world}")
@@ -76,6 +83,9 @@ def wait_for_discovery(ag: ZrddsAllgather, world:int, timeout_ms:int=10000, incl
 
 def main():
     # DDS participant
+    start_time = datetime.datetime.now()
+    if RANK == 0:
+        logging.info(f"[train_scripts] started at {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
     dp = dds.DomainParticipantFactory.get_instance().create_participant(
         DOMAIN_ID, dds.DOMAINPARTICIPANT_QOS_DEFAULT, None, 0)
     dds.register_all_types(dp)
@@ -104,11 +114,11 @@ def main():
     stepper = DDPDGCStepper(model, comp, ag, GROUP, RANK, WORLD)
 
     # 数据
-    train_loader, val_loader = make_loaders(DATA_DIR, batch_size=256, device=device)
+    train_loader, val_loader = make_loaders(DATA_DIR, batch_size=128, device=device, subset_size=36000)
     loss_fn = nn.CrossEntropyLoss()
 
     # 训练参数
-    epochs = 3
+    epochs = 10
     eval_every = 100
     EVAL_ROUND_OFFSET = 1_000_000_000
 
@@ -129,7 +139,7 @@ def main():
             opt.step()
 
             if RANK == 0 and (global_step % 100 == 0):
-                print(f"[rank {RANK}] step {global_step} loss={loss.item():.4f}")
+                logging.info(f"[rank {RANK}] step {global_step} loss={loss.item():.4f}")
 
             # 按 step 做全局评估（Top-1）
             if (global_step + 1) % eval_every == 0:
@@ -141,12 +151,17 @@ def main():
                     name="val.top1", rank=RANK, world=WORLD, timeout_s=100000.0
                 )
                 if RANK == 0:
-                    print(f"[VAL] step {global_step:05d} acc={acc*100:.2f}% ({g_correct}/{g_total})")
+                    logging.info(f"[VAL] step {global_step:05d} acc={acc*100:.2f}% ({g_correct}/{g_total})")
 
             global_step += 1
 
     dp.delete_contained_entities()
-    if RANK == 0: print("[train_scripts] done.")
+    end_time = datetime.datetime.now()
+    if RANK == 0:
+        duration = end_time - start_time
+        logging.info(f"[train_scripts] finished at {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        logging.info(f"[train_scripts] total duration: {str(duration)}")
+    if RANK == 0: logging.info("[train_scripts] done.")
 
 if __name__ == "__main__":
     main()

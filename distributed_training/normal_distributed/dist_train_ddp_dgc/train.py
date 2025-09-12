@@ -16,8 +16,8 @@ from memory import DGCSGDMemory
 from dgc_eval import ddp_evaluate_top1   # 用你提供的 ddp_eval.py
 from dds_barrier_verbose import ddp_barrier_verbose
 # ---- 环境参数（也可从命令行传入）
-RANK      = int(os.environ.get("RANK", "1"))
-WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
+RANK      = int(os.environ.get("RANK", "0"))
+WORLD     = int(os.environ.get("WORLD_SIZE", "1"))
 GROUP     = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
 DATA_DIR  = os.environ.get("DATA_DIR", "data")

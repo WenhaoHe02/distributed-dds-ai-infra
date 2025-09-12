@@ -65,7 +65,7 @@ def run_yolo(cfg: dict):
         results = model.predict(source=sources, conf=conf, iou=iou, save=False, stream=False)
         for name, res in zip(names, results):
             _save_result(res, out_dir, stem=name)
-        logging.info(f"[INFO] YOLO 内存 batch 完成，输出：{out_dir}")
+        logging.info(f"[INFO] YOLO 内存 batch 完成，输出：%s",out_dir)
         return
 
     # --- 模式 2: 文件 batch ---
@@ -75,7 +75,7 @@ def run_yolo(cfg: dict):
         results = model.predict(source=input_files, conf=conf, iou=iou, save=False, stream=False)
         for name, res in zip(names, results):
             _save_result(res, out_dir, stem=name)
-        logging.info(f"[INFO] YOLO 文件 batch 完成，输出：{out_dir}")
+        logging.info(f"[INFO] YOLO 文件 batch 完成，输出：%s",out_dir)
         return
 
     # --- 模式 3: 普通模式 (目录/文件) ---
@@ -86,4 +86,4 @@ def run_yolo(cfg: dict):
         for res in results:
             stem = Path(res.path).stem if res.path else f.stem
             _save_result(res, out_dir, stem=stem)
-    logging.info(f"[INFO] YOLO 完成，输出：{out_dir}")
+    logging.info(f"[INFO] YOLO 完成，输出：%s",out_dir)

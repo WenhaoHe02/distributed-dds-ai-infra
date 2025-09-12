@@ -13,6 +13,14 @@ from pathlib import Path
 from typing import Optional, NamedTuple, List, Tuple, Callable, Any
 
 from DDS_All import TaskList, WorkerResult, WorkerTaskResult
+import logging
+log_format = "%(asctime)s - %(levelname)s - %(message)s"
+
+# 2. 配置 logging
+logging.basicConfig(
+    level=logging.INFO,        # 设置日志级别：DEBUG < INFO < WARNING < ERROR < CRITICAL
+    format=log_format          # 设置输出格式
+)
 
 class RunPaths(NamedTuple):
     run_id: str
@@ -55,7 +63,7 @@ class ModelRunner:
         wr.batch_id = tasks.batch_id
         wr.model_id = tasks.model_id
 
-        print("[WorkerRunner] batch_id:", wr.batch_id, " model_id:", wr.model_id)
+        logging.info("[WorkerRunner] batch_id: %s model_id: %s", wr.batch_id,wr.model_id)
 
         seq = getattr(tasks, "tasks", None) or []
         n, get_at = self._make_seq_accessors(seq)
@@ -117,7 +125,7 @@ class ModelRunner:
             return wr
 
         except Exception as e:
-            print(f"Batch processing error: {e}")
+            logging.error(f"Batch processing error: %s",e)
             # 兜底：构造 ERROR_RUNNER
             for i in range(n):
                 t = get_at(i)
@@ -162,7 +170,7 @@ class ModelRunner:
         try:
             shutil.rmtree(root_path, ignore_errors=True)
         except Exception as e:
-            print(f"Failed to delete {root_path}: {e}")
+            logging.error(f"Failed to delete %s: %s",root_path,e)
 
     @staticmethod
     def _safe_name(name: str, default: str = "unknown") -> str:

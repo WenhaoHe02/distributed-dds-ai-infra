@@ -64,7 +64,7 @@ def _save_ocr_outputs(result: Any, out_dir: Path, stem: str):
                 # 没有文本就写空，避免 join(None) 报错
                 f.write("")
     except Exception as e:
-        logging.error(f"写入文本失败: {txt_path} -> {e}")
+        logging.error("写入文本失败: %s -> %s", txt_path, e)
 
 def _to_pil(img: Union[bytes, bytearray, memoryview, Image.Image, str, Path]) -> Image.Image:
 
@@ -127,7 +127,7 @@ def _save_vis_or_original(result: Any, out_dir: Path, stem: str, source_img: Ima
         try:
             source_img.save(vis_path, format="JPEG")
         except Exception as e:
-            logging.error(f"保存占位图失败: {e}")
+            logging.error(f"保存占位图失败: %s",e)
 
 # -----------------------
 # Runner
@@ -205,20 +205,20 @@ def run_ocr(task_config: dict):
                 _save_vis_or_original(result, out_dir, stem=stem, source_img=img)
                 _save_ocr_outputs(result, out_dir, stem=stem)
             except Exception as e:
-                logging.error(f"task {task_id} 处理失败: {e}")
+                logging.error(f"task %s 处理失败: %s",task_id,e)
                 texts_map[stem] = []
-        logging.info(f"OCR batch 完成（内存模式），输出：{out_dir}")
+        logging.info(f"OCR batch 完成（内存模式），输出：%s",out_dir)
         return texts_map
 
     # 3) 兼容旧的目录/单文件模式（需要提前把 DDS 字节落盘到 input 目录）
     input_path = Path(task_config["input"])
     if not input_path.exists():
-        logging.error(f"输入路径不存在: {input_path}")
+        logging.error(f"输入路径不存在: %s",input_path)
         return texts_map
 
     files = [input_path] if input_path.is_file() else sorted(input_path.glob("*.*"))
     if not files:
-        logging.warning(f"输入目录中未找到图像文件: {input_path}")
+        logging.warning(f"输入目录中未找到图像文件: %s",input_path)
         return texts_map
 
     for img_path in files:
@@ -231,8 +231,8 @@ def run_ocr(task_config: dict):
             stem = img_path.stem
             _save_ocr_outputs(result, out_dir, stem=stem)
         except Exception as e:
-            logging.error(f"图像 {img_path} 处理失败: {e}")
+            logging.error(f"图像 %s 处理失败: %s",img_path,e)
             texts_map[stem] = []
 
-    logging.info(f"OCR 完成（目录模式），输出：{out_dir}")
+    logging.info(f"OCR 完成（目录模式），输出：%s",out_dir)
     return texts_map

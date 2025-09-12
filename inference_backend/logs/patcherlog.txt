@@ -1,0 +1,42 @@
+2025-09-11 16:36:04 - INFO - [Patcher] - ==================================================
+2025-09-11 16:36:04 - INFO - [Patcher] - Patcher started.
+2025-09-11 16:36:04 - INFO - [Patcher] - Sub: inference/request, inference/claim
+2025-09-11 16:36:04 - INFO - [Patcher] - Pub: inference/open_batch, inference/grant, inference/task_list
+2025-09-11 16:36:04 - INFO - [Patcher] - Press ENTER to exit...
+2025-09-11 16:36:04 - INFO - [Patcher] - ==================================================
+2025-09-11 16:36:46 - INFO - [Patcher] - got InferenceRequest: request_id=06dfc7e5-4677-4005-b963-c332b77d9bb7_priority1 tasks=1
+2025-09-11 16:36:46 - INFO - [Patcher] - got Claim: batch_id=b-1757579806620-1 worker_id=worker1_cpu qlen=0
+2025-09-11 16:36:46 - INFO - [Patcher] - got InferenceRequest: request_id=ed3db004-283a-4769-9717-63a3ba7b89ce_priority2 tasks=2
+2025-09-11 16:36:46 - INFO - [Patcher] - got Claim: batch_id=b-1757579806729-2 worker_id=worker1_cpu qlen=1
+2025-09-11 16:44:26 - INFO - [Patcher] - got InferenceRequest: request_id=4872a186-6d97-4213-85d3-09a0e4199fc9_priority0 tasks=2
+2025-09-11 16:44:26 - INFO - [Patcher] - got Claim: batch_id=b-1757580266687-3 worker_id=worker1_cpu qlen=0
+2025-09-11 16:44:26 - INFO - [Patcher] - got InferenceRequest: request_id=f6ea5b10-9405-42af-ba94-018aa66e35df_priority2 tasks=2
+2025-09-11 16:44:26 - INFO - [Patcher] - got Claim: batch_id=b-1757580266796-4 worker_id=worker1_cpu qlen=1
+2025-09-11 16:44:52 - INFO - [Patcher] - got InferenceRequest: request_id=a948eec2-bd88-4420-b1c2-9fc02afe2850_priority0 tasks=2
+2025-09-11 16:44:52 - INFO - [Patcher] - got Claim: batch_id=b-1757580292851-5 worker_id=worker1_cpu qlen=0
+2025-09-11 16:44:52 - INFO - [Patcher] - got InferenceRequest: request_id=09bb9ce7-f84e-4d6b-a68c-930208deb022_priority2 tasks=1
+2025-09-11 16:44:52 - INFO - [Patcher] - got Claim: batch_id=b-1757580292944-6 worker_id=worker1_cpu qlen=1
+2025-09-11 16:45:22 - INFO - [Patcher] - got InferenceRequest: request_id=5277e3f1-2138-4a44-b8d7-7c81e8d838e7_priority2 tasks=2
+2025-09-11 16:45:22 - INFO - [Patcher] - got Claim: batch_id=b-1757580322579-7 worker_id=worker1_cpu qlen=0
+2025-09-11 16:45:22 - INFO - [Patcher] - got InferenceRequest: request_id=ed710a64-9923-4515-81c6-ad9ca95ae422_priority0 tasks=1
+2025-09-11 16:45:22 - INFO - [Patcher] - got Claim: batch_id=b-1757580322701-8 worker_id=worker1_cpu qlen=1
+2025-09-11 16:45:40 - INFO - [Patcher] - got InferenceRequest: request_id=428a13dc-44b6-4db7-a9bc-8caa5f6ef665_priority2 tasks=2
+2025-09-11 16:45:40 - INFO - [Patcher] - got Claim: batch_id=b-1757580340034-9 worker_id=worker1_cpu qlen=0
+2025-09-11 16:45:40 - INFO - [Patcher] - got InferenceRequest: request_id=69930c4c-1622-4e4a-bb81-54f70e092523_priority0 tasks=1
+2025-09-11 16:45:40 - INFO - [Patcher] - got Claim: batch_id=b-1757580340158-10 worker_id=worker1_cpu qlen=1
+2025-09-11 16:45:42 - INFO - [Patcher] - got InferenceRequest: request_id=d9a793a5-b208-4333-bc5e-631a6266e2e5_priority0 tasks=2
+2025-09-11 16:45:42 - INFO - [Patcher] - got Claim: batch_id=b-1757580342137-11 worker_id=worker1_cpu qlen=2
+2025-09-11 16:45:42 - INFO - [Patcher] - got InferenceRequest: request_id=d2e18b1e-593d-4f26-9552-46c430b195c3_priority1 tasks=2
+2025-09-11 16:45:42 - INFO - [Patcher] - got Claim: batch_id=b-1757580342300-12 worker_id=worker1_cpu qlen=2
+2025-09-11 16:48:08 - INFO - [Patcher] - got InferenceRequest: request_id=c9f88149-b8ef-4e35-8fff-b8dba4e2f2f3_priority0 tasks=1
+2025-09-11 16:48:08 - INFO - [Patcher] - got Claim: batch_id=b-1757580488345-13 worker_id=worker1_cpu qlen=0
+2025-09-11 16:48:08 - INFO - [Patcher] - got InferenceRequest: request_id=3bcde1aa-4c46-48de-ba43-c264ef6f7007_priority1 tasks=2
+2025-09-11 16:48:08 - INFO - [Patcher] - got Claim: batch_id=b-1757580488483-14 worker_id=worker1_cpu qlen=1
+2025-09-11 16:53:07 - INFO - [Patcher] - got InferenceRequest: request_id=78241894-99d4-495a-a3da-07b31a93cd2d_priority0 tasks=1
+2025-09-11 16:53:07 - INFO - [Patcher] - got Claim: batch_id=b-1757580787333-15 worker_id=worker1_cpu qlen=0
+2025-09-11 16:53:07 - INFO - [Patcher] - got InferenceRequest: request_id=61a4bfc0-00c2-4da4-a06e-a83313bf531e_priority2 tasks=2
+2025-09-11 16:53:07 - INFO - [Patcher] - got Claim: batch_id=b-1757580787474-16 worker_id=worker1_cpu qlen=1
+2025-09-11 16:54:03 - INFO - [Patcher] - got InferenceRequest: request_id=bb3525cd-9821-4fd1-b8c0-3c38933f515c_priority2 tasks=2
+2025-09-11 16:54:03 - INFO - [Patcher] - got Claim: batch_id=b-1757580843384-17 worker_id=worker1_cpu qlen=0
+2025-09-11 16:54:03 - INFO - [Patcher] - got InferenceRequest: request_id=cadbd171-8036-425d-9bed-fbc4263550a7_priority2 tasks=1
+2025-09-11 16:54:03 - INFO - [Patcher] - got Claim: batch_id=b-1757580843461-18 worker_id=worker1_cpu qlen=1

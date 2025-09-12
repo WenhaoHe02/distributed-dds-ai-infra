@@ -47,3 +47,5 @@
 {"request_id":"3bcde1aa-4c46-48de-ba43-c264ef6f7007_priority1","task_sum":2,"tasks":[{"task_id":"t001","model_id":"ocr","send_time":1757580488468},{"task_id":"t002","model_id":"ocr","send_time":1757580488468}],"client_id":"client-afjykv"}
 {"request_id":"78241894-99d4-495a-a3da-07b31a93cd2d_priority0","task_sum":1,"tasks":[{"task_id":"t001","model_id":"ocr","send_time":1757580787315}],"client_id":"client-1ou0qbx"}
 {"request_id":"61a4bfc0-00c2-4da4-a06e-a83313bf531e_priority2","task_sum":2,"tasks":[{"task_id":"t001","model_id":"ocr","send_time":1757580787465},{"task_id":"t002","model_id":"ocr","send_time":1757580787465}],"client_id":"client-1ou0qbx"}
+{"request_id":"bb3525cd-9821-4fd1-b8c0-3c38933f515c_priority2","task_sum":2,"tasks":[{"task_id":"t001","model_id":"ocr","send_time":1757580843366},{"task_id":"t002","model_id":"ocr","send_time":1757580843366}],"client_id":"client-1qzouy9"}
+{"request_id":"cadbd171-8036-425d-9bed-fbc4263550a7_priority2","task_sum":1,"tasks":[{"task_id":"t001","model_id":"ocr","send_time":1757580843453}],"client_id":"client-1qzouy9"}

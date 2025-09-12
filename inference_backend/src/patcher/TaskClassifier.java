@@ -74,9 +74,9 @@ public class TaskClassifier {
 
     private static class Window {
         final String modelId;
-        final ArrayDeque<PendingItem> q;
+        final ConcurrentLinkedDeque<PendingItem> q;
         long firstArrivedAt = 0L;
-        Window(String modelId, int capacity){ this.modelId = modelId; this.q = new ArrayDeque<>(capacity); }
+        Window(String modelId, int capacity){ this.modelId = modelId; this.q = new ConcurrentLinkedDeque<>(); }
         int size(){ return q.size(); }
         boolean isEmpty(){ return q.isEmpty(); }
         void add(PendingItem pi){ if (q.isEmpty()) firstArrivedAt = System.currentTimeMillis(); q.addLast(pi); }
@@ -106,7 +106,7 @@ public class TaskClassifier {
 
     private final ConcurrentMap<String, Window> windows = new ConcurrentHashMap<>();                // model_id -> window
     private final ConcurrentMap<String, StoredBatch> pendingBatches = new ConcurrentHashMap<>();     // batch_id -> stored
-    private final Deque<StoredBatch> servedRecently = new ArrayDeque<>();                            // for retention cleanup
+    private final Deque<StoredBatch> servedRecently = new ConcurrentLinkedDeque<>();                            // for retention cleanup
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "taskclassifier-ticker"); t.setDaemon(true); return t; });
@@ -233,7 +233,9 @@ public class TaskClassifier {
         ob.model_id = w.modelId;
         ob.size = items.size();
         // 注意：IDL若是int，这里仍按int写入；如需long请改IDL
-        ob.create_ts_ms = (int) sb.createTs;
+        ob.create_ts_ms =  (int)sb.createTs;
+        System.out.println("[TaskClassifier] OPEN batch: batch_id=" + ob.batch_id +
+                " model_id=" + ob.model_id + " size=" + ob.size);
 
         try { openBatchEmitter.emit(ob); } catch (Exception e){ e.printStackTrace(); }
     }

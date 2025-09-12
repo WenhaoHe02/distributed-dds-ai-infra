@@ -25,7 +25,7 @@ import com.zrdds.subscription.DataReaderQos;
  *  - 接收 Claim（包含 queue_length）：在一个很短的收集窗口内择优（queue_length 最小者）授予 Grant。
  *  - 授予后调用 TaskClassifier.onGrant(grant)：发布带 assigned_worker_id 的 TaskList（独占给胜者）。
  *
- * 不包含：QoS/指标/重试（按你的要求暂不做）。
+
  */
 public class Patcher {
 
@@ -149,8 +149,9 @@ public class Patcher {
     /* ===================== Internal helpers ===================== */
 
     private void onOpenBatch(OpenBatch ob) {
+        long now = System.currentTimeMillis();
         // 记录 open 状态（Task 内容由 TaskClassifier 内部持有，不重复存储）
-        open.put(ob.batch_id, new BatchState(ob.batch_id, ob.model_id, ob.create_ts_ms));
+        open.put(ob.batch_id, new BatchState(ob.batch_id, ob.model_id, now));
     }
 
     /** 在收集窗口结束后，选择 queue_length 最小的 claim，并授予 Grant。 */

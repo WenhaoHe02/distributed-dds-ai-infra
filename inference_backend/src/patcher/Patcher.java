@@ -133,15 +133,30 @@ public class Patcher {
      */
     public void onClaim(Claim c) {
         if (c == null) return;
-        BatchState st = open.get(c.batch_id);
-        if (st == null) return; // 未知/已过期/已授予
+        final String bid = c.batch_id;
+        if (bid == null) return;
+
+        final String wid = c.worker_id;
+        final Integer qlen = c.queue_length;
+
+        BatchState st = open.get(bid);
+        if (st == null) return;
 
         ClaimAccumulator acc = accums.computeIfAbsent(c.batch_id, ClaimAccumulator::new);
         synchronized (acc) {
-            acc.add(c);
+            // 放“拷贝”进去，避免后面被 DDS 改写
+            Claim copy = new Claim();
+            copy.batch_id = bid;
+            copy.worker_id = wid;
+            copy.queue_length = qlen;
+            acc.add(copy);
+
             if (acc.selectTask == null) {
                 long wait = waitWindowMsByPriority();
-                acc.selectTask = scheduler.schedule(() -> selectAndGrant(c.batch_id), wait, TimeUnit.MILLISECONDS);
+                // 只闭包捕获“不可变的 bid”
+                acc.selectTask = scheduler.schedule(() -> selectAndGrant(bid), wait, TimeUnit.MILLISECONDS);
+                // 可选：日志
+                // System.out.println("[Patcher] scheduled select for " + bid);
             }
         }
     }

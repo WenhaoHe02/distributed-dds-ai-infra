@@ -13,17 +13,7 @@
     <orderEntry type="module-library" exported="">
       <library>
         <CLASSES>
-          <root url="jar://C:/Program Files (x86)/ZRDDS/ZRDDS-2.4.4/lib/ZRDDS.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="library" exported="" name="lib" level="project" />
-    <orderEntry type="module-library" exported="">
-      <library>
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/../../jackson-annotations-2.15.2.jar!/" />
+          <root url="jar://$MODULE_DIR$/lib/jackson-annotations-3.0-rc5.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
@@ -32,7 +22,7 @@
     <orderEntry type="module-library" exported="">
       <library>
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/../../jackson-core-2.15.2.jar!/" />
+          <root url="jar://$MODULE_DIR$/lib/jackson-core-2.20.0.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
@@ -41,7 +31,7 @@
     <orderEntry type="module-library" exported="">
       <library>
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/../../jackson-databind-2.15.2.jar!/" />
+          <root url="jar://$MODULE_DIR$/lib/jackson-databind-2.20.0.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
@@ -50,9 +40,21 @@
     <orderEntry type="module-library" exported="">
       <library>
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/../../lombok-1.18.30.jar!/" />
+          <root url="jar://$MODULE_DIR$/lib/lombok-1.18.40.jar!/" />
         </CLASSES>
         <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" exported="">
+      <library>
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/../../ZRDDS/ZRDDS-2.4.4/lib/ZRDDS.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <NATIVE>
+          <root url="file://$MODULE_DIR$/../../ZRDDS/ZRDDS-2.4.4/lib" />
+        </NATIVE>
         <SOURCES />
       </library>
     </orderEntry>

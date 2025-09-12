@@ -324,8 +324,8 @@ class Worker:
         if rc != DDS_All.DDS_ReturnCode_t.OK:
             logging.info(f"[WorkerMain] claim write rc={rc}")
         else:
-            logging.info("[Worker]成功发送claim batch_id:", claim.batch_id,
-                  " worker_id:", claim.worker_id, " queue_length:", claim.queue_length)
+            logging.info("[Worker]成功发送claim batch_id: %s worker_id: %s queue_length: %s",
+                         claim.batch_id, claim.worker_id, claim.queue_length)
 
     def result_emitter(self, worker_result: WorkerResult) -> None:
         rc = self._write_with_best_effort(self.result_writer, worker_result)
@@ -355,8 +355,8 @@ class Worker:
         claim.worker_id = self.config.worker_id
         claim.queue_length = self.current_depth()
 
-        logging.info("[Worker]get batch batch_id:", claim.batch_id,
-              " worker_id:", claim.worker_id, " queue_length:", claim.queue_length)
+        logging.info("[Worker]get batch batch_id: %s worker_id: %s queue_length: %s",
+                     claim.batch_id, claim.worker_id, claim.queue_length)
 
         try:
             self.claim_emitter(claim)
@@ -376,8 +376,8 @@ class Worker:
                 return
             self.seen_task_list.add(task_list.batch_id)
 
-        logging.info("[Worker]get tasklist worker_id:", task_list.assigned_worker_id,
-              " batch_id:", task_list.batch_id, " model_id:", task_list.model_id)
+        logging.info("[Worker]get tasklist worker_id: %s batch_id: %s model_id: %s",
+                     task_list.assigned_worker_id, task_list.batch_id, task_list.model_id)
         try:
             self.batch_queue.put_nowait(task_list)
         except queue.Full:

@@ -1,19 +1,17 @@
 package spliter;
 
-import com.zrdds.infrastructure.StatusKind;
+import com.zrdds.infrastructure.*;
 import com.zrdds.simpleinterface.DDSIF;
 import com.zrdds.domain.DomainParticipant;
 import com.zrdds.domain.DomainParticipantFactory;
 import com.zrdds.subscription.DataReader;
 import com.zrdds.subscription.SimpleDataReaderListener;
-import com.zrdds.infrastructure.InstanceHandle_t;
-import com.zrdds.infrastructure.ReturnCode_t;
-import com.zrdds.infrastructure.SampleInfo;
 import com.zrdds.topic.Topic;
 import com.zrdds.publication.Publisher;
 import com.zrdds.subscription.Subscriber;
 
 import data_structure.*; // WorkerResult / WorkerTaskResult / WorkerTaskResultSeq / ResultUpdate / ResultItem / *TypeSupport
+import data_structure.Bytes;
 
 import java.util.concurrent.*;
 import java.util.*;
@@ -273,12 +271,43 @@ public class Spliter {
 
         private static ResultItem toItem(WorkerTaskResult r) {
             ResultItem it = new ResultItem();
+
+            // String 类型保持引用即可
             it.task_id = r.task_id;
             it.status  = r.status;
-            // 直接引用上游 Bytes（若上游会复用/覆写，请在此复制）
-            it.output_blob = r.output_blob;
+
+            // ======= 拷贝 output_blob (ByteSeq) =======
+            if (r.output_blob != null && r.output_blob.value != null) {
+                ByteSeq src = r.output_blob.value;
+                ByteSeq dst = new ByteSeq();
+                int len = src.length();
+                dst.ensure_length(len, len);
+                for (int i = 0; i < len; i++) {
+                    dst.set_at(i, src.get_at(i));
+                }
+                Bytes b = new Bytes();
+                b.value = dst;
+                it.output_blob = b;
+            } else {
+                it.output_blob = null;
+            }
+
+            // ======= 拷贝 texts (StringSeq) =======
+            if (r.texts != null && r.texts.length() > 0) {
+                StringSeq src = new StringSeq();
+                src.ensure_length(r.texts.length(), r.texts.length());
+                for (int i = 0; i < r.texts.length(); i++) {
+                    src.set_at(i, r.texts.get_at(i));
+                }
+                it.texts = src;
+            } else {
+                it.texts = null;
+            }
+
             return it;
         }
+
+
 
         private static int approxBytes(ResultItem it){
             int s = 0;

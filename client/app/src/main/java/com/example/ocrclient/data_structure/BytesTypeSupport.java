@@ -6,10 +6,10 @@ import com.zrdds.publication.DataWriter;
 import com.zrdds.subscription.DataReader;
 import java.io.UnsupportedEncodingException;
 
-public class GrantTypeSupport extends TypeSupport {
-    private String type_name = "Grant";
+public class BytesTypeSupport extends TypeSupport {
+    private String type_name = "Bytes";
     private static TypeCodeImpl s_typeCode = null;
-    private static GrantTypeSupport m_instance = new GrantTypeSupport();
+    private static BytesTypeSupport m_instance = new BytesTypeSupport();
 
     private final byte[] tmp_byte_obj = new byte[1];
     private final char[] tmp_char_obj = new char[1];
@@ -21,13 +21,13 @@ public class GrantTypeSupport extends TypeSupport {
     private final boolean[] tmp_boolean_obj = new boolean[1];
 
     
-    private GrantTypeSupport(){}
+    private BytesTypeSupport(){}
 
     
     public static TypeSupport get_instance() { return m_instance; }
 
     public Object create_sampleI() {
-        Grant sample = new Grant();
+        Bytes sample = new Bytes();
         return sample;
     }
 
@@ -36,9 +36,9 @@ public class GrantTypeSupport extends TypeSupport {
     }
 
     public int copy_sampleI(Object dst,Object src) {
-        Grant GrantDst = (Grant)dst;
-        Grant GrantSrc = (Grant)src;
-        GrantDst.copy(GrantSrc);
+        Bytes BytesDst = (Bytes)dst;
+        Bytes BytesSrc = (Bytes)src;
+        BytesDst.copy(BytesSrc);
         return 1;
     }
 
@@ -47,18 +47,11 @@ public class GrantTypeSupport extends TypeSupport {
             System.out.println("NULL");
             return -1;
         }
-        Grant sample = (Grant)_sample;
-        if (sample.batch_id != null){
-            System.out.println("sample.batch_id:" + sample.batch_id);
-        }
-        else{
-            System.out.println("sample.batch_id: null");
-        }
-        if (sample.winner_worker_id != null){
-            System.out.println("sample.winner_worker_id:" + sample.winner_worker_id);
-        }
-        else{
-            System.out.println("sample.winner_worker_id: null");
+        Bytes sample = (Bytes)_sample;
+        int valueTmpLen = sample.value.length();
+        System.out.println("sample.value.length():" +valueTmpLen);
+        for (int i = 0; i < valueTmpLen; ++i){
+            System.out.println("sample.value.get_at(" + i + "):" + sample.value.get_at(i));
         }
         return 0;
     }
@@ -83,9 +76,9 @@ public class GrantTypeSupport extends TypeSupport {
         return "-1";
     }
 
-    public DataReader create_data_reader() {return new GrantDataReader();}
+    public DataReader create_data_reader() {return new BytesDataReader();}
 
-    public DataWriter create_data_writer() {return new GrantDataWriter();}
+    public DataWriter create_data_writer() {return new BytesDataWriter();}
 
     public TypeCode get_inner_typecode(){
         TypeCode userTypeCode = get_typecode();
@@ -95,42 +88,46 @@ public class GrantTypeSupport extends TypeSupport {
 
     public int get_sizeI(Object _sample,long cdr, int offset) throws UnsupportedEncodingException {
         int initialAlignment = offset;
-        Grant sample = (Grant)_sample;
-        offset += CDRSerializer.get_string_size(sample.batch_id == null ? 0 : sample.batch_id.getBytes().length, offset);
-
-        offset += CDRSerializer.get_string_size(sample.winner_worker_id == null ? 0 : sample.winner_worker_id.getBytes().length, offset);
+        Bytes sample = (Bytes)_sample;
+        offset += CDRSerializer.get_untype_size(4, offset);
+        int valueLen = sample.value.length();
+        if (valueLen != 0){
+            offset += 1 * valueLen;
+        }
 
         return offset - initialAlignment;
     }
 
     public int serializeI(Object _sample ,long cdr) {
-         Grant sample = (Grant) _sample;
+         Bytes sample = (Bytes) _sample;
 
-        if (!CDRSerializer.put_string(cdr, sample.batch_id, sample.batch_id == null ? 0 : sample.batch_id.length())){
-            System.out.println("serialize sample.batch_id failed.");
+        if (!CDRSerializer.put_int(cdr, sample.value.length())){
+            System.out.println("serialize length of sample.value failed.");
             return -2;
         }
-
-        if (!CDRSerializer.put_string(cdr, sample.winner_worker_id, sample.winner_worker_id == null ? 0 : sample.winner_worker_id.length())){
-            System.out.println("serialize sample.winner_worker_id failed.");
-            return -2;
+        if (sample.value.length() != 0){
+            if (!CDRSerializer.put_byte_array(cdr, sample.value.get_contiguous_buffer(), sample.value.length())){
+                System.out.println("serialize sample.value failed.");
+                return -2;
+            }
         }
 
         return 0;
     }
 
     synchronized public int deserializeI(Object _sample, long cdr){
-        Grant sample = (Grant) _sample;
-        sample.batch_id = CDRDeserializer.get_string(cdr);
-        if(sample.batch_id ==null){
-            System.out.println("deserialize member sample.batch_id failed.");
+        Bytes sample = (Bytes) _sample;
+        if (!CDRDeserializer.get_int_array(cdr, tmp_int_obj, 1)){
+            System.out.println("deserialize length of sample.value failed.");
+            return -2;
+        }
+        if (!sample.value.ensure_length(tmp_int_obj[0], tmp_int_obj[0])){
+            System.out.println("Set maxiumum member sample.value failed.");
             return -3;
         }
-
-        sample.winner_worker_id = CDRDeserializer.get_string(cdr);
-        if(sample.winner_worker_id ==null){
-            System.out.println("deserialize member sample.winner_worker_id failed.");
-            return -3;
+        if (!CDRDeserializer.get_byte_array(cdr, sample.value.get_contiguous_buffer(), sample.value.length())){
+            System.out.println("deserialize sample.value failed.");
+            return -2;
         }
 
         return 0;
@@ -138,18 +135,18 @@ public class GrantTypeSupport extends TypeSupport {
 
     public int get_key_sizeI(Object _sample,long cdr,int offset)throws UnsupportedEncodingException {
         int initialAlignment = offset;
-        Grant sample = (Grant)_sample;
+        Bytes sample = (Bytes)_sample;
         offset += get_sizeI(sample, cdr, offset);
         return offset - initialAlignment;
     }
 
     public int serialize_keyI(Object _sample, long cdr){
-        Grant sample = (Grant)_sample;
+        Bytes sample = (Bytes)_sample;
         return 0;
     }
 
     public int deserialize_keyI(Object _sample, long cdr) {
-        Grant sample = (Grant)_sample;
+        Bytes sample = (Bytes)_sample;
         return 0;
     }
 
@@ -159,48 +156,30 @@ public class GrantTypeSupport extends TypeSupport {
         }
         TypeCodeFactory factory = TypeCodeFactory.get_instance();
 
-        s_typeCode = factory.create_struct_TC("Grant");
+        s_typeCode = factory.create_struct_TC("Bytes");
         if (s_typeCode == null){
-            System.out.println("create struct Grant typecode failed.");
+            System.out.println("create struct Bytes typecode failed.");
             return s_typeCode;
         }
         int ret = 0;
         TypeCodeImpl memberTc = new TypeCodeImpl();
         TypeCodeImpl eleTc = new TypeCodeImpl();
 
-        memberTc = factory.create_string_TC(0xffffffff);
-        if (memberTc == null){
-            System.out.println("Get Member batch_id TypeCode failed.");
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
-        }
-        ret = s_typeCode.add_member_to_struct(
-            0,
-            0,
-            "batch_id",
-            memberTc,
-            false,
-            false);
-        factory.delete_TC(memberTc);
-        if (ret < 0)
+        memberTc = factory.get_primitive_TC(TypeCodeKind.DDS_TK_UCHAR);
+        if (memberTc != null)
         {
-            factory.delete_TC(s_typeCode);
-            s_typeCode = null;
-            return null;
+            memberTc = factory.create_sequence_TC(0xffffffff, memberTc);
         }
-
-        memberTc = factory.create_string_TC(0xffffffff);
         if (memberTc == null){
-            System.out.println("Get Member winner_worker_id TypeCode failed.");
+            System.out.println("Get Member value TypeCode failed.");
             factory.delete_TC(s_typeCode);
             s_typeCode = null;
             return null;
         }
         ret = s_typeCode.add_member_to_struct(
-            1,
-            1,
-            "winner_worker_id",
+            0,
+            0,
+            "value",
             memberTc,
             false,
             false);

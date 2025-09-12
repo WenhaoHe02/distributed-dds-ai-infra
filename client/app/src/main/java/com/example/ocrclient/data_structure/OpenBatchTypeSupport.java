@@ -70,11 +70,11 @@ public class OpenBatchTypeSupport extends TypeSupport {
     }
 
     public int get_max_sizeI(){
-        return 528;
+        return 0xffffffff;
     }
 
     public int get_max_key_sizeI(){
-        return 528;
+        return 0xffffffff;
     }
 
     public boolean has_keyI(){
@@ -196,7 +196,7 @@ public class OpenBatchTypeSupport extends TypeSupport {
         TypeCodeImpl memberTc = new TypeCodeImpl();
         TypeCodeImpl eleTc = new TypeCodeImpl();
 
-        memberTc = factory.create_string_TC(255);
+        memberTc = factory.create_string_TC(0xffffffff);
         if (memberTc == null){
             System.out.println("Get Member batch_id TypeCode failed.");
             factory.delete_TC(s_typeCode);
@@ -218,7 +218,7 @@ public class OpenBatchTypeSupport extends TypeSupport {
             return null;
         }
 
-        memberTc = factory.create_string_TC(255);
+        memberTc = factory.create_string_TC(0xffffffff);
         if (memberTc == null){
             System.out.println("Get Member model_id TypeCode failed.");
             factory.delete_TC(s_typeCode);

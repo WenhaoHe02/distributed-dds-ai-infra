@@ -7,6 +7,7 @@ public class WorkerTaskResult{
     public String client_id = "";// @ID(2)
     public String status = "";// @ID(3)
     public Bytes output_blob = new Bytes();// @ID(4)
+    public com.zrdds.infrastructure.StringSeq texts = new com.zrdds.infrastructure.StringSeq();// @ID(5)
 
     public WorkerTaskResult(){
 
@@ -24,6 +25,7 @@ public class WorkerTaskResult{
         this.client_id =  typedSrc.client_id;
         this.status =  typedSrc.status;
         this.output_blob.copy(typedSrc.output_blob);
+        this.texts.copy(typedSrc.texts);
         return this;
     }
 }

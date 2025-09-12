@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import DDS_All as dds
+from normal_distributed.dist_train_ddp_dgc.dds_barrier_verbose import ddp_barrier_verbose
+from  normal_distributed.dist_train_ddp_dgc.zrdds_allgather import ZrddsAllgather
 
 TOPIC_TRAIN_CMD     = "train_scripts/train_cmd"
 TOPIC_CLIENT_UPDATE = "train_scripts/client_update"
@@ -102,6 +104,33 @@ class ControllerV3:
         )
         return cfg
 
+    def wait_for_discovery(self, ag: ZrddsAllgather, world: int, timeout_ms: int = 10000, include_self: bool = True,
+                           poll_ms: int = 200):
+        """阻塞直到 discovery 匹配完成"""
+        deadline = time.time() + timeout_ms / 1000.0
+        target = world if include_self else max(0, world - 1)
+
+        def _get_pub_count():
+            st = ag.writer.get_publication_matched_status()  # 直接返回 DDS_All.PublicationMatchedStatus
+            return int(getattr(st, "current_count", 0))
+
+        def _get_sub_count():
+            st = ag.reader.get_subscription_matched_status()
+            return int(getattr(st, "current_count", 0))
+
+        last_w = last_r = -1
+        while True:
+            cw, cr = _get_pub_count(), _get_sub_count()
+            if (cw >= target) and (cr >= target):
+                print(f"[ag][discovery] OK: writer={cw}, reader={cr}, target={target}")
+                return
+            if cw != last_w or cr != last_r:
+                print(f"[ag][discovery] waiting... writer={cw}, reader={cr}, target={target}")
+                last_w, last_r = cw, cr
+            if time.time() >= deadline:
+                raise TimeoutError(f"discovery timeout: writer={cw}, reader={cr}, target={target}, world={world}")
+            time.sleep(poll_ms / 1000.0)
+
     # ========== DDS 初始化 ==========
     def init(self):
         dpf = dds.DomainParticipantFactory.get_instance()
@@ -112,6 +141,20 @@ class ControllerV3:
             raise RuntimeError("create participant failed")
 
         dds.register_all_types(self.dp)
+
+        # 通信引擎
+        ag = ZrddsAllgather(self.dp, topic="train_scripts/allgather_blob")
+
+        # ---- ★ 在 barrier 之前先确保 discovery 已完成
+        self.wait_for_discovery(ag, world=self.cfg.expected_clients + 1, timeout_ms=100000, include_self=True)
+
+        ok = ddp_barrier_verbose(ag, group_id='1', rank=0, world=self.cfg.expected_clients + 1,
+                                 domain_id=self.cfg.domain_id, topic_name="train_scripts/allgather_blob",
+                                 min_writer_matches=self.cfg.expected_clients + 1,
+                                 min_reader_matches=self.cfg.expected_clients + 1,
+                                 match_timeout_s=150.0, barrier_timeout_s=600.0)
+        if not ok:
+            raise SystemExit("[barrier] failed; check missing ranks / matching logs")
 
         t_cmd = self.dp.create_topic(TOPIC_TRAIN_CMD, "TrainCmd", dds.TOPIC_QOS_DEFAULT, None, 0)
         t_upd = self.dp.create_topic(TOPIC_CLIENT_UPDATE, "ClientUpdate", dds.TOPIC_QOS_DEFAULT, None, 0)

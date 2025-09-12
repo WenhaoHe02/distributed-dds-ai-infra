@@ -64,10 +64,11 @@ public class ReceiveService {
         listener = new ListenerDataReaderListener();
 
 //        //TODO: QOS策略配置，保证不会漏消息等等
-//        DataReaderQos qos = new DataReaderQos();
-//
-//        qos.reliability.kind = ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS;
-//        qos.history.kind = HistoryQosPolicyKind.KEEP_ALL_HISTORY_QOS;
+        DataReaderQos qos = new DataReaderQos();
+
+        qos.reliability.kind = ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS;
+        qos.history.kind = HistoryQosPolicyKind.KEEP_ALL_HISTORY_QOS;
+        qos.history.depth=100;
 //        qos.resource_limits.max_samples = 10000;
 //        qos.resource_limits.max_instances = 1000;
 //        qos.resource_limits.max_samples_per_instance = 1000;
@@ -75,7 +76,7 @@ public class ReceiveService {
 //        qos.liveliness.kind = LivelinessQosPolicyKind.AUTOMATIC_LIVELINESS_QOS;
 
         // 创建数据读者
-        dr = sub.create_datareader(tp, Subscriber.DATAREADER_QOS_DEFAULT, listener,
+        dr = sub.create_datareader(tp, qos, listener,
                 StatusKind.DATA_AVAILABLE_STATUS);
         if (dr == null) {
             System.out.println("create dr failed");

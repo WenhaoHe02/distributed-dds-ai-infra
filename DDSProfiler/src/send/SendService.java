@@ -3,6 +3,7 @@ package send;
 import com.zrdds.infrastructure.*;
 import com.zrdds.domain.DomainParticipant;
 import com.zrdds.domain.DomainParticipantFactory;
+import com.zrdds.publication.DataWriterQos;
 import com.zrdds.topic.Topic;
 import com.zrdds.publication.Publisher;
 import common.GlobalResourceManager;
@@ -26,19 +27,24 @@ public class SendService {
 
     // 模型配置
     private static final String[] MODELS = { "ocr", "yolo" };
+//    private static final String[] MODELS = { "ocr" };
+//    private static final String[] MODELS = { "yolo" };
 
     // 优先级配置
     private static final int[] PRIORITIES = { 0, 1, 2 };
+//    private static final int[] PRIORITIES = { 0 };
+//    private static final int[] PRIORITIES = { 1 };
+//    private static final int[] PRIORITIES = { 2 };
+
 
     // 任务数量配置（现在作为实例变量，可以被构造函数覆盖）
-    private int minTasksPerRequest = 1;
-    private int maxTasksPerRequest = 2;
+    private int minTasksPerRequest = 5;
+    private int maxTasksPerRequest = 10;
 
     // 图片数据配置
-    private static final int MIN_IMAGE_WIDTH = 224;
-    private static final int MAX_IMAGE_WIDTH = 500;
-    private static final int MIN_IMAGE_HEIGHT = 224;
-    private static final int MAX_IMAGE_HEIGHT = 500;
+    private static final String YOLO_IMAGE_FOLDER = "yolo_image";
+    private static final String OCR_IMAGE_FOLDER = "ocr_image";
+    private static final String[] SUPPORTED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".gif"};
 
     // 请求间隔配置（现在作为实例变量，可以被构造函数覆盖）
     private int minRequestIntervalMs = 50;
@@ -142,18 +148,32 @@ public class SendService {
         }
         pub.enable();
 
+        DataWriterQos wq = new DataWriterQos();
+        pub.get_default_datawriter_qos(wq);
+
+        wq.reliability.kind = ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS;
+        wq.history.kind = HistoryQosPolicyKind.KEEP_ALL_HISTORY_QOS;
+        wq.history.depth = 100;
         // 创建数据写入器
         requestWriter = (InferenceRequestDataWriter) pub.create_datawriter(
-                topic, Publisher.DATAWRITER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
+                topic, wq, null, StatusKind.STATUS_MASK_NONE);
         if (requestWriter == null) {
             throw new RuntimeException("create_datawriter failed");
         }
         requestWriter.enable();
+
+        //保证匹配到再写数据
+        PublicationMatchedStatus status = new PublicationMatchedStatus();
+        do {
+            requestWriter.get_publication_matched_status(status);
+            Thread.sleep(50);
+        } while (status.current_count == 0);
+
     }
 
     public void sendRequest(String requestId, int taskCount, int priority) throws Exception {
         // 创建请求，包含优先级信息
-        String requestIdWithPriority = java.util.UUID.randomUUID().toString() + "_priority" + priority;
+        String requestIdWithPriority = java.util.UUID.randomUUID().toString() + "_priority:" + priority;
         InferenceRequest request = new InferenceRequest();
         request.request_id = requestIdWithPriority;
 
@@ -173,7 +193,7 @@ public class SendService {
             task.model_id = MODELS[random.nextInt(MODELS.length)];
 
             // 添加图片数据负载
-            task.payload = createImagePayload();
+            task.payload = createImagePayload(task.model_id);
 
             tasks.set_at(i, task);
 
@@ -188,9 +208,8 @@ public class SendService {
 
         // 发送请求
         ReturnCode_t rc = requestWriter.write(request, InstanceHandle_t.HANDLE_NIL_NATIVE);
-
         long sendTimeMs = System.currentTimeMillis(); // 在发送后记录时间
-        
+
         // 记录完整的请求信息到日志 (使用新的JSON格式)，使用读写锁保护
         resourceManager.acquireWriteLock();
         try {
@@ -213,6 +232,7 @@ public class SendService {
 
             logWriter.println(logEntry.toString());
             logWriter.flush();
+
         } finally {
             resourceManager.releaseWriteLock();
         }
@@ -247,25 +267,92 @@ public class SendService {
     }
 
     // 创建模拟图片数据负载
-    private Bytes createImagePayload() {
+    private Bytes createImagePayload(String modelId) {
         Bytes payload = new Bytes();
         
-        // 随机生成图片尺寸
-        int width = random.nextInt(MAX_IMAGE_WIDTH - MIN_IMAGE_WIDTH + 1) + MIN_IMAGE_WIDTH;
-        int height = random.nextInt(MAX_IMAGE_HEIGHT - MIN_IMAGE_HEIGHT + 1) + MIN_IMAGE_HEIGHT;
-        
-        // 生成有效的PNG图像数据
-        byte[] imageData = generatePNGImage(width, height);
-        payload.value.from_array(imageData, imageData.length);
+        // 根据模型名称从对应文件夹中随机选择图片
+        byte[] imageData = getRandomImageFromFile(modelId);
+        if (imageData != null) {
+            payload.value.from_array(imageData, imageData.length);
+        } else {
+            // 如果没有找到图片文件，则生成随机图片
+            System.out.println("Warning: No image files found for model " + modelId + ", generating random image instead.");
+            imageData = generateRandomImage();
+            payload.value.from_array(imageData, imageData.length);
+        }
 
         return payload;
     }
 
     /**
-     * 使用BufferedImage生成PNG图像数据
+     * 根据模型名称从指定文件夹中随机获取一张图片
      */
-    private byte[] generatePNGImage(int width, int height) {
+    private byte[] getRandomImageFromFile(String modelId) {
         try {
+            // 根据模型名称选择文件夹
+            String folderPath = modelId.equals("yolo") ? YOLO_IMAGE_FOLDER : OCR_IMAGE_FOLDER;
+            
+            File folder = new File(folderPath);
+            if (!folder.exists() || !folder.isDirectory()) {
+                System.out.println("Image folder does not exist: " + folderPath);
+                return null;
+            }
+
+            File[] imageFiles = folder.listFiles(this::isImageFile);
+            if (imageFiles == null || imageFiles.length == 0) {
+                System.out.println("No image files found in: " + folderPath);
+                return null;
+            }
+
+            // 随机选择一张图片
+            File selectedImage = imageFiles[random.nextInt(imageFiles.length)];
+            
+            // 读取图片文件为字节数组
+            FileInputStream fis = new FileInputStream(selectedImage);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = fis.read(buffer)) != -1) {
+                baos.write(buffer, 0, bytesRead);
+            }
+            
+            fis.close();
+            byte[] imageBytes = baos.toByteArray();
+            baos.close();
+            
+            System.out.println("Loaded image: " + selectedImage.getName() + " from " + folderPath + " (" + imageBytes.length + " bytes)");
+            return imageBytes;
+        } catch (Exception e) {
+            System.err.println("Error reading image file: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 检查文件是否为支持的图片格式
+     */
+    private boolean isImageFile(File file) {
+        if (!file.isFile()) return false;
+        
+        String fileName = file.getName().toLowerCase();
+        for (String extension : SUPPORTED_IMAGE_EXTENSIONS) {
+            if (fileName.endsWith(extension)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 生成随机图片数据作为备选方案
+     */
+    private byte[] generateRandomImage() {
+        try {
+            // 随机生成图片尺寸
+            int width = random.nextInt(500 - 224 + 1) + 224;
+            int height = random.nextInt(500 - 224 + 1) + 224;
+            
             // 创建BufferedImage
             BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
             

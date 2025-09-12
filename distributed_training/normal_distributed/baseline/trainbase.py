@@ -14,7 +14,7 @@ from dds_barrier_verboseBaseline import ddp_barrier_verbose
 
 # ---- 环境参数（也可从命令行传入）
 RANK      = int(os.environ.get("RANK", "0"))
-WORLD     = int(os.environ.get("WORLD_SIZE", "1"))
+WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
 GROUP     = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
 DATA_DIR  = os.environ.get("DATA_DIR", "../data")
@@ -112,7 +112,7 @@ def main():
     stepper = DDPDGCStepper(model, comp, ag, GROUP, RANK, WORLD)
 
     # 数据
-    train_loader, val_loader = make_loaders(DATA_DIR, batch_size=128, device=device, subset_size=12000)
+    train_loader, val_loader = make_loaders(DATA_DIR, batch_size=128, device=device, subset_size=36000)
     loss_fn = nn.CrossEntropyLoss()
 
     # 训练参数

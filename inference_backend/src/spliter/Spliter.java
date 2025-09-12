@@ -41,7 +41,7 @@ public class Spliter {
     private static final long MAX_WAIT_MS           = 6L;
 
     /** 空闲超时：自最近一次活动起超过该时长（毫秒），关闭请求并丢弃迟到 */
-    private static final long IDLE_CLOSE_MS         = 300L;
+    private static final long IDLE_CLOSE_MS         = 30000L;
 
     /** 去重表：保留时长（毫秒） */
     private static final long DEDUP_TTL_MS          = 60_000L;
@@ -89,7 +89,7 @@ public class Spliter {
             // 定时清理去重表
             this.sched.scheduleAtFixedRate(this::cleanupDedup, CLEANUP_INTERVAL_MS, CLEANUP_INTERVAL_MS, TimeUnit.MILLISECONDS);
             // 定时：检查应当 flush 的请求 + 空闲关闭
-            this.sched.scheduleAtFixedRate(this::flushDueRequests, FLUSH_TICK_MS, FLUSH_TICK_MS, TimeUnit.MILLISECONDS);
+            this.sched.scheduleAtFixedRate(this::flushDueRequestsSafe, FLUSH_TICK_MS, FLUSH_TICK_MS, TimeUnit.MILLISECONDS);
             // 定时：清理已关闭的请求状态
             this.sched.scheduleAtFixedRate(this::cleanupReqStates, CLEANUP_INTERVAL_MS, CLEANUP_INTERVAL_MS, TimeUnit.MILLISECONDS);
         }
@@ -114,10 +114,18 @@ public class Spliter {
 
                     // 1) 服务端去重：仅首次处理
                     Long prev = SEEN.putIfAbsent(key, now);
-                    if (prev != null) continue;
+                    if (prev != null){
+                        System.out.printf("[Spliter] dedup drop: req=%s batch=%s task=%s key=%s%n",
+                                reqId, wr.batch_id, r.task_id, key);
+                        continue;
+                    }
+
 
                     // 2) 获取/初始化该 request 的状态
                     ReqState st = REQ.compute(reqId, (k, cur) -> (cur == null) ? new ReqState(reqId, clientId, now) : cur);
+
+                    System.out.printf("[Spliter] recv ok: req=%s batch=%s task=%s buf=%d%n",
+                            reqId, wr.batch_id, r.task_id, st.buffer.size());
 
                     // 已关闭（空闲超时），把后续视为“迟到”并丢弃
                     if (st.closed) continue;
@@ -169,6 +177,12 @@ public class Spliter {
                         }
                     }
                 }
+            }
+        }
+        private void flushDueRequestsSafe() {
+            try { flushDueRequests(); } catch (Throwable t) {
+                System.err.println("[Spliter] flushDueRequests crashed: " + t);
+                t.printStackTrace();
             }
         }
 

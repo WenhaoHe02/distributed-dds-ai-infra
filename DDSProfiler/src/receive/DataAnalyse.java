@@ -142,10 +142,11 @@ public class DataAnalyse {
                 System.err.println("[SAVE_RESULT_ERROR] 保存测试结果失败: " + e.getMessage());
                 e.printStackTrace();
             }
+
+            GlobalResourceManager.getInstance().setTestEnd();
         }
 
         System.out.println("[PROCESS_RESULT_UPDATE] ResultUpdate处理完成: request_id=" + resultUpdate.request_id);
-        GlobalResourceManager.getInstance().setTestEnd();
     }
 
     /**

@@ -5,6 +5,7 @@ public class ResultItem{
     public String task_id = "";// @ID(0)
     public String status = "";// @ID(1)
     public data_structure.Bytes output_blob = new data_structure.Bytes();// @ID(2)
+    public com.zrdds.infrastructure.StringSeq texts = new com.zrdds.infrastructure.StringSeq();// @ID(3)
 
     public ResultItem(){
 
@@ -20,6 +21,9 @@ public class ResultItem{
         this.task_id =  typedSrc.task_id;
         this.status =  typedSrc.status;
         this.output_blob.copy(typedSrc.output_blob);
+        if (typedSrc.texts != null) {
+            this.texts.copy(typedSrc.texts);
+        }
         return this;
     }
 }

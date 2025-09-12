@@ -7,8 +7,8 @@ from torchvision import datasets, transforms
 import DDS_All as dds
 from ZrddsDenseBroadcast import ZrddsDenseBroadcast
 from dgc_stepperBaseline import DDPDGCStepper
-from compressionBaseline import Int8Compressor
-from memoryBaseline import Int8SGDMemory
+from compressionBaseline import Int8CompressorBase
+from memoryBaseline import Int8sgdmemoryBase
 from dgc_evalBaseline import ddp_evaluate_top1
 from dds_barrier_verboseBaseline import ddp_barrier_verbose
 
@@ -107,12 +107,12 @@ def main():
     opt = optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
 
     # Int8 压缩器
-    mem = Int8SGDMemory(momentum=0.9, nesterov=False, gradient_clipping=None)
-    comp = Int8Compressor(memory=mem, warmup_epochs=3)
+    mem = Int8sgdmemoryBase(momentum=0.9, nesterov=False, gradient_clipping=None)
+    comp = Int8CompressorBase(memory=mem, warmup_epochs=3)
     stepper = DDPDGCStepper(model, comp, ag, GROUP, RANK, WORLD)
 
     # 数据
-    train_loader, val_loader = make_loaders(DATA_DIR, batch_size=128, device=device, subset_size=12000)
+    train_loader, val_loader = make_loaders(DATA_DIR, batch_size=128, device=device, subset_size=36000)
     loss_fn = nn.CrossEntropyLoss()
 
     # 训练参数

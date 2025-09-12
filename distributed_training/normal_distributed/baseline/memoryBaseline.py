@@ -19,7 +19,7 @@ class Memory:
     def load_state_dict(state_dict): pass
 
 
-class Int8SGDMemory(Memory):
+class Int8sgdmemoryBase(Memory):
     """ Int8 压缩的动量修正 + 误差反馈缓存 """
 
     def __init__(self, momentum=0.9, nesterov=False, gradient_clipping=None):

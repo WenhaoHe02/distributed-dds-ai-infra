@@ -4,7 +4,7 @@ import torch
 from memoryBaseline import Memory
 
 
-class Int8Compressor:
+class Int8CompressorBase:
     def __init__(self, memory=None, warmup_epochs=-1, warmup_coeff=None):
         self.world_size = 1  # DDP 下请在外部设置为实际 world_size
         self.op = "average"  # 简化：目标语义 = 平均

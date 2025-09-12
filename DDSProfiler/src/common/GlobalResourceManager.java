@@ -18,7 +18,7 @@ public class GlobalResourceManager {
     // 静态内部类持有单例
     private static class Holder {
         private static final GlobalResourceManager INSTANCE =
-                new GlobalResourceManager("data.txt"); // 可以改成配置文件路径
+                new GlobalResourceManager("logs/send.log"); // 使用更合理的默认路径
     }
 
     // 全局访问点

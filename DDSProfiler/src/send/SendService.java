@@ -8,6 +8,8 @@ import com.zrdds.publication.Publisher;
 import common.GlobalResourceManager;
 import data_structure.*;
 import java.io.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -23,7 +25,7 @@ public class SendService {
     private static final String TOPIC_INFER_REQ = "inference/request";
 
     // 模型配置
-    private static final String[] MODELS = { "ocr" };
+    private static final String[] MODELS = { "ocr", "yolo" };
 
     // 优先级配置
     private static final int[] PRIORITIES = { 0, 1, 2 };
@@ -57,7 +59,12 @@ public class SendService {
         if (!logsDir.exists()) {
             logsDir.mkdirs();
         }
-        return "logs/send_" + System.currentTimeMillis() + ".log";
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
+        String timestamp = LocalDateTime.now().format(formatter);
+
+
+        return "logs/send_" + timestamp + ".log";
     }
 
     private DomainParticipant dp;
@@ -79,6 +86,8 @@ public class SendService {
         resourceManager.acquireWriteLock();
         try {
             this.logWriter = new PrintWriter(new FileWriter(LOG_FILE_NAME, true));
+            // 设置全局资源管理器的文件路径
+            resourceManager.setFilePath(LOG_FILE_NAME);
         } finally {
             resourceManager.releaseWriteLock();
         }
@@ -330,7 +339,7 @@ public class SendService {
                     Integer.toUnsignedString(new Random().nextInt(), 36));
 
             sender = new SendService(clientId);
-            sender.resourceManager.setFilePath(LOG_FILE_NAME);
+            System.out.println("Filepath:"+sender.resourceManager.getFilePath());
 
 
             // 发送混合测试请求
@@ -340,6 +349,9 @@ public class SendService {
 
             System.out.println("Requests sent. Press ENTER to exit...");
             System.in.read();
+
+
+
 
         } catch (Exception e) {
             e.printStackTrace();

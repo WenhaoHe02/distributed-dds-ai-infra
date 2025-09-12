@@ -49,12 +49,27 @@ public class DataAnalyse {
         System.out.println("[PROCESS_ITEMS] 开始处理items，items长度: " + resultUpdate.items.length());
         for (int i = 0; i < resultUpdate.items.length(); i++) {
             ResultItem item = resultUpdate.items.get_at(i);
+            
+            // 增加调试信息，检查item是否为null以及task_id是否为空
+            if (item == null) {
+                System.out.println("[ITEM_NULL] 第" + (i+1) + "个item为null");
+                continue;
+            }
+            
+            System.out.println("[ITEM_DEBUG] 处理第" + (i+1) + "个item: task_id=" + item.task_id + ", status=" + item.status);
+            
+            // 检查task_id是否为空
+            if (item.task_id == null || item.task_id.isEmpty()) {
+                System.out.println("[TASK_ID_EMPTY] 第" + (i+1) + "个item的task_id为空");
+                continue;
+            }
+            
             Request.Task task = request.tasks.get(item.task_id);
 
             if (task == null) {
                 //TODO: 异常处理
                 System.out.println("[TASK_NOT_FOUND] 接收到未知task: task_id=" + item.task_id);
-                return;
+                continue; // 改为continue而不是return，继续处理其他task
             }
 
             System.out.println("[TASK_FOUND] 接收到已知task: task_id=" + item.task_id +

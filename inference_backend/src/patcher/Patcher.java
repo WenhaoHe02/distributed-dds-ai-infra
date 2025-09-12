@@ -377,7 +377,7 @@ public class Patcher {
             sub.get_default_datareader_qos(rq);
             rq.reliability.kind = ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS;
             rq.history.kind = HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS;
-            rq.resource_limits.max_samples = 100;
+            rq.history.depth = 100;
 
             // 7) Readers + Listeners
             reqReader = (InferenceRequestDataReader) sub.create_datareader(

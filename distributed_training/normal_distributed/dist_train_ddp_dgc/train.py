@@ -3,6 +3,8 @@
 import logging
 import os, time, torch, torch.nn as nn, torch.optim as optim, torch.nn.functional as F
 import datetime
+
+from sympy.physics.units.definitions.dimension_definitions import information
 from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 
@@ -15,7 +17,7 @@ from dgc_eval import ddp_evaluate_top1   # 用你提供的 ddp_eval.py
 from dds_barrier_verbose import ddp_barrier_verbose
 # ---- 环境参数（也可从命令行传入）
 RANK      = int(os.environ.get("RANK", "0"))
-WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
+WORLD     = int(os.environ.get("WORLD_SIZE", "1"))
 GROUP     = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
 DATA_DIR  = os.environ.get("DATA_DIR", "data")
@@ -42,8 +44,8 @@ def make_loaders(data_dir, batch_size, device, subset_size:int = None):
 
     # ✅ 子集调试（可选）
     if subset_size is not None:
-        train_ds = Subset(train_ds, list(range(subset_size)))
-        val_ds   = Subset(val_ds, list(range(subset_size)))
+        train_ds = Subset(train_ds, list(range(min(subset_size, len(train_ds)))))
+        val_ds = Subset(val_ds, list(range(min(subset_size, len(val_ds)))))
 
     pin = (device.type == "cuda")
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
@@ -112,7 +114,7 @@ def main():
     stepper = DDPDGCStepper(model, comp, ag, GROUP, RANK, WORLD)
 
     # 数据
-    train_loader, val_loader = make_loaders(DATA_DIR, batch_size=128, device=device, subset_size=6000)
+    train_loader, val_loader = make_loaders(DATA_DIR, batch_size=128, device=device, subset_size=36000)
     loss_fn = nn.CrossEntropyLoss()
 
     # 训练参数

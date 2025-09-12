@@ -7,14 +7,14 @@ from torchvision import datasets, transforms
 import DDS_All as dds
 from ZrddsDenseBroadcast import ZrddsDenseBroadcast
 from dgc_stepperBaseline import DDPDGCStepper
-from compressionBaseline import Int8Compressor
-from memoryBaseline import Int8SGDMemory
+from compressionBaseline import Int8CompressorBase
+from memoryBaseline import Int8sgdmemoryBase
 from dgc_evalBaseline import ddp_evaluate_top1
 from dds_barrier_verboseBaseline import ddp_barrier_verbose
 
 # ---- 环境参数（也可从命令行传入）
-RANK      = int(os.environ.get("RANK", "1"))
-WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
+RANK      = int(os.environ.get("RANK", "0"))
+WORLD     = int(os.environ.get("WORLD_SIZE", "1"))
 GROUP     = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
 DATA_DIR  = os.environ.get("DATA_DIR", "../data")
@@ -43,8 +43,8 @@ def make_loaders(data_dir, batch_size, device, subset_size:int = None):
 
     # ✅ 子集调试（可选）
     if subset_size is not None:
-        train_ds = Subset(train_ds, list(range(subset_size)))
-        val_ds   = Subset(val_ds, list(range(subset_size)))
+        train_ds = Subset(train_ds, list(range(min(subset_size, len(train_ds)))))
+        val_ds = Subset(val_ds, list(range(min(subset_size, len(val_ds)))))
 
     pin = (device.type == "cuda")
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
@@ -83,6 +83,7 @@ def wait_for_discovery(ag: ZrddsDenseBroadcast, world:int, timeout_ms:int=10000,
 
 def main():
     # DDS participant
+    t0 = int(time.time() * 1000)
     dp = dds.DomainParticipantFactory.get_instance().create_participant(
         DOMAIN_ID, dds.DOMAINPARTICIPANT_QOS_DEFAULT, None, 0)
     dds.register_all_types(dp)
@@ -106,12 +107,12 @@ def main():
     opt = optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
 
     # Int8 压缩器
-    mem = Int8SGDMemory(momentum=0.9, nesterov=False, gradient_clipping=None)
-    comp = Int8Compressor(memory=mem, warmup_epochs=3)
+    mem = Int8sgdmemoryBase(momentum=0.9, nesterov=False, gradient_clipping=None)
+    comp = Int8CompressorBase(memory=mem, warmup_epochs=3)
     stepper = DDPDGCStepper(model, comp, ag, GROUP, RANK, WORLD)
 
     # 数据
-    train_loader, val_loader = make_loaders(DATA_DIR, batch_size=128, device=device, subset_size=6000)
+    train_loader, val_loader = make_loaders(DATA_DIR, batch_size=128, device=device, subset_size=36000)
     loss_fn = nn.CrossEntropyLoss()
 
     # 训练参数
@@ -151,6 +152,9 @@ def main():
                     print(f"[VAL] step {global_step:05d} acc={acc*100:.2f}% ({g_correct}/{g_total})")
 
             global_step += 1
+
+    t1 = int(time.time() * 1000)
+    print(f"[Controller_v3] round time: {t1 - t0} ms")
 
     dp.delete_contained_entities()
     if RANK == 0: print("[train] done.")

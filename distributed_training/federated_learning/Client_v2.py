@@ -14,7 +14,7 @@ import argparse
 
 # 从train目录导入dist_train_v2模块
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'train_scripts'))
-from dist_train_v2 import train_one_client, load_init_model, Net
+from train_scripts.dist_train_v2 import train_one_client, load_init_model, Net
 
 
 class Client_v2:

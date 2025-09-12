@@ -1,5 +1,6 @@
 # ZrddsDenseBroadcast.py
 # -*- coding: utf-8 -*-
+import logging
 import struct, threading, time, traceback
 import DDS_All as dds
 from collections import defaultdict
@@ -8,7 +9,7 @@ MAGIC = b'AG1\0'
 # < little-endian: magic, gl, nl, part_id, rank, round_id, world, seq, seq_cnt, reserved
 HDR_FMT = "<4sH H H H I H H H H"
 HDR_SIZE = struct.calcsize(HDR_FMT)
-
+logging.basicConfig(level=logging.INFO)
 def pack_frame(group_id, round_id, tensor_name, part_id, rank, world, seq, seq_cnt, payload: bytes):
     g = group_id.encode('utf-8'); n = tensor_name.encode('utf-8')
     hdr = struct.pack(HDR_FMT, MAGIC, len(g), len(n), part_id, rank, round_id, world, seq, seq_cnt, 0)
@@ -29,7 +30,7 @@ class ZrddsDenseBroadcast:
       - 每个 rank 把自己的分片广播出去
       - 每个 rank 同时收集所有 rank 的同名分片，收齐后返回
     """
-    def __init__(self, dp, topic="ddp/allgather_blob", history_depth=10, debug=True):
+    def __init__(self, dp, topic="ddp/allgather_blob", history_depth=4, debug=True):
         self.dp = dp
         self.debug = debug
 
@@ -49,18 +50,18 @@ class ZrddsDenseBroadcast:
         wq.history.kind = dds.HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS
         wq.history.depth = history_depth
         self.writer = self.pub.create_datawriter(self.topic, wq, None, 0)
-
-        # Reader：RELIABLE + KEEP_LAST(32) 更稳（除非你必须保所有历史）
         rq = dds.DataReaderQos()
         self.sub.get_default_datareader_qos(rq)
         rq.reliability.kind = dds.ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS
         rq.history.kind = dds.HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS
-        rq.history.depth = 32
+        rq.history.depth = 4
 
 
         # Buckets / state
         self._buckets = defaultdict(lambda: defaultdict(list))  # key -> rank -> [(seq, bytes)...]
         self._done = {}
+        self._tx_bytes = 0  # 已发送
+        self._rx_bytes = 0  # 已接收
         self._lock = threading.Lock()
 
         # [DEBUG] Reader listener: 打印 subscription matched + 数据到达
@@ -123,6 +124,9 @@ class ZrddsDenseBroadcast:
         """
         处理收到的稠密 int8 数据帧，直接广播收集到 _buckets
         """
+        with self._lock:
+            self._rx_bytes += len(raw)
+
         # 解析帧
         g, r, name, p, rank, world, seq, seq_cnt, payload = unpack_frame(raw)
         key = self._make_key(g, r, name, p)
@@ -130,6 +134,9 @@ class ZrddsDenseBroadcast:
         if self.debug:
             print(f"[dense][recv] key={key} from_rank={rank} len={len(payload)} world={world}")
 
+        logging.info(f"[dense][recv] key={key} from_rank={rank} "
+              f"len={len(payload)} frame={len(raw)} "
+              f"world={world} total_rx={self._rx_bytes}")
         with self._lock:
             # 直接存储 payload，无需分片拼接
             self._buckets[key][rank] = payload
@@ -163,9 +170,13 @@ class ZrddsDenseBroadcast:
             mb.data = body
 
             self.writer.write(mb)
+            with self._lock:
+                self._tx_bytes += len(body)
             if self.debug:
                 print(f"[ag][send] key={key} rank={rank} seg={seq + 1}/{len(chunks)} len={len(ck)}")
-
+            logging.info(f"[ag][send] key={key} rank={rank} "
+                  f"seg={seq + 1}/{len(chunks)} len={len(ck)} "
+                  f"(frame={len(body)}) total_tx={self._tx_bytes}")
         ev = self._done[key]
 
         def await_and_collect(timeout=None):

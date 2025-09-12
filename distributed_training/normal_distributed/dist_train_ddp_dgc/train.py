@@ -19,7 +19,7 @@ WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
 GROUP     = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
 DATA_DIR  = os.environ.get("DATA_DIR", "data")
-
+logging.basicConfig(level=logging.INFO)
 # ---- 模型：自动扁平化 28x28 -> 784
 class MNISTNet(nn.Module):
     def __init__(self, hidden=512, out_dim=10):

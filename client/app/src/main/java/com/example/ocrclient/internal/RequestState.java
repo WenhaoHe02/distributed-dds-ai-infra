@@ -1,5 +1,7 @@
 package com.example.ocrclient.internal;
 
+import android.util.Log;
+
 import com.example.ocrclient.*;
 import com.example.ocrclient.data_structure.ResultItem;
 
@@ -29,6 +31,7 @@ public class RequestState {
      */
     public void addResultItem(ResultItem item) {
         receivedResults.put(item.task_id, item);
+        Log.d("addResultItem", "添加结果项: " + item.task_id + ", item=" + item);
         checkCompletion();
     }
 

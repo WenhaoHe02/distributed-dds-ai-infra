@@ -1,6 +1,8 @@
 # train_ddp_mnist.py
 # -*- coding: utf-8 -*-
+import logging
 import os, time, torch, torch.nn as nn, torch.optim as optim, torch.nn.functional as F
+import datetime
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
@@ -11,7 +13,6 @@ from compression import DGCCompressor
 from memory import DGCSGDMemory
 from dgc_eval import ddp_evaluate_top1   # 用你提供的 ddp_eval.py
 from dds_barrier_verbose import ddp_barrier_verbose
-
 # ---- 环境参数（也可从命令行传入）
 RANK      = int(os.environ.get("RANK", "0"))
 WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
@@ -65,10 +66,10 @@ def wait_for_discovery(ag: ZrddsAllgather, world:int, timeout_ms:int=10000, incl
     while True:
         cw, cr = _get_pub_count(), _get_sub_count()
         if (cw >= target) and (cr >= target):
-            print(f"[ag][discovery] OK: writer={cw}, reader={cr}, target={target}")
+            logging.info(f"[ag][discovery] OK: writer={cw}, reader={cr}, target={target}")
             return
         if cw != last_w or cr != last_r:
-            print(f"[ag][discovery] waiting... writer={cw}, reader={cr}, target={target}")
+            logging.info(f"[ag][discovery] waiting... writer={cw}, reader={cr}, target={target}")
             last_w, last_r = cw, cr
         if time.time() >= deadline:
             raise TimeoutError(f"discovery timeout: writer={cw}, reader={cr}, target={target}, world={world}")
@@ -76,6 +77,9 @@ def wait_for_discovery(ag: ZrddsAllgather, world:int, timeout_ms:int=10000, incl
 
 def main():
     # DDS participant
+    start_time = datetime.datetime.now()
+    if RANK == 0:
+        logging.info(f"[train_scripts] started at {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
     dp = dds.DomainParticipantFactory.get_instance().create_participant(
         DOMAIN_ID, dds.DOMAINPARTICIPANT_QOS_DEFAULT, None, 0)
     dds.register_all_types(dp)
@@ -129,7 +133,7 @@ def main():
             opt.step()
 
             if RANK == 0 and (global_step % 100 == 0):
-                print(f"[rank {RANK}] step {global_step} loss={loss.item():.4f}")
+                logging.info(f"[rank {RANK}] step {global_step} loss={loss.item():.4f}")
 
             # 按 step 做全局评估（Top-1）
             if (global_step + 1) % eval_every == 0:
@@ -141,12 +145,17 @@ def main():
                     name="val.top1", rank=RANK, world=WORLD, timeout_s=100000.0
                 )
                 if RANK == 0:
-                    print(f"[VAL] step {global_step:05d} acc={acc*100:.2f}% ({g_correct}/{g_total})")
+                    logging.info(f"[VAL] step {global_step:05d} acc={acc*100:.2f}% ({g_correct}/{g_total})")
 
             global_step += 1
 
     dp.delete_contained_entities()
-    if RANK == 0: print("[train_scripts] done.")
+    end_time = datetime.datetime.now()
+    if RANK == 0:
+        duration = end_time - start_time
+        logging.info(f"[train_scripts] finished at {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        logging.info(f"[train_scripts] total duration: {str(duration)}")
+    if RANK == 0: logging.info("[train_scripts] done.")
 
 if __name__ == "__main__":
     main()

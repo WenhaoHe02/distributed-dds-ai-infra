@@ -4,17 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e138a3a6-543a-47a0-9f7a-53f13e8e1cca" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../DDSProfiler/DDSProfiler.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/DDSProfiler.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDSProfiler/src/data_structure/ResultItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/src/data_structure/ResultItem.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDSProfiler/src/data_structure/ResultItemTypeSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/src/data_structure/ResultItemTypeSupport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDSProfiler/src/data_structure/WorkerTaskResult.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/src/data_structure/WorkerTaskResult.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDSProfiler/src/data_structure/WorkerTaskResultTypeSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/src/data_structure/WorkerTaskResultTypeSupport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDSProfiler/src/main.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/src/Main.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../DDSProfiler/src/receive/DataAnalyse.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/src/receive/DataAnalyse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/inference_backend.iml" beforeDir="false" afterPath="$PROJECT_DIR$/inference_backend.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/DDS_All.pyd" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/DDS_All.pyd" afterDir="false" />
-    </list>
+    <list default="true" id="e138a3a6-543a-47a0-9f7a-53f13e8e1cca" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -25,7 +15,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "git-widget-placeholder": "Merging main",
+    "git-widget-placeholder": "main",
     "node.js.selected.package.tslint": "(autodetect)"
   }
 }]]></component>

@@ -5,7 +5,7 @@
   "rounds": 3,
 
   "python_exe": "C:/Users/32137/.conda/envs/dds/python.exe",
-  "eval_script": "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/distributed_training/train_scripts/evaluate.py",
+  "eval_script": "E:\\distributed-dds-ai-serving-system\\distributed_training\\train_scripts\\evaluate.py",
   "data_dir": "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/data",
   "batch_size": 64
 }

@@ -11,10 +11,10 @@ import java.util.concurrent.CountDownLatch;
 public class Main {
 
     // 多线程配置
-    private static final int DEFAULT_THREAD_COUNT = 5;
+    private static final int DEFAULT_THREAD_COUNT = 2;
     private static final int DEFAULT_REQUEST_COUNT_PER_THREAD = 5;
-    private static final int DEFAULT_MIN_TASKS_PER_REQUEST = 1;
-    private static final int DEFAULT_MAX_TASKS_PER_REQUEST = 10;
+    private static final int DEFAULT_MIN_TASKS_PER_REQUEST = 2;
+    private static final int DEFAULT_MAX_TASKS_PER_REQUEST = 2;
     private static final int DEFAULT_MIN_REQUEST_INTERVAL_MS = 50;
     private static final int DEFAULT_MAX_REQUEST_INTERVAL_MS = 500;
 
@@ -33,11 +33,14 @@ public class Main {
         // 1. 初始化接收端 ReceiveService
 
         System.out.println("[MAIN] 初始化接收端...");
+        System.out.println(resourceManager.getTestEnd());
         ReceiveService receiveService = new ReceiveService();
         receiveService.initDDS(); // 内部挂载 ListenerDataReaderListener
 
 
+
         // 2. 初始化多线程发送端
+
 
         System.out.println("[MAIN] 初始化多线程发送端...");
         List<Thread> sendThreads = new ArrayList<>();
@@ -96,11 +99,11 @@ public class Main {
 
             System.out.println("[MAIN] 所有发送线程已完成");
             System.out.println("[MAIN] 接收端继续运行，等待数据...");
+            System.out.println(resourceManager.getTestEnd());
             while(!resourceManager.getTestEnd());
 
-//            while( true);
+            System.out.println("[MAIN] 测试完成，准备清理资源");
 
-            System.out.println("[MAIN] 所有任务完成，退出进程");
 
         } catch (InterruptedException e) {
             e.printStackTrace();

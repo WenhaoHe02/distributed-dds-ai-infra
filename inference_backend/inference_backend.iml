@@ -10,13 +10,15 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" exported="" name="ZRDDS" level="project" />
     <orderEntry type="module-library" exported="">
       <library>
         <CLASSES>
-          <root url="jar://C:/Program Files (x86)/ZRDDS/ZRDDS-2.4.4/lib/ZRDDS.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../ZRDDS/ZRDDS-2.4.4/lib/ZRDDS.jar!/" />
         </CLASSES>
         <JAVADOC />
+        <NATIVE>
+          <root url="file://$MODULE_DIR$/../../ZRDDS/ZRDDS-2.4.4/lib" />
+        </NATIVE>
         <SOURCES />
       </library>
     </orderEntry>

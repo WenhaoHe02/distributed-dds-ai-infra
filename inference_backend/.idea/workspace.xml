@@ -4,14 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e138a3a6-543a-47a0-9f7a-53f13e8e1cca" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/data_structure/ResultItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/data_structure/ResultItem.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/spliter/Spliter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/spliter/Spliter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/DDS_All.pyd" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/DDS_All.pyd" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/Worker.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/woker.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/woker.py" afterDir="false" />
-    </list>
+    <list default="true" id="e138a3a6-543a-47a0-9f7a-53f13e8e1cca" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

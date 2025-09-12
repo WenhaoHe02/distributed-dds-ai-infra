@@ -78,7 +78,7 @@ class ControllerV3:
         try:
             for i in range(cfg.rounds):
                 # 与 Java 示例一致：subset=60000, epochs=5, lr=0.01, seed=12345+i
-                ctrl.run_training_round(subset_size=60000, epochs=5, lr=0.01, seed=12345 + i)
+                ctrl.run_training_round(subset_size=6000, epochs=5, lr=0.01, seed=12345 + i)
         finally:
             try:
                 ctrl.shutdown()

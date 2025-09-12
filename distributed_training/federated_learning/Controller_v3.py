@@ -190,35 +190,10 @@ class ControllerV3:
         if not self.client_update_reader:
             raise RuntimeError("create ClientUpdate reader failed")
 
+        self.client_update_listener=ClientUpdateListener(self)
         # 监听器
-        class ClientUpdateListener(dds.DataReaderListener):
-            def __init__(self, outer: "ControllerV3"):
-                super().__init__()
-                self.outer = outer
-
-            def on_data_available(self, reader):
-                try:
-                    samples = dds.ClientUpdateSeq()
-                    infos = dds.SampleInfoSeq()
-                    reader.take(
-                        samples, infos, -1,
-                        dds.ANY_SAMPLE_STATE, dds.ANY_VIEW_STATE, dds.ANY_INSTANCE_STATE
-                    )
-                    try:
-                        for i in range(samples.length()):
-                            if not infos.get_at(i).valid_data:
-                                continue
-                            cu = samples.get_at(i)
-                            self.outer._on_update(cu)
-                        # end for
-                    finally:
-                        reader.return_loan(samples, infos)
-                except Exception:
-                    import traceback
-                    traceback.print_exc()
-
         self.client_update_reader.set_listener(
-            ClientUpdateListener(self), dds.StatusKind.DATA_AVAILABLE_STATUS
+            self.client_update_listener, dds.StatusKind.DATA_AVAILABLE_STATUS
         )
 
         self._wait_reader_matched(self.client_update_reader, 1, 5000)
@@ -557,6 +532,31 @@ class ControllerV3:
         print("[Controller_v3] shutdown.")
         self._quit.set()
 
+class ClientUpdateListener(dds.DataReaderListener):
+    def __init__(self, outer: "ControllerV3"):
+        super().__init__()
+        self.outer = outer
+
+    def on_data_available(self, reader):
+        try:
+            samples = dds.ClientUpdateSeq()
+            infos = dds.SampleInfoSeq()
+            reader.take(
+                samples, infos, -1,
+                dds.ANY_SAMPLE_STATE, dds.ANY_VIEW_STATE, dds.ANY_INSTANCE_STATE
+            )
+            try:
+                for i in range(samples.length()):
+                    if not infos.get_at(i).valid_data:
+                        continue
+                    cu = samples.get_at(i)
+                    self.outer._on_update(cu)
+                # end for
+            finally:
+                reader.return_loan(samples, infos)
+        except Exception:
+            import traceback
+            traceback.print_exc()
 
 if __name__ == "__main__":
     ControllerV3.main(sys.argv[1:])

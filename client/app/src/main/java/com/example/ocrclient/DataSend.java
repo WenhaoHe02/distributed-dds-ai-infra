@@ -6,9 +6,6 @@ import android.provider.Settings;
 import android.util.Log;
 
 import com.example.ocrclient.data_structure.*;
-import com.example.ocrclient.data_structure.InferenceRequest;
-import com.example.ocrclient.data_structure.SingleTask;
-import com.example.ocrclient.data_structure.SingleTaskSeq;
 import com.example.ocrclient.internal.RequestState;
 import com.example.ocrclient.util.ImageUtils;
 
@@ -23,8 +20,8 @@ public class DataSend {
     private final Context context;
     private final String clientId;
     private DDSSendService ddsService;
-    private static final String MODEL_ID_1 = "model_0";
-    private static final String MODEL_ID_2 = "model_0";
+    private static final String MODEL_ID_1 = "ocr";
+    private static final String MODEL_ID_2 = "yolo";
 
     public DataSend(Context context) {
         this.context = context;
@@ -75,7 +72,7 @@ public class DataSend {
 
             // 将图片转换为字节数组并存储到input_blob中
             byte[] imageBytes = uriToByteArray(ocrUris.get(i));
-            task.payload.from_array(imageBytes, imageBytes.length);
+            task.payload.value.from_array(imageBytes, imageBytes.length);
 
             Log.d(TAG, "OCR任务 " + i + " 创建完成，任务ID: " + task.task_id + "，图片大小: " + imageBytes.length + " 字节");
 
@@ -93,7 +90,7 @@ public class DataSend {
 
             // 将图片转换为字节数组并存储到input_blob中
             byte[] imageBytes = uriToByteArray(detectUris.get(i));
-            task.payload.from_array(imageBytes, imageBytes.length);
+            task.payload.value.from_array(imageBytes, imageBytes.length);
 
             Log.d(TAG, "检测任务 " + i + " 创建完成，任务ID: " + task.task_id + "，图片大小: " + imageBytes.length + " 字节");
 

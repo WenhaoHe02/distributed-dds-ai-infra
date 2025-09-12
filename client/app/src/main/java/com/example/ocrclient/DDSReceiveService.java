@@ -2,7 +2,7 @@ package com.example.ocrclient;
 
 import android.util.Log;
 
-import com.example.ocrclient.data_structure.ResultItem;
+import com.example.ocrclient.data_structure.*;
 import com.example.ocrclient.data_structure.ResultUpdate;
 import com.example.ocrclient.data_structure.ResultUpdateDataReader;
 import com.example.ocrclient.data_structure.ResultUpdateSeq;

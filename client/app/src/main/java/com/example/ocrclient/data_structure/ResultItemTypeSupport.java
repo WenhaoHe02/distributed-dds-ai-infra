@@ -60,10 +60,16 @@ public class ResultItemTypeSupport extends TypeSupport {
         else{
             System.out.println("sample.status: null");
         }
-        int output_blobTmpLen = sample.output_blob.length();
-        System.out.println("sample.output_blob.length():" +output_blobTmpLen);
-        for (int i = 0; i < output_blobTmpLen; ++i){
-            System.out.println("sample.output_blob.get_at(" + i + "):" + sample.output_blob.get_at(i));
+        BytesTypeSupport.get_instance().print_sample(sample.output_blob);
+        int textsTmpLen = sample.texts.length();
+        System.out.println("sample.texts.length():" +textsTmpLen);
+        for (int i = 0; i < textsTmpLen; ++i){
+            if (sample.texts.get_at(i) != null){
+                System.out.println("sample.texts.get_at(" + i + "):" + sample.texts.get_at(i));
+            }
+            else{
+                System.out.println("sample.texts.get_at(" + i + "): null");
+            }
         }
         return 0;
     }
@@ -73,11 +79,11 @@ public class ResultItemTypeSupport extends TypeSupport {
     }
 
     public int get_max_sizeI(){
-        return 779;
+        return 0xffffffff;
     }
 
     public int get_max_key_sizeI(){
-        return 779;
+        return 0xffffffff;
     }
 
     public boolean has_keyI(){
@@ -105,10 +111,15 @@ public class ResultItemTypeSupport extends TypeSupport {
 
         offset += CDRSerializer.get_string_size(sample.status == null ? 0 : sample.status.getBytes().length, offset);
 
+        offset += BytesTypeSupport.get_instance().get_sizeI(sample.output_blob, cdr, offset);
+
         offset += CDRSerializer.get_untype_size(4, offset);
-        int output_blobLen = sample.output_blob.length();
-        if (output_blobLen != 0){
-            offset += 1 * output_blobLen;
+        int textsLen = sample.texts.length();
+        if (textsLen != 0){
+            for(int i = 0; i<sample.texts.length(); ++i)
+            {
+                offset += CDRSerializer.get_string_size(sample.texts.get_at(i).getBytes().length,offset);
+            }
         }
 
         return offset - initialAlignment;
@@ -127,13 +138,18 @@ public class ResultItemTypeSupport extends TypeSupport {
             return -2;
         }
 
-        if (!CDRSerializer.put_int(cdr, sample.output_blob.length())){
-            System.out.println("serialize length of sample.output_blob failed.");
+        if (BytesTypeSupport.get_instance().serializeI(sample.output_blob,cdr) < 0){
+            System.out.println("serialize sample.output_blobfailed.");
             return -2;
         }
-        if (sample.output_blob.length() != 0){
-            if (!CDRSerializer.put_byte_array(cdr, sample.output_blob.get_contiguous_buffer(), sample.output_blob.length())){
-                System.out.println("serialize sample.output_blob failed.");
+
+        if (!CDRSerializer.put_int(cdr, sample.texts.length())){
+            System.out.println("serialize length of sample.texts failed.");
+            return -2;
+        }
+        for (int i = 0; i < sample.texts.length(); ++i){
+            if (!CDRSerializer.put_string(cdr, sample.texts.get_at(i), sample.texts.get_at(i) == null ? 0 : sample.texts.get_at(i).length())){
+                System.out.println("serialize sample.texts failed.");
                 return -2;
             }
         }
@@ -155,17 +171,22 @@ public class ResultItemTypeSupport extends TypeSupport {
             return -3;
         }
 
-        if (!CDRDeserializer.get_int_array(cdr, tmp_int_obj, 1)){
-            System.out.println("deserialize length of sample.output_blob failed.");
-            return -2;
-        }
-        if (!sample.output_blob.ensure_length(tmp_int_obj[0], tmp_int_obj[0])){
-            System.out.println("Set maxiumum member sample.output_blob failed.");
-            return -3;
-        }
-        if (!CDRDeserializer.get_byte_array(cdr, sample.output_blob.get_contiguous_buffer(), sample.output_blob.length())){
+        if (BytesTypeSupport.get_instance().deserializeI(sample.output_blob, cdr) < 0){
             System.out.println("deserialize sample.output_blob failed.");
             return -2;
+        }
+
+        if (!CDRDeserializer.get_int_array(cdr, tmp_int_obj, 1)){
+            System.out.println("deserialize length of sample.texts failed.");
+            return -2;
+        }
+        if (!sample.texts.ensure_length(tmp_int_obj[0], tmp_int_obj[0])){
+            System.out.println("Set maxiumum member sample.texts failed.");
+            return -3;
+        }
+        for(int i =0 ;i < sample.texts.length() ;++i)
+        {
+            sample.texts.set_at(i, CDRDeserializer.get_string(cdr));
         }
 
         return 0;
@@ -203,7 +224,7 @@ public class ResultItemTypeSupport extends TypeSupport {
         TypeCodeImpl memberTc = new TypeCodeImpl();
         TypeCodeImpl eleTc = new TypeCodeImpl();
 
-        memberTc = factory.create_string_TC(255);
+        memberTc = factory.create_string_TC(0xffffffff);
         if (memberTc == null){
             System.out.println("Get Member task_id TypeCode failed.");
             factory.delete_TC(s_typeCode);
@@ -225,7 +246,7 @@ public class ResultItemTypeSupport extends TypeSupport {
             return null;
         }
 
-        memberTc = factory.create_string_TC(255);
+        memberTc = factory.create_string_TC(0xffffffff);
         if (memberTc == null){
             System.out.println("Get Member status TypeCode failed.");
             factory.delete_TC(s_typeCode);
@@ -247,11 +268,7 @@ public class ResultItemTypeSupport extends TypeSupport {
             return null;
         }
 
-        memberTc = factory.get_primitive_TC(TypeCodeKind.DDS_TK_UCHAR);
-        if (memberTc != null)
-        {
-            memberTc = factory.create_sequence_TC(255, memberTc);
-        }
+        memberTc = (TypeCodeImpl)BytesTypeSupport.get_instance().get_typecode();
         if (memberTc == null){
             System.out.println("Get Member output_blob TypeCode failed.");
             factory.delete_TC(s_typeCode);
@@ -262,6 +279,31 @@ public class ResultItemTypeSupport extends TypeSupport {
             2,
             2,
             "output_blob",
+            memberTc,
+            false,
+            false);
+        if (ret < 0)
+        {
+            factory.delete_TC(s_typeCode);
+            s_typeCode = null;
+            return null;
+        }
+
+        memberTc = factory.create_string_TC(0xffffffff);
+        if (memberTc != null)
+        {
+            memberTc = factory.create_sequence_TC(0xffffffff, memberTc);
+        }
+        if (memberTc == null){
+            System.out.println("Get Member texts TypeCode failed.");
+            factory.delete_TC(s_typeCode);
+            s_typeCode = null;
+            return null;
+        }
+        ret = s_typeCode.add_member_to_struct(
+            3,
+            3,
+            "texts",
             memberTc,
             false,
             false);

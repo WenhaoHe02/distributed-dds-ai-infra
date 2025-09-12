@@ -1,11 +1,12 @@
-import java.io.*;
-import java.util.concurrent.atomic.AtomicInteger;
+package common;
+
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
 public class GlobalResourceManager {
     private volatile String filePath;
     private volatile int requestCount = 0;
+    private volatile boolean isTestEnd = false;
     private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
     private final ReentrantReadWriteLock requestCountLock = new ReentrantReadWriteLock();
 
@@ -60,6 +61,14 @@ public class GlobalResourceManager {
         } finally {
             requestCountLock.writeLock().unlock();
         }
+    }
+
+    public void setTestEnd(){
+        isTestEnd = true;
+    }
+
+    public boolean getTestEnd(){
+        return isTestEnd;
     }
 
     // ======= 文件访问锁 =======

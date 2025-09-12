@@ -1,6 +1,7 @@
 package receive;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import common.GlobalResourceManager;
 import inner.Request;
 import inner.SendLog;
 import utils.JsonUtil;
@@ -14,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 public class ReadSendLog {
-    private static final String SEND_LOG_PATH = "./logs/send.log";
+    private String sendLogPath;
 
     private long filePointer = 0;  // 上次读取的位置
 
@@ -28,7 +29,22 @@ public class ReadSendLog {
      * 增量读取新日志，每行一个完整的 JSON
      */
     public void updateRead() {
-        try (RandomAccessFile raf = new RandomAccessFile(SEND_LOG_PATH, "r")) {
+        // 获取全局资源
+        GlobalResourceManager globalResourceManager = GlobalResourceManager.getInstance();
+
+        // 获取日志文件地址
+        if (sendLogPath == null || sendLogPath.isEmpty()) {
+            sendLogPath = globalResourceManager.getFilePath();
+            // 如果获取到的文件地址为空，直接退出
+            if (sendLogPath == null || sendLogPath.isEmpty()) {
+                System.out.println("未指定日志文件路径");
+                return;
+            }
+        }
+
+        //获取读锁
+        globalResourceManager.acquireReadLock();
+        try (RandomAccessFile raf = new RandomAccessFile(sendLogPath, "r")) {
             raf.seek(filePointer);  // 从上次结束位置开始读
 
             String line;
@@ -47,50 +63,33 @@ public class ReadSendLog {
                     // 存入 Map
                     Request request = new Request(sendLog);
                     requests.put(sendLog.request_id + ":" + sendLog.client_id, request);
-                    //System.out.println("成功读取JSON对象");
                 } catch (Exception ex) {
                     System.err.println("解析JSON失败: " + ex.getMessage());
                 }
             }
-
             // 更新文件指针，下次继续从这里读
             filePointer = raf.getFilePointer();
         } catch (FileNotFoundException e) {
-            System.err.println("日志文件未找到: " + SEND_LOG_PATH);
+            System.err.println("日志文件未找到: " + sendLogPath);
         } catch (IOException e) {
             System.err.println("读取日志文件失败: " + e.getMessage());
+        } finally {
+            // 释放读锁
+            globalResourceManager.releaseReadLock();
         }
     }
 
     /**
      * 根据 request_id 获取 Request
      */
-    public Request getSendLog(String requestId, String clientId) {
+    public Request getRequest(String requestId, String clientId) {
         return requests.get(requestId + ":" + clientId);
     }
 
     /**
-     * 清空已存储的 SendLog
+     * 获取所有请求列表
+     * @return 请求列表
      */
-    public void clearLogs() {
-        sendLogs.clear();
-    }
-
-    /**
-     * 根据 requestId 和 clientId 删除 SendLog
-     */
-    public void deleteSendLog(String requestId, String clientId) {
-        sendLogs.remove(requestId + ":" + clientId);
-    }
-
-    /**
-     * 判断整个测试是否结束
-     * （暂时通过看SendLogs是否为空来判断该次测试是否结束）
-     */
-    public boolean isTestEnd() {
-        return sendLogs.isEmpty();
-    }
-
     public List<Request> getRequests() {
         return new ArrayList<>(requests.values());
     }

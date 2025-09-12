@@ -1,5 +1,6 @@
+package send;
+
 import com.zrdds.infrastructure.*;
-import com.zrdds.simpleinterface.DDSIF;
 import com.zrdds.domain.DomainParticipant;
 import com.zrdds.domain.DomainParticipantFactory;
 import com.zrdds.topic.Topic;
@@ -9,7 +10,7 @@ import data_structure.*;
 import java.io.*;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
-import data_structure.*;
+
 import data_structure.Bytes;
 import java.util.ArrayList;
 import java.util.List;
@@ -85,6 +86,7 @@ public class SendService {
         // 初始化DDS
         initDDS();
     }
+
     
     // 带配置参数的构造函数
     public SendService(String clientId, 
@@ -207,9 +209,9 @@ public class SendService {
         }
 
         if (rc != ReturnCode_t.RETCODE_OK) {
-            System.err.println("[SendService] request write failed, rc=" + rc);
+            System.err.println("[send.SendService] request write failed, rc=" + rc);
         } else {
-            System.out.println("[SendService] Sent request " + requestIdWithPriority +
+            System.out.println("[send.SendService] Sent request " + requestIdWithPriority +
                     " with " + taskCount + " tasks" + " with priority " + priority);
         }
     }
@@ -314,9 +316,6 @@ public class SendService {
                 dp.delete_contained_entities();
                 dp = null;
             }
-            
-            // 输出全局计数器的最终值以验证正确性
-            System.out.println("[SendService] Final global request count: " + resourceManager.getRequestCount());
 
         } catch (Exception e) {
             System.err.println("Error during resource cleanup: " + e.getMessage());

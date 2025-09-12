@@ -83,6 +83,7 @@ def wait_for_discovery(ag: ZrddsDenseBroadcast, world:int, timeout_ms:int=10000,
 
 def main():
     # DDS participant
+    t0 = int(time.time() * 1000)
     dp = dds.DomainParticipantFactory.get_instance().create_participant(
         DOMAIN_ID, dds.DOMAINPARTICIPANT_QOS_DEFAULT, None, 0)
     dds.register_all_types(dp)
@@ -151,6 +152,9 @@ def main():
                     print(f"[VAL] step {global_step:05d} acc={acc*100:.2f}% ({g_correct}/{g_total})")
 
             global_step += 1
+
+    t1 = int(time.time() * 1000)
+    print(f"[Controller_v3] round time: {t1 - t0} ms")
 
     dp.delete_contained_entities()
     if RANK == 0: print("[train] done.")

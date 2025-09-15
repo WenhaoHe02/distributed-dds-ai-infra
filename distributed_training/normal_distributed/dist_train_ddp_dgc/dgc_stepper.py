@@ -5,6 +5,9 @@ import logging
 import numpy as np
 import torch
 import time
+
+from fontTools.misc.plistlib import totree
+
 logging.basicConfig(level=logging.INFO)
 class DDPDGCStepper:
     """
@@ -83,6 +86,7 @@ class DDPDGCStepper:
 
     def begin_step(self, step_id: int):
         """注意：应在 loss.backward() 之后调用，保证 p.grad 已就绪"""
+        total_t=0.0
         self._cur_step = step_id
         self._last_dds_wait_ms = 0.0
 
@@ -103,11 +107,13 @@ class DDPDGCStepper:
             compressed, ctx = self.comp.compress(p.grad.data, name)
             self._ctx.append((name, ctx, p))
 
+
             if isinstance(compressed, (tuple, list)):  # 稀疏(values, indices)
                 values, indices = compressed
                 v_bytes = self._to_bytes(values.view(-1), self.dtype_val)
                 i_bytes = self._to_bytes(indices.view(-1), self.dtype_idx)
 
+                start_time = time.perf_counter()
                 h0 = self.comm.allgather_async(group_id=self.group, round_id=step_id,
                                                name=f"{name}.t0", part_id=0,
                                                rank=self.rank, world=self.world,
@@ -117,23 +123,35 @@ class DDPDGCStepper:
                                                rank=self.rank, world=self.world,
                                                payload=i_bytes)
                 self._handles.append((name, True, (h0, h1)))
+                end_time = time.perf_counter()
+                total_t += end_time - start_time
             else:  # 稠密
                 d_bytes = self._to_bytes(compressed.view(-1), self.dtype_val)
+                start_time = time.perf_counter()
                 h = self.comm.allgather_async(group_id=self.group, round_id=step_id,
                                               name=f"{name}.dense", part_id=0,
                                               rank=self.rank, world=self.world,
                                               payload=d_bytes)
                 self._handles.append((name, False, (h,)))
+                end_time = time.perf_counter()
+                total_t += end_time - start_time
+
+        print(f"[Timing] begin_step step_id={step_id} transmission took {total_t:.6f} seconds")
+        return total_t
 
     def finish_and_apply(self, timeout_s=10000.0):
+        total_t=0.0
         device = next(self.model.parameters()).device
 
         # 等待通信 + 解压聚合
         for (name, is_sparse, hs), (_, ctx, p) in zip(self._handles, self._ctx):
             if is_sparse:
                 # 仅等待阶段计时
+                pre_time = time.perf_counter()
                 vals_lists = self._await_handle(hs[0], timeout_s)
                 idxs_lists = self._await_handle(hs[1], timeout_s)
+                cur_time=time.perf_counter()
+                total_t+=cur_time-pre_time
 
                 # 解压：一次性拼接再 index_put，避免多次 index_put
                 numel = ctx[1]; shape = ctx[2]
@@ -153,7 +171,11 @@ class DDPDGCStepper:
                 p.grad.data = dense.view(shape)
             else:
                 # 稠密直接求和平均
+                pre_time = time.perf_counter()
                 dense_lists = self._await_handle(hs[0], timeout_s)
+                cur_time = time.perf_counter()
+                total_t += cur_time - pre_time
+
                 acc = None
                 for vb in dense_lists:
                     v = self._from_bytes(vb, self.dtype_val, device).to(torch.float32)
@@ -186,6 +208,8 @@ class DDPDGCStepper:
             # 重置窗口
             self._win_ms = self._win_tx = self._win_rx = 0
             self._win_steps = 0
+        print(f"[Timing]  finish_and_apply transmission took {total_t:.6f} seconds")
+        return total_t
 
     def report_and_reset(self, tag="epoch"):
         """在 epoch 末调用：打印窗口内的汇总并清零窗口计数"""

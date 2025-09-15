@@ -630,7 +630,7 @@ def generate_random_id() -> str:
 
 def main():
     """Main function"""
-    worker_id = sys_or_env("worker.id", "WORKER_ID", "worker1_cpu")
+    worker_id = sys_or_env("worker.id", "WORKER_ID", "worker1_gpu")
     model_id = sys_or_env("worker.model", "WORKER_MODEL", "yolo")
 
     worker = None

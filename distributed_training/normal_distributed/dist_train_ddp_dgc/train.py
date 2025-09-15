@@ -16,7 +16,7 @@ from memory import DGCSGDMemory
 from dgc_eval import ddp_evaluate_top1   # 用你提供的 ddp_eval.py
 from dds_barrier_verbose import ddp_barrier_verbose
 # ---- 环境参数（也可从命令行传入）
-RANK      = int(os.environ.get("RANK", "0"))
+RANK      = int(os.environ.get("RANK", "1"))
 WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
 GROUP     = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
@@ -123,6 +123,8 @@ def main():
     EVAL_ROUND_OFFSET = 1_000_000_000
 
     global_step = 0
+
+    total_time=0.0
     for ep in range(epochs):
         comp.warmup_compress_ratio(ep)
         for xb, yb in train_loader:
@@ -133,9 +135,9 @@ def main():
             logits = model(xb)
             loss = loss_fn(logits, yb)
             loss.backward()
-            stepper.begin_step(global_step)
+            total_time+=stepper.begin_step(global_step)
 
-            stepper.finish_and_apply(timeout_s=100000)
+            total_time+=stepper.finish_and_apply(timeout_s=100000)
             opt.step()
             if RANK == 0 and (global_step % 100 == 0):
                 logging.info(f"[rank {RANK}] step {global_step} loss={loss.item():.4f}")
@@ -161,6 +163,7 @@ def main():
         logging.info(f"[train_scripts] finished at {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
         logging.info(f"[train_scripts] total duration: {str(duration)}")
     if RANK == 0: logging.info("[train_scripts] done.")
+    print(f"[train] transition time: {total_time:8f} s")
 
 if __name__ == "__main__":
     main()

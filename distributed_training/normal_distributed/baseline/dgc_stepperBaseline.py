@@ -1,3 +1,4 @@
+import time
 
 import numpy as np
 import torch
@@ -46,6 +47,7 @@ class DDPDGCStepperBase:
         """压缩并发送每个梯度。必须在 loss.backward() 后调用"""
         self._handles.clear()
         self._ctx_map.clear()
+        total_t=0.0
 
         for name, p in self.named_params:
             if p.grad is None:
@@ -69,6 +71,7 @@ class DDPDGCStepperBase:
 
             payload = self._pack_data_with_scale(val_int8, scale, self.dtype_val, self.dtype_scale)
 
+            start_time = time.perf_counter()
             # 异步发送
             h = self.comm.allgather_async(
                 group_id=self.group,
@@ -81,12 +84,19 @@ class DDPDGCStepperBase:
                 max_chunk=1 << 20
             )
             self._handles.append((name, h))
+            end_time = time.perf_counter()
+            total_t+=end_time-start_time
+
             print(f"[Dense] Sent {name}: {payload.__sizeof__()} bytes, numel={numel}, scale={scale:.6f}")
+
+        print(f"[Timing] begin_step step_id={step_id} transmission took {total_t:.6f} seconds")
+        return total_t
 
     def finish_and_apply(self, timeout_s=10000.0):
         """等待接收所有rank的梯度 -> 反量化 -> 累加平均 -> 应用回 p.grad"""
         device = next(self.model.parameters()).device
         timeout_ms = int(timeout_s * 1000)
+        total_t=0.0
 
         for name, h in self._handles:
             if name not in self._ctx_map:
@@ -94,6 +104,7 @@ class DDPDGCStepperBase:
 
             numel, shape, orig_dtype = self._ctx_map[name]
 
+            start_time = time.perf_counter()
             # allgather_async 返回 (key, await_fn)
             if isinstance(h, (tuple, list)) and len(h) == 2 and callable(h[1]):
                 _, await_fn = h
@@ -102,6 +113,8 @@ class DDPDGCStepperBase:
                 dense_lists = h(timeout_ms)
             else:
                 dense_lists = h
+            end_time = time.perf_counter()
+            total_t+=end_time-start_time
 
             accumulated = None
             per_rank_lengths = []
@@ -135,3 +148,6 @@ class DDPDGCStepperBase:
                 raise RuntimeError(
                     f"[finish] cannot view accumulated ({accumulated.numel()}) as {shape} for param {name}, per_rank_lengths={per_rank_lengths}"
                 ) from e
+
+        print(f"[Timing]  finish_and_apply transmission took {total_t:.6f} seconds")
+        return total_t

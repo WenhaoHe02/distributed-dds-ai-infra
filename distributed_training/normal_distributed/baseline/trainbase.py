@@ -1,6 +1,8 @@
 # train_ddp_mnist_int8.py
 # -*- coding: utf-8 -*-
 import os, time, torch, torch.nn as nn, torch.optim as optim, torch.nn.functional as F
+
+from sympy import print_tree
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
@@ -83,7 +85,7 @@ def wait_for_discovery(ag: ZrddsDenseBroadcast, world:int, timeout_ms:int=10000,
 
 def main():
     # DDS participant
-    t0 = int(time.time() * 1000)
+    t0 = int(time.time())
     dp = dds.DomainParticipantFactory.get_instance().create_participant(
         DOMAIN_ID, dds.DOMAINPARTICIPANT_QOS_DEFAULT, None, 0)
     dds.register_all_types(dp)
@@ -117,6 +119,8 @@ def main():
     eval_every = 100
     EVAL_ROUND_OFFSET = 1_000_000_000
 
+    total_time=0.0
+
     global_step = 0
     for ep in range(epochs):
         for xb, yb in train_loader:
@@ -129,8 +133,8 @@ def main():
             loss = loss_fn(logits, yb)
             loss.backward()
 
-            stepper.begin_step(global_step)  # ✅ 放在 backward 之后
-            stepper.finish_and_apply(timeout_s=100000)
+            total_time+=stepper.begin_step(global_step)  # ✅ 放在 backward 之后
+            total_time+=stepper.finish_and_apply(timeout_s=100000)
             opt.step()
 
             if RANK == 0 and (global_step % 100 == 0):
@@ -150,8 +154,9 @@ def main():
 
             global_step += 1
 
-    t1 = int(time.time() * 1000)
-    print(f"[Controller_v3] round time: {t1 - t0} ms")
+    t1 = int(time.time())
+    print(f"[trainBase] round time: {t1 - t0:8f} s")
+    print(f"[trainBase] transition time: {total_time:8f} s")
 
     dp.delete_contained_entities()
     if RANK == 0: print("[train] done.")

@@ -86,9 +86,9 @@ def wait_for_discovery(ag: ZrddsAllgather, world:int, timeout_ms:int=10000, incl
 
 def main():
     # DDS participant
-    start_time = datetime.datetime.now()
+    script_start = datetime.datetime.now()
     if RANK == 0:
-        logging.info(f"[train_scripts] started at {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        logging.info(f"[train_scripts] started at {script_start.strftime('%Y-%m-%d %H:%M:%S')}")
     dp = dds.DomainParticipantFactory.get_instance().create_participant(
         DOMAIN_ID, dds.DOMAINPARTICIPANT_QOS_DEFAULT, None, 0)
     dds.register_all_types(dp)
@@ -127,10 +127,16 @@ def main():
 
     global_step = 0
 
-    # 纯通信等待总时间（毫秒）
-    total_wait_ms = 0.0
-    max_wait_ms = 0.0
+    # ===== 计时统计 =====
+    # 1) 纯通信等待（毫秒累加，来自 finish_and_apply 的 wait-only）
+    comm_wait_total_ms = 0.0
+    comm_wait_max_ms = 0.0
+    # 2) 通信阶段墙钟时间（秒，覆盖 begin_step+finish_and_apply；包含压缩/解压/收集合并）
+    comm_phase_wall_total_s = 0.0
+    # 3) 训练步数
     n_steps = 0
+
+    train_wall_t0 = time.perf_counter()
 
     for ep in range(epochs):
         comp.warmup_compress_ratio(ep)
@@ -144,10 +150,13 @@ def main():
             loss.backward()
 
             # 正确顺序：backward -> begin_step -> finish_and_apply -> optimizer.step
+            phase_t0 = time.perf_counter()
             stepper.begin_step(global_step)
-            wait_ms = stepper.finish_and_apply(timeout_s=100000.0)  # 返回纯通信等待时间（毫秒）
-            total_wait_ms += wait_ms
-            if wait_ms > max_wait_ms: max_wait_ms = wait_ms
+            wait_ms = stepper.finish_and_apply(timeout_s=100000.0)  # 纯 wait（毫秒）
+            comm_phase_wall_total_s += (time.perf_counter() - phase_t0)
+
+            comm_wait_total_ms += wait_ms
+            if wait_ms > comm_wait_max_ms: comm_wait_max_ms = wait_ms
             n_steps += 1
 
             opt.step()
@@ -172,18 +181,30 @@ def main():
         # 每个 epoch 结束打印一次 stepper 聚合统计
         stepper.report_and_reset(tag=f"epoch-{ep}")
 
+    train_wall_s = time.perf_counter() - train_wall_t0
+
+    # 清理
     dp.delete_contained_entities()
-    end_time = datetime.datetime.now()
+    script_end = datetime.datetime.now()
+
+    # ===== 结果输出 =====
     if RANK == 0:
-        duration = end_time - start_time
-        logging.info(f"[train_scripts] finished at {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
-        logging.info(f"[train_scripts] total duration: {str(duration)}")
-        logging.info(f"[COMM][train] steps={n_steps} "
-                     f"pure_wait_total={total_wait_ms/1000.0:.3f}s  "
-                     f"avg_wait={ (total_wait_ms/max(1,n_steps)) :.2f}ms  "
-                     f"max_wait={max_wait_ms:.2f}ms")
-    if RANK == 0: logging.info("[train_scripts] done.")
-    print(f"[train] transition time: {total_wait_ms/1000.0:.6f} s")
+        script_duration = script_end - script_start
+        avg_wait_ms = (comm_wait_total_ms / max(1, n_steps))
+        logging.info(f"[train_scripts] finished at {script_end.strftime('%Y-%m-%d %H:%M:%S')}")
+        logging.info(f"[train_scripts] total duration: {str(script_duration)}")
+        # 纯通信等待
+        logging.info(f"[COMM][pure_wait] steps={n_steps} "
+                     f"total={comm_wait_total_ms/1000.0:.3f}s  avg={avg_wait_ms:.2f}ms  max={comm_wait_max_ms:.2f}ms")
+        # 通信阶段墙钟（begin_step+finish_and_apply）
+        logging.info(f"[COMM][phase_wall] steps={n_steps} "
+                     f"total={comm_phase_wall_total_s:.3f}s  avg={ (comm_phase_wall_total_s/max(1,n_steps)) :.3f}s")
+        # 训练循环墙钟
+        logging.info(f"[TRAIN][wall] total_train_loop={train_wall_s:.3f}s")
+
+    if RANK == 0:
+        logging.info("[train_scripts] done.")
+    print(f"[train] transition time: {comm_phase_wall_total_s:.6f} s")
 
 if __name__ == "__main__":
     main()

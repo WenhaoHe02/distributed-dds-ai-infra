@@ -409,6 +409,28 @@ class _TrainCmdListener(dds.DataReaderListener):
             return max(0, now_ms - send_ms)
         except Exception:
             return None
+
+    def on_data_available(self, reader):
+        try:
+            samples = dds.TrainCmdSeq();
+            infos = dds.SampleInfoSeq()
+            reader.take(samples, infos, -1, dds.ANY_SAMPLE_STATE, dds.ANY_VIEW_STATE, dds.ANY_INSTANCE_STATE)
+            try:
+                for i in range(samples.length()):
+                    if not infos.get_at(i).valid_data:
+                        continue
+                    # >>> 新增：打印 controller→client 的 TrainCmd 传输时间
+                    lat_ms = self._latency_ms_from_info(infos.get_at(i))
+                    if lat_ms is not None:
+                        rid = int(getattr(samples.get_at(i), "round_id", -1))
+                        print(f"[DDS][downlink] TrainCmd transit≈{lat_ms} ms (round={rid})")
+                    # <<< 新增结束
+                    self._process(samples.get_at(i))
+            finally:
+                reader.return_loan(samples, infos)
+        except Exception:
+            import traceback as _tb;
+            _tb.print_exc()
     def _process(self, cmd):
         round_id = int(cmd.round_id); subset = int(cmd.subset_size)
         epochs = int(cmd.epochs); lr = float(cmd.lr); seed = int(cmd.seed)
@@ -439,18 +461,47 @@ class _TrainCmdListener(dds.DataReaderListener):
 class _ModelBlobListener(dds.DataReaderListener):
     def __init__(self, cli: Client):
         super().__init__(); self.client = cli
+
+    @staticmethod
+    def _latency_ms_from_info(info):
+        try:
+            st = getattr(info, "source_timestamp", None)
+            if st is None:
+                return None
+            if hasattr(st, "sec") and hasattr(st, "nanosec"):
+                send_ms = int(st.sec) * 1000 + int(st.nanosec) // 1_000_000
+            elif isinstance(st, (tuple, list)) and len(st) >= 2:
+                send_ms = int(st[0]) * 1000 + int(st[1]) // 1_000_000
+            else:
+                send_ms = int(float(st) * 1000.0)
+            now_ms = int(_time.time() * 1000)
+            return max(0, now_ms - send_ms)
+        except Exception:
+            return None
+
     def on_data_available(self, reader):
         try:
-            samples = dds.ModelBlobSeq(); infos = dds.SampleInfoSeq()
+            samples = dds.ModelBlobSeq();
+            infos = dds.SampleInfoSeq()
             reader.take(samples, infos, -1, dds.ANY_SAMPLE_STATE, dds.ANY_VIEW_STATE, dds.ANY_INSTANCE_STATE)
             try:
                 for i in range(samples.length()):
-                    if not infos.get_at(i).valid_data: continue
+                    if not infos.get_at(i).valid_data:
+                        continue
+                    # >>> 新增：打印 controller→client 的 ModelBlob 传输时间
+                    lat_ms = self._latency_ms_from_info(infos.get_at(i))
+                    if lat_ms is not None:
+                        s = samples.get_at(i)
+                        sz = 0 if (not hasattr(s, "data") or s.data is None) else len(s.data)
+                        rid = int(getattr(s, "round_id", -1))
+                        print(f"[DDS][downlink] ModelBlob transit≈{lat_ms} ms (round={rid} bytes={sz})")
+                    # <<< 新增结束
                     self._process(samples.get_at(i))
             finally:
                 reader.return_loan(samples, infos)
         except Exception:
-            import traceback as _tb; _tb.print_exc()
+            import traceback as _tb;
+            _tb.print_exc()
     def _process(self, mb):
         try:
             buf = mb.data

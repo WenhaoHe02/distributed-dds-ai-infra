@@ -24,6 +24,46 @@ def unpack_frame(frame: bytes):
     payload = frame[off:]
     return group_id, round_id, name, part_id, rank, world, seq, seq_cnt, payload
 
+class _AGHandle:
+    """
+    句柄对象：将“等待”(wait, 纯通信时间, 单位=毫秒) 与 “收集合并”(collect) 分离。
+    兼容旧接口(tuple)：
+      - h[0] -> key
+      - h[1] -> await_and_collect(timeout_ms)   # 注意：参数按“毫秒”解释（与旧实现一致）
+    """
+    __slots__ = ("key", "_ev", "_get_fn", "wait_ms")
+
+    def __init__(self, key: str, ev: threading.Event, get_and_clear_fn):
+        self.key = key
+        self._ev = ev
+        self._get_fn = get_and_clear_fn
+        self.wait_ms = 0.0
+
+    # 纯等待（毫秒）
+    def wait(self, timeout_ms=None):
+        t0 = time.perf_counter()
+        ok = self._ev.wait(None if timeout_ms is None else (timeout_ms / 1000.0))
+        self.wait_ms += (time.perf_counter() - t0) * 1000.0
+        if not ok:
+            raise TimeoutError(f"allgather timeout: {self.key}")
+        return True
+
+    # 收集合并（不计入等待时间）
+    def collect(self):
+        return self._get_fn()
+
+    # ---- 旧 tuple 语义兼容：h[1](timeout_ms) ----
+    def __getitem__(self, idx):
+        if idx == 0:
+            return self.key
+        if idx == 1:
+            def _await_and_collect(timeout_ms=None):
+                # 与旧版保持一致：传入的数按“毫秒”处理
+                self.wait(timeout_ms)
+                return self.collect()
+            return _await_and_collect
+        raise IndexError("invalid handle index; use 0 for key or 1 for await_fn")
+
 class ZrddsDenseBroadcast:
     """
     通过单个 Topic 进行 allgather：
@@ -37,7 +77,7 @@ class ZrddsDenseBroadcast:
         # Topic
         self.topic = dp.create_topic(topic, "ModelBlob", dds.TOPIC_QOS_DEFAULT, None, 0)
         if self.debug:
-            print(f"[ag] topic created: name={topic}, type=ModelBlob")
+            logging.info(f"[ag] topic created: name={topic}, type=ModelBlob")
 
         # Pub/Sub
         self.pub = dp.create_publisher(dds.PUBLISHER_QOS_DEFAULT, None, 0)
@@ -72,10 +112,10 @@ class ZrddsDenseBroadcast:
             # 订阅匹配事件
             def on_subscription_matched(self, reader, status):
                 try:
-                    print(f"[ag][match][reader] current={status.current_count} "
+                    logging.info(f"[ag][match][reader] current={status.current_count} "
                           f"change={status.current_count_change} total={status.total_count}")
                 except Exception as e:
-                    print(f"[ag][match][reader] error printing status: {e}")
+                    logging.info(f"[ag][match][reader] error printing status: {e}")
 
             # 数据可读事件
             def on_data_available(self, r):
@@ -87,7 +127,7 @@ class ZrddsDenseBroadcast:
                     n_info = info.length()
                     n = min(n_data, n_info)
                     # [DEBUG] 观察长度是否不一致
-                    # print(f"[ag][recv] loaned data={n_data}, info={n_info}, iter={n}")
+                    # logging.info(f"[ag][recv] loaned data={n_data}, info={n_info}, iter={n}")
 
                     for i in range(n):
                         inf = info.get_at(i)
@@ -100,7 +140,7 @@ class ZrddsDenseBroadcast:
                             self.o._on_raw_dense(data)
                     # 如果确实不一致，打个日志方便定位
                     if n_data != n_info:
-                        print(f"[ag][warn] data/info length mismatch: data={n_data}, info={n_info}")
+                        logging.info(f"[ag][warn] data/info length mismatch: data={n_data}, info={n_info}")
                 finally:
                     r.return_loan(seq, info)
 
@@ -113,7 +153,7 @@ class ZrddsDenseBroadcast:
         )
 
         if self.debug:
-            print("[ag] ZrddsAllgather ready: RELIABLE, writer KEEP_LAST depth="
+            logging.info("[ag] ZrddsAllgather ready: RELIABLE, writer KEEP_LAST depth="
                   f"{history_depth}, reader KEEP_ALL")
 
     @staticmethod
@@ -132,7 +172,7 @@ class ZrddsDenseBroadcast:
         key = self._make_key(g, r, name, p)
 
         if self.debug:
-            print(f"[dense][recv] key={key} from_rank={rank} len={len(payload)} world={world}")
+            logging.info(f"[dense][recv] key={key} from_rank={rank} len={len(payload)} world={world}")
 
         logging.info(f"[dense][recv] key={key} from_rank={rank} "
               f"len={len(payload)} frame={len(raw)} "
@@ -148,7 +188,7 @@ class ZrddsDenseBroadcast:
                 if self.debug:
                     have = sorted(ranks.keys())
                     sizes = [len(ranks[r]) for r in have]
-                    print(f"[dense][done] key={key} collected from ranks={have}, sizes={sizes}, world={world}")
+                    logging.info(f"[dense][done] key={key} collected from ranks={have}, sizes={sizes}, world={world}")
                 if key in self._done:
                     self._done[key].set()
 
@@ -173,7 +213,7 @@ class ZrddsDenseBroadcast:
             with self._lock:
                 self._tx_bytes += len(body)
             if self.debug:
-                print(f"[ag][send] key={key} rank={rank} seg={seq + 1}/{len(chunks)} len={len(ck)}")
+                logging.info(f"[ag][send] key={key} rank={rank} seg={seq + 1}/{len(chunks)} len={len(ck)}")
             logging.info(f"[ag][send] key={key} rank={rank} "
                   f"seg={seq + 1}/{len(chunks)} len={len(ck)} "
                   f"(frame={len(body)}) total_tx={self._tx_bytes}")
@@ -181,7 +221,7 @@ class ZrddsDenseBroadcast:
 
         def await_and_collect(timeout=None):
             if self.debug:
-                print(f"[ag][wait] key={key} waiting up to {timeout} ms")
+                logging.info(f"[ag][wait] key={key} waiting up to {timeout} ms")
             ok = ev.wait(None if timeout is None else (timeout/1000.0))
             if not ok:
                 raise TimeoutError(f"allgather timeout: {key}")
@@ -193,10 +233,19 @@ class ZrddsDenseBroadcast:
             if self.debug:
                 sizes = [len(x) for x in out]
                 ranks = sorted(mp.keys())
-                print(f"[ag][wait] key={key} done: ranks={ranks} sizes={sizes}")
+                logging.info(f"[ag][wait] key={key} done: ranks={ranks} sizes={sizes}")
             return out
 
-        return (key, await_and_collect)
+        def _get_and_clear():
+            with self._lock:
+                mp = self._buckets.pop(key, {})
+                self._done.pop(key, None)
+            out = [mp[r] for r in sorted(mp.keys())]
+            sizes = [len(x) for x in out]
+            logging.info(f"[ag][collect] key={key} done: ranks={sorted(mp.keys())} sizes={sizes}")
+            return out
+
+        return _AGHandle(key, ev, _get_and_clear)
 
     def wait_for_discovery(self, *, world: int, timeout_ms: int = 8000, include_self: bool = True, poll_ms: int = 100):
         """
@@ -231,11 +280,11 @@ class ZrddsDenseBroadcast:
             cw = _get_pub_count()
             cr = _get_sub_count()
             if (cw >= target) and (cr >= target):
-                print(f"[ag][discovery] OK: writer={cw}, reader={cr}, target={target}")
+                logging.info(f"[ag][discovery] OK: writer={cw}, reader={cr}, target={target}")
                 return
             # 变化时打印一条
             if cw != last_w or cr != last_r:
-                print(f"[ag][discovery] waiting... writer={cw}, reader={cr}, target={target}")
+                logging.infologging.info(f"[ag][discovery] waiting... writer={cw}, reader={cr}, target={target}")
                 last_w, last_r = cw, cr
             if time.time() >= deadline:
                 raise TimeoutError(f"discovery timeout: writer={cw}, reader={cr}, target={target}, world={world}")

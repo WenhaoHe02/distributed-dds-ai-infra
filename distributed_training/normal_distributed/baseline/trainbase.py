@@ -1,21 +1,20 @@
 # train_ddp_mnist_int8.py
 # -*- coding: utf-8 -*-
+import datetime
+import logging
 import os, time, torch, torch.nn as nn, torch.optim as optim, torch.nn.functional as F
 
-from sympy import print_tree
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 import DDS_All as dds
 from ZrddsDenseBroadcast import ZrddsDenseBroadcast
 from dgc_stepperBaseline import DDPDGCStepperBase
-# from compressionBaseline import Int8CompressorBase
-# from memoryBaseline import Int8sgdmemoryBase
 from dgc_evalBaseline import ddp_evaluate_top1
 from dds_barrier_verboseBaseline import ddp_barrier_verbose
 
 # ---- 环境参数（也可从命令行传入）
-RANK      = int(os.environ.get("RANK", "0"))
+RANK      = int(os.environ.get("RANK", "1"))
 WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
 GROUP     = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
@@ -74,18 +73,18 @@ def wait_for_discovery(ag: ZrddsDenseBroadcast, world:int, timeout_ms:int=10000,
     while True:
         cw, cr = _get_pub_count(), _get_sub_count()
         if (cw >= target) and (cr >= target):
-            print(f"[ag][discovery] OK: writer={cw}, reader={cr}, target={target}")
+            logging.info(f"[ag][discovery] OK: writer=%s, reader=%s, target=%s",cw,cr,target)
             return
         if cw != last_w or cr != last_r:
-            print(f"[ag][discovery] waiting... writer={cw}, reader={cr}, target={target}")
+            logging.info(f"[ag][discovery] waiting... writer=%s, reader=%s, target=%s",cw,cr,target)
             last_w, last_r = cw, cr
         if time.time() >= deadline:
-            raise TimeoutError(f"discovery timeout: writer={cw}, reader={cr}, target={target}, world={world}")
+            raise TimeoutError(f"discovery timeout: writer=%s, reader=%s, target=%s, world=%s",cw,cr,target,world)
         time.sleep(poll_ms/1000.0)
 
 def main():
     # DDS participant
-    t0 = int(time.time())
+    start_time = datetime.datetime.now()
     dp = dds.DomainParticipantFactory.get_instance().create_participant(
         DOMAIN_ID, dds.DOMAINPARTICIPANT_QOS_DEFAULT, None, 0)
     dds.register_all_types(dp)
@@ -120,6 +119,8 @@ def main():
     EVAL_ROUND_OFFSET = 1_000_000_000
 
     total_time=0.0
+    max_wait_ms = 0.0
+    n_steps = 0
 
     global_step = 0
     for ep in range(epochs):
@@ -133,12 +134,19 @@ def main():
             loss = loss_fn(logits, yb)
             loss.backward()
 
-            total_time+=stepper.begin_step(global_step)  # ✅ 放在 backward 之后
-            total_time+=stepper.finish_and_apply(timeout_s=100000)
+            #total_time+=stepper.begin_step(global_step)  # ✅ 放在 backward 之后
+            stepper.begin_step(global_step)
+
+            wait_ms = stepper.finish_and_apply(timeout_s=100000.0)  # 返回纯通信等待时间（毫秒）
+            total_time += wait_ms
+            if wait_ms > max_wait_ms: max_wait_ms = wait_ms
+            n_steps += 1
+
+            #stepper.finish_and_apply(timeout_s=100000)
             opt.step()
 
             if RANK == 0 and (global_step % 100 == 0):
-                print(f"[rank {RANK}] step {global_step} loss={loss.item():.4f}")
+                logging.info(f"[rank %s] step %s loss=%s",RANK,global_step,loss.item())
 
             # 按 step 做全局评估（Top-1）
             if (global_step + 1) % eval_every == 0:
@@ -150,16 +158,23 @@ def main():
                     name="val.top1", rank=RANK, world=WORLD, timeout_s=100000.0
                 )
                 if RANK == 0:
-                    print(f"[VAL] step {global_step:05d} acc={acc*100:.2f}% ({g_correct}/{g_total})")
+                    logging.info(f"[VAL] step {global_step:05d} acc={acc*100:.2f}% ({g_correct}/{g_total})")
 
             global_step += 1
 
-    t1 = int(time.time())
-    print(f"[trainBase] round time: {t1 - t0:8f} s")
-    print(f"[trainBase] transition time: {total_time:8f} s")
-
+    end_time = datetime.datetime.now()
     dp.delete_contained_entities()
-    if RANK == 0: print("[train] done.")
+    if RANK == 0: logging.info("[train] done.")
+    if RANK == 0:
+        duration = end_time - start_time
+        logging.info(f"[train_scripts] finished at {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        logging.info(f"[train_scripts] total duration: {str(duration)}")
+        logging.info(f"[COMM][train] steps={n_steps} "
+                     f"pure_wait_total={total_time/1000.0:.3f}s  "
+                     f"avg_wait={ (total_time/max(1,n_steps)) :.2f}ms  "
+                     f"max_wait={max_wait_ms:.2f}ms")
+    if RANK == 0: logging.info("[train_scripts] done.")
+    logging.info(f"[train] transition time: {total_time/1000.0:.6f} s")
 
 if __name__ == "__main__":
     main()

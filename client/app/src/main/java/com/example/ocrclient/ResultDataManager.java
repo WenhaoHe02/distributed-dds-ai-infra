@@ -6,6 +6,7 @@ import com.example.ocrclient.data_structure.*;
 import com.example.ocrclient.data_structure.ResultItem;
 import com.example.ocrclient.data_structure.ResultUpdate;
 import com.example.ocrclient.internal.RequestState;
+import com.zrdds.infrastructure.StringSeq;
 
 import java.util.Map;
 import java.util.List;
@@ -70,34 +71,76 @@ public class ResultDataManager {
     public void handleResultUpdate(ResultUpdate resultUpdate) {
         String requestId = resultUpdate.request_id;
         String clientId = resultUpdate.client_id;
-        
+
         Log.d(TAG, "收到ResultUpdate，requestId: " + requestId + ", clientId: " + clientId);
-        
+
         // 验证消息是否属于自己
         if (!isRequestValid(requestId, clientId)) {
             Log.d(TAG, "请求验证失败，requestId: " + requestId);
             return;
         }
-        
+
         Log.d(TAG, "请求验证成功，requestId: " + requestId);
-        
+
         // 获取或创建请求状态
-        RequestState requestState = requestStates.computeIfAbsent(requestId, 
-            id -> new RequestState(id));
-        
+        RequestState requestState = requestStates.computeIfAbsent(requestId,
+                id -> new RequestState(id));
+
         Log.d(TAG, "获取到RequestState，当前结果数: " + requestState.getReceivedResultCount());
-        
+
         // 合并新结果
         for (int i = 0; i < resultUpdate.items.length(); i++) {
             ResultItem item = resultUpdate.items.get_at(i);
             Log.d(TAG, "添加结果项，taskId: " + item.task_id);
-            requestState.addResultItem(item);
+
+            // 深拷贝整个 ResultItem
+            ResultItem copyItem = deepCopyResultItem(item);
+
+            requestState.addResultItem(copyItem);
         }
-        
+
         Log.d(TAG, "添加结果后，当前结果数: " + requestState.getReceivedResultCount());
-        
+
         // 通知监听器结果已更新
         notifyResultUpdated(requestId);
+    }
+
+    /**
+     * 对 ResultItem 进行完整深拷贝，包括 output_blob 和 texts
+     */
+    private ResultItem deepCopyResultItem(ResultItem original) {
+        if (original == null) return null;
+
+        ResultItem copy = new ResultItem();
+        copy.task_id = original.task_id;
+
+        // 深拷贝 output_blob
+        if (original.output_blob != null && original.output_blob.value.length() > 0) {
+            int len = original.output_blob.value.length();
+            byte[] byteCopy = new byte[len];
+            for (int i = 0; i < len; i++) {
+                byteCopy[i] = original.output_blob.value.get_at(i);
+            }
+            copy.output_blob = new Bytes();
+            copy.output_blob.value.from_array(byteCopy, len);
+        } else {
+            copy.output_blob = new Bytes(); // 保证非 null
+        }
+
+        // 深拷贝 texts（假设 texts 支持按索引 get_at 和 length）
+        if (original.texts != null && original.texts.length() > 0) {
+            copy.texts = new StringSeq();
+            for (int i = 0; i < original.texts.length(); i++) {
+                copy.texts.append(original.texts.get_at(i));
+            }
+        } else {
+            copy.texts = new StringSeq();
+        }
+
+        // 其他字段如果有，也可以在这里拷贝
+        // e.g., copy.someOtherField = original.someOtherField;
+
+        return copy;
     }
     
     /**

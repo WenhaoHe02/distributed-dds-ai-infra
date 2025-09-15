@@ -5,13 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e138a3a6-543a-47a0-9f7a-53f13e8e1cca" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../distributed_training/.idea/distributed_training.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/.idea/distributed_training.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../distributed_training/normal_distributed/dist_train_ddp_dgc/simple_test.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/inference_backend.iml" beforeDir="false" afterPath="$PROJECT_DIR$/inference_backend.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDSProfiler/src/receive/ReceiveService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/src/receive/ReceiveService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDSProfiler/src/send/SendService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/src/send/SendService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../client/app/src/main/java/com/example/ocrclient/ResultActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/../client/app/src/main/java/com/example/ocrclient/ResultActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../client/app/src/main/java/com/example/ocrclient/ResultDataManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/../client/app/src/main/java/com/example/ocrclient/ResultDataManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../client/app/src/main/java/com/example/ocrclient/internal/RequestState.java" beforeDir="false" afterPath="$PROJECT_DIR$/../client/app/src/main/java/com/example/ocrclient/internal/RequestState.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/patcher/Patcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/patcher/Patcher.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/patcher/TaskClassifier.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/patcher/TaskClassifier.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/spliter/Spliter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/spliter/Spliter.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -33,22 +33,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;E:/dynamo&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "git-widget-placeholder": "Merging main",
+    "last_opened_file_path": "E:/dynamo",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.2",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
@@ -60,7 +61,7 @@
       <workItem from="1757676064132" duration="143000" />
       <workItem from="1757740122197" duration="751000" />
       <workItem from="1757758249959" duration="99000" />
-      <workItem from="1757896382628" duration="1169000" />
+      <workItem from="1757896382628" duration="1378000" />
     </task>
     <servers />
   </component>
@@ -72,7 +73,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/src/spliter/Spliter.java</url>
-          <line>159</line>
+          <line>161</line>
           <option name="timeStamp" value="3" />
         </line-breakpoint>
       </breakpoints>

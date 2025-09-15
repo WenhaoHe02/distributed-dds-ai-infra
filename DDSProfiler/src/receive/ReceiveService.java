@@ -9,6 +9,10 @@ import com.zrdds.subscription.DataReaderQos;
 import com.zrdds.subscription.Subscriber;
 import com.zrdds.topic.Topic;
 import data_structure.*;
+import data_structure.Bytes;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ReceiveService {
     private static final int DOMAIN_ID = 100;
@@ -116,9 +120,12 @@ public class ReceiveService {
 class ListenerDataReaderListener implements DataReaderListener {
     private static final String LOG_TAG = "[ReceiveServiceListener] ";
     private final DataAnalyse dataAnalyse;
+    private final ExecutorService executor;
 
     public ListenerDataReaderListener() {
         dataAnalyse = new DataAnalyse();
+        // 创建一个固定线程池，例如 10 个线程
+        executor = Executors.newFixedThreadPool(10);
     }
 
     public void on_data_available(DataReader dataReader) {
@@ -153,8 +160,12 @@ class ListenerDataReaderListener implements DataReaderListener {
             System.out.println((LOG_TAG + "request_id: " + ru.request_id + " client_id: " + ru.client_id));
             //ResultUpdate.print_sample(dataSeq.get_at(i));
 
+            // 深拷贝ResultUpdate对象
+            ResultUpdate copyResultUpdate = deepCopyResultUpdate(ru);
+
             // 交给DataAnalyse处理
-            dataAnalyse.processResultUpdate(ru, receiveTime);
+            // 提交到线程池异步处理
+            executor.submit(() -> dataAnalyse.processResultUpdate(copyResultUpdate, receiveTime));
         }
 
         // 返还数据空间
@@ -162,6 +173,60 @@ class ListenerDataReaderListener implements DataReaderListener {
         if (rtn != ReturnCode_t.RETCODE_OK) {
             System.out.println("return loan failed");
         }
+    }
+
+    /**
+     * 深拷贝ResultUpdate对象
+     * @param original 原始ResultUpdate对象
+     * @return 深拷贝后的ResultUpdate对象
+     */
+    public ResultUpdate deepCopyResultUpdate(ResultUpdate original) {
+        if (original == null) {
+            return null;
+        }
+        
+        ResultUpdate copy = new ResultUpdate();
+        copy.request_id = original.request_id != null ? new String(original.request_id) : null;
+        copy.client_id = original.client_id != null ? new String(original.client_id) : null;
+        
+        // 深拷贝items序列
+        if (original.items != null) {
+            copy.items = new ResultItemSeq();
+            copy.items.ensure_length(original.items.length(),original.items.length());
+            // 手动深拷贝每个ResultItem
+            for (int i = 0; i < original.items.length(); i++) {
+                ResultItem originalItem = original.items.get_at(i);
+                if (originalItem != null) {
+                    ResultItem copyItem = new ResultItem();
+                    copyItem.task_id = originalItem.task_id != null ? new String(originalItem.task_id) : null;
+                    copyItem.status = originalItem.status != null ? new String(originalItem.status) : null;
+
+                    // 对于该测试中目前用不上的字段不做深拷贝
+
+//                    // 深拷贝output_blob
+//                    if (originalItem.output_blob != null) {
+//                        copyItem.output_blob = new Bytes();
+//                        if (originalItem.output_blob.value != null) {
+//                            copyItem.output_blob.value = new com.zrdds.infrastructure.ByteSeq();
+//                            copyItem.output_blob.value.copy(originalItem.output_blob.value);
+//                        }
+//                    }
+//
+//                    // 深拷贝texts
+//                    if (originalItem.texts != null) {
+//                        copyItem.texts = new com.zrdds.infrastructure.StringSeq();
+//                        copyItem.texts.copy(originalItem.texts);
+//                    }
+                    
+                    // 将拷贝的item添加到序列中
+                    copy.items.set_at(i, copyItem);
+                }
+            }
+        } else {
+            copy.items = null;
+        }
+        
+        return copy;
     }
 
     public void on_liveliness_changed(DataReader arg0, LivelinessChangedStatus arg1) {

@@ -88,7 +88,7 @@ def main():
     # DDS participant
     script_start = datetime.datetime.now()
     if RANK == 0:
-        logging.info(f"[train_scripts] started at {script_start.strftime('%Y-%m-%d %H:%M:%S')}")
+        logging.info(f"[federal_train_scripts] started at {script_start.strftime('%Y-%m-%d %H:%M:%S')}")
     dp = dds.DomainParticipantFactory.get_instance().create_participant(
         DOMAIN_ID, dds.DOMAINPARTICIPANT_QOS_DEFAULT, None, 0)
     dds.register_all_types(dp)
@@ -191,8 +191,8 @@ def main():
     if RANK == 0:
         script_duration = script_end - script_start
         avg_wait_ms = (comm_wait_total_ms / max(1, n_steps))
-        logging.info(f"[train_scripts] finished at {script_end.strftime('%Y-%m-%d %H:%M:%S')}")
-        logging.info(f"[train_scripts] total duration: {str(script_duration)}")
+        logging.info(f"[federal_train_scripts] finished at {script_end.strftime('%Y-%m-%d %H:%M:%S')}")
+        logging.info(f"[federal_train_scripts] total duration: {str(script_duration)}")
         # 纯通信等待
         logging.info(f"[COMM][pure_wait] steps={n_steps} "
                      f"total={comm_wait_total_ms/1000.0:.3f}s  avg={avg_wait_ms:.2f}ms  max={comm_wait_max_ms:.2f}ms")
@@ -203,7 +203,7 @@ def main():
         logging.info(f"[TRAIN][wall] total_train_loop={train_wall_s:.3f}s")
 
     if RANK == 0:
-        logging.info("[train_scripts] done.")
+        logging.info("[federal_train_scripts] done.")
     print(f"[train] transition time: {comm_phase_wall_total_s:.6f} s")
 
 if __name__ == "__main__":

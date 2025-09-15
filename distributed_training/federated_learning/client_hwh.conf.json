@@ -1,0 +1,20 @@
+{
+  "domain_id": 200,
+  "client_id": 0,
+  "num_clients": 1,
+  "python_exe": "C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe",
+  "trainer_script": "E:\\distributed-dds-ai-serving-system\\distributed_training\\federal_train_scripts\\dist_train_v2.py",
+  "data_dir": "E:/distributed-dds-ai-serving-system/data",
+  "batch_size": 64,
+
+
+  "wire_format": "int8",
+  "stream": true,
+  "comm_every": 0,
+  "sparse_first_round": false,
+  "sparse_ratio": 0.1,
+
+  "int8_chunk": 8192,
+  "init_model_path": "",
+  "wait_model_ms": 8000
+}

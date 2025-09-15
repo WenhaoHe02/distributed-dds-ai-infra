@@ -416,7 +416,7 @@ def train_one_client(args) -> Tuple[int, dict]:
 
     opt = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
 
-    # train_scripts
+    # federal_train_scripts
     model.train()
     criterion = nn.CrossEntropyLoss()
     for _ in range(args.epochs):
@@ -488,7 +488,7 @@ def main():
     ap.add_argument("--dgc_mask_momentum",  type=int,   default=1)  # 1=true
     ap.add_argument("--dgc_warmup_rounds",  type=int,   default=0)
     ap.add_argument("--round",              type=int,   default=0)  # pass from Java for warmup schedule
-    ap.add_argument("--state_dir",          type=str,   default="D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/distributed_training/train_scripts/log") # residual/momentum persistence
+    ap.add_argument("--state_dir",          type=str,   default="D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/distributed_training/federal_train_scripts/log") # residual/momentum persistence
 
     ap.add_argument("--init_model", type=str, default=None,
                     help="Path to initial model weights (fp32/Q8/S8)")

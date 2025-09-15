@@ -5,7 +5,7 @@
   "batch_size": 64,
 
   "python_exe": "C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe",
-  "trainer_script": "E:/distributed-dds-ai-serving-system/distributed_training/train/dist_train_v3.py",
+  "trainer_script": "E:\\distributed-dds-ai-serving-system\\distributed_training\\federal_train_scripts\\dist_train_v3.py",
   "data_dir": "E:/distributed-dds-ai-serving-system/data",
   "sparse_k": 0,
   "sparse_ratio": 0.1,

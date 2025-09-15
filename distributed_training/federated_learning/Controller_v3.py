@@ -15,9 +15,9 @@ import DDS_All as dds
 from normal_distributed.dist_train_ddp_dgc.dds_barrier_verbose import ddp_barrier_verbose
 from  normal_distributed.dist_train_ddp_dgc.zrdds_allgather import ZrddsAllgather
 
-TOPIC_TRAIN_CMD     = "train_scripts/train_cmd"
-TOPIC_CLIENT_UPDATE = "train_scripts/client_update"
-TOPIC_MODEL_BLOB    = "train_scripts/model_blob"
+TOPIC_TRAIN_CMD     = "federal_train_scripts/train_cmd"
+TOPIC_CLIENT_UPDATE = "federal_train_scripts/client_update"
+TOPIC_MODEL_BLOB    = "federal_train_scripts/model_blob"
 
 
 class ControllerV3:
@@ -143,13 +143,13 @@ class ControllerV3:
         dds.register_all_types(self.dp)
 
         # 通信引擎
-        ag = ZrddsAllgather(self.dp, topic="train_scripts/allgather_blob")
+        ag = ZrddsAllgather(self.dp, topic="federal_train_scripts/allgather_blob")
 
         # ---- ★ 在 barrier 之前先确保 discovery 已完成
         self.wait_for_discovery(ag, world=self.cfg.expected_clients + 1, timeout_ms=100000, include_self=True)
 
         ok = ddp_barrier_verbose(ag, group_id='1', rank=0, world=self.cfg.expected_clients + 1,
-                                 domain_id=self.cfg.domain_id, topic_name="train_scripts/allgather_blob",
+                                 domain_id=self.cfg.domain_id, topic_name="federal_train_scripts/allgather_blob",
                                  min_writer_matches=self.cfg.expected_clients + 1,
                                  min_reader_matches=self.cfg.expected_clients + 1,
                                  match_timeout_s=150.0, barrier_timeout_s=600.0)

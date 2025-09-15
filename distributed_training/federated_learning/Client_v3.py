@@ -168,13 +168,13 @@ class Client_v3:
         dds.register_all_types(self.dp)
 
         # 通信引擎
-        ag = ZrddsAllgather(self.dp, topic="train_scripts/allgather_blob")
+        ag = ZrddsAllgather(self.dp, topic="federal_train_scripts/allgather_blob")
 
         # ---- ★ 在 barrier 之前先确保 discovery 已完成
         self.wait_for_discovery(ag, world=Client_v3.NUM_CLIENTS + 1, timeout_ms=100000, include_self=True)
 
         ok = ddp_barrier_verbose(ag, group_id='1', rank=Client_v3.CLIENT_ID, world=Client_v3.NUM_CLIENTS + 1,
-                                 domain_id=Client_v3.DOMAIN_ID, topic_name="train_scripts/allgather_blob",
+                                 domain_id=Client_v3.DOMAIN_ID, topic_name="federal_train_scripts/allgather_blob",
                                  min_writer_matches=Client_v3.NUM_CLIENTS + 1,
                                  min_reader_matches=Client_v3.NUM_CLIENTS + 1,
                                  match_timeout_s=150.0, barrier_timeout_s=600.0)
@@ -182,9 +182,9 @@ class Client_v3:
             raise SystemExit("[barrier] failed; check missing ranks / matching logs")
 
         # Topics
-        self.t_cmd = self.dp.create_topic("train_scripts/train_cmd", "TrainCmd", dds.TOPIC_QOS_DEFAULT, None, 0)
-        self.t_upd = self.dp.create_topic("train_scripts/client_update", "ClientUpdate", dds.TOPIC_QOS_DEFAULT, None, 0)
-        self.t_model = self.dp.create_topic("train_scripts/model_blob", "ModelBlob", dds.TOPIC_QOS_DEFAULT, None, 0)
+        self.t_cmd = self.dp.create_topic("federal_train_scripts/train_cmd", "TrainCmd", dds.TOPIC_QOS_DEFAULT, None, 0)
+        self.t_upd = self.dp.create_topic("federal_train_scripts/client_update", "ClientUpdate", dds.TOPIC_QOS_DEFAULT, None, 0)
+        self.t_model = self.dp.create_topic("federal_train_scripts/model_blob", "ModelBlob", dds.TOPIC_QOS_DEFAULT, None, 0)
 
         # Pub/Sub
         self.pub = self.dp.create_publisher(dds.PUBLISHER_QOS_DEFAULT, None, 0)
@@ -286,7 +286,7 @@ class Client_v3:
                         round_id=round_id,
                     )
                     t1 = int(time.time() * 1000)
-                    print(f"[Client_v3] local train_scripts+pack cost: {t1 - t0} ms")
+                    print(f"[Client_v3] local federal_train_scripts+pack cost: {t1 - t0} ms")
 
                     # 发送
                     if tr["mode"] == "stream":

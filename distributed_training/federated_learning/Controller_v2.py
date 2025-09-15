@@ -24,9 +24,9 @@ class Config:
 		print(f"[Controller_v2] cfg: domain={self.domain_id} expected_clients={self.expected_clients} timeout_ms={self.timeout_ms}")
 
 class Controller_v2:
-	TOPIC_TRAIN_CMD = "train_scripts/train_cmd"
-	TOPIC_CLIENT_UPDATE = "train_scripts/client_update"
-	TOPIC_MODEL_BLOB = "train_scripts/model_blob"
+	TOPIC_TRAIN_CMD = "federal_train_scripts/train_cmd"
+	TOPIC_CLIENT_UPDATE = "federal_train_scripts/client_update"
+	TOPIC_MODEL_BLOB = "federal_train_scripts/model_blob"
 
 	def __init__(self, config):
 		self.config = config

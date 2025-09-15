@@ -25,7 +25,7 @@ public class DataAnalyse {
     }
 
     // 处理ReusltUpdate
-    public void processResultUpdate(ResultUpdate resultUpdate, long receiveTime) {
+    synchronized public void processResultUpdate(ResultUpdate resultUpdate, long receiveTime) {
         System.out.println("[PROCESS_RESULT_UPDATE] 开始处理ResultUpdate: request_id=" + resultUpdate.request_id +
                 ", client_id=" + resultUpdate.client_id + ", receiveTime=" + receiveTime);
 
@@ -124,7 +124,7 @@ public class DataAnalyse {
             System.out.println("[TEST_COMPLETED] 测试完成！");
 
             // 更新测试结束时间
-            testEndTime = System.currentTimeMillis();
+            testEndTime = receiveTime;
             System.out.println("[TEST_END_TIME] 测试结束时间: " + testEndTime);
 
             // 生成测试结果

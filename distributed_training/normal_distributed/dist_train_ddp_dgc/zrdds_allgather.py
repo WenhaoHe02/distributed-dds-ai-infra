@@ -1,7 +1,6 @@
-# zrdds_allgather.py
 # -*- coding: utf-8 -*-
 import logging
-import struct, threading, time, traceback
+import struct, threading, time
 import DDS_All as dds
 from collections import defaultdict
 
@@ -9,7 +8,9 @@ MAGIC = b'AG1\0'
 # < little-endian: magic, gl, nl, part_id, rank, round_id, world, seq, seq_cnt, reserved
 HDR_FMT = "<4sH H H H I H H H H"
 HDR_SIZE = struct.calcsize(HDR_FMT)
+
 logging.basicConfig(level=logging.INFO)
+
 def pack_frame(group_id, round_id, tensor_name, part_id, rank, world, seq, seq_cnt, payload: bytes):
     g = group_id.encode('utf-8'); n = tensor_name.encode('utf-8')
     hdr = struct.pack(HDR_FMT, MAGIC, len(g), len(n), part_id, rank, round_id, world, seq, seq_cnt, 0)
@@ -24,6 +25,46 @@ def unpack_frame(frame: bytes):
     payload = frame[off:]
     return group_id, round_id, name, part_id, rank, world, seq, seq_cnt, payload
 
+class _AGHandle:
+    """
+    句柄对象：将“等待”(wait, 纯通信时间, 单位=毫秒) 与 “收集合并”(collect) 分离。
+    兼容旧接口(tuple)：
+      - h[0] -> key
+      - h[1] -> await_and_collect(timeout_ms)   # 注意：参数按“毫秒”解释（与旧实现一致）
+    """
+    __slots__ = ("key", "_ev", "_get_fn", "wait_ms")
+
+    def __init__(self, key: str, ev: threading.Event, get_and_clear_fn):
+        self.key = key
+        self._ev = ev
+        self._get_fn = get_and_clear_fn
+        self.wait_ms = 0.0
+
+    # 纯等待（毫秒）
+    def wait(self, timeout_ms=None):
+        t0 = time.perf_counter()
+        ok = self._ev.wait(None if timeout_ms is None else (timeout_ms / 1000.0))
+        self.wait_ms += (time.perf_counter() - t0) * 1000.0
+        if not ok:
+            raise TimeoutError(f"allgather timeout: {self.key}")
+        return True
+
+    # 收集合并（不计入等待时间）
+    def collect(self):
+        return self._get_fn()
+
+    # ---- 旧 tuple 语义兼容：h[1](timeout_ms) ----
+    def __getitem__(self, idx):
+        if idx == 0:
+            return self.key
+        if idx == 1:
+            def _await_and_collect(timeout_ms=None):
+                # 与旧版保持一致：传入的数按“毫秒”处理
+                self.wait(timeout_ms)
+                return self.collect()
+            return _await_and_collect
+        raise IndexError("invalid handle index; use 0 for key or 1 for await_fn")
+
 class ZrddsAllgather:
     """
     通过单个 Topic 进行 allgather：
@@ -32,65 +73,60 @@ class ZrddsAllgather:
     """
     def __init__(self, dp, topic="ddp/allgather_blob", history_depth=4, debug=True):
         self.dp = dp
-        self.debug = debug
+        self.debug = bool(debug)
 
         # Topic
         self.topic = dp.create_topic(topic, "ModelBlob", dds.TOPIC_QOS_DEFAULT, None, 0)
-        if self.debug:
-            logging.info(f"[ag] topic created: name={topic}, type=ModelBlob")
+        logging.info(f"[ag] topic created: name={topic}, type=ModelBlob")
 
         # Pub/Sub
         self.pub = dp.create_publisher(dds.PUBLISHER_QOS_DEFAULT, None, 0)
         self.sub = dp.create_subscriber(dds.SUBSCRIBER_QOS_DEFAULT, None, 0)
 
-        # Writer：RELIABLE + KEEP_LAST(depth)，不挂 listener（避免 native 回调崩）
-        wq = dds.DataWriterQos();
+        # Writer：RELIABLE + KEEP_LAST(depth)
+        wq = dds.DataWriterQos()
         self.pub.get_default_datawriter_qos(wq)
         wq.reliability.kind = dds.ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS
         wq.history.kind = dds.HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS
         wq.history.depth = history_depth
         self.writer = self.pub.create_datawriter(self.topic, wq, None, 0)
 
-        # Reader：RELIABLE + KEEP_LAST(32) 更稳（除非你必须保所有历史）
+        # Reader：RELIABLE + KEEP_LAST(4)
         rq = dds.DataReaderQos()
         self.sub.get_default_datareader_qos(rq)
         rq.reliability.kind = dds.ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS
         rq.history.kind = dds.HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS
         rq.history.depth = 4
 
-
         # Buckets / state
         self._buckets = defaultdict(lambda: defaultdict(list))  # key -> rank -> [(seq, bytes)...]
         self._done = {}
-        self._tx_bytes = 0  # 已发送
-        self._rx_bytes = 0  # 已接收
+        self._tx_bytes = 0      # 已发送（含头）
+        self._rx_bytes = 0      # 已接收（含头）
+        self._tx_payload = 0    # 仅载荷
+        self._rx_payload = 0    # 仅载荷
         self._lock = threading.Lock()
 
-        # [DEBUG] Reader listener: 打印 subscription matched + 数据到达
+        # Reader listener
         class _ReaderL(dds.DataReaderListener):
             def __init__(self, outer):
                 super().__init__(); self.o = outer
 
-            # 订阅匹配事件
             def on_subscription_matched(self, reader, status):
+                # 这条是否触发取决于 DataReader 的 mask；我们不强依赖它
+                if not self.o.debug: return
                 try:
                     logging.info(f"[ag][match][reader] current={status.current_count} "
-                          f"change={status.current_count_change} total={status.total_count}")
+                                 f"change={status.current_count_change} total={status.total_count}")
                 except Exception as e:
                     logging.info(f"[ag][match][reader] error printing status: {e}")
 
-            # 数据可读事件
             def on_data_available(self, r):
-                seq = dds.ModelBlobSeq();
+                seq = dds.ModelBlobSeq()
                 info = dds.SampleInfoSeq()
                 r.take(seq, info, -1, dds.ANY_SAMPLE_STATE, dds.ANY_VIEW_STATE, dds.ANY_INSTANCE_STATE)
                 try:
-                    n_data = seq.length()
-                    n_info = info.length()
-                    n = min(n_data, n_info)
-                    # [DEBUG] 观察长度是否不一致
-                    # print(f"[ag][recv] loaned data={n_data}, info={n_info}, iter={n}")
-
+                    n = min(seq.length(), info.length())
                     for i in range(n):
                         inf = info.get_at(i)
                         if getattr(inf, "valid_data", False):
@@ -98,72 +134,67 @@ class ZrddsAllgather:
                             try:
                                 data = bytes(blob.data or b"")
                             except Exception:
-                                data = bytes(blob.data)  # 兜底
+                                data = bytes(blob.data)
                             self.o._on_raw(data)
-                    # 如果确实不一致，打个日志方便定位
-                    if n_data != n_info:
-                        logging.info(f"[ag][warn] data/info length mismatch: data={n_data}, info={n_info}")
                 finally:
                     r.return_loan(seq, info)
 
         self.listener = _ReaderL(self)
-        mask = dds.StatusKind.DATA_AVAILABLE_STATUS
-        if self.debug:
-            mask = mask | dds.StatusKind.SUBSCRIPTION_MATCHED_STATUS
-        self.reader = self.sub.create_datareader(
-            self.topic, rq, self.listener, dds.StatusKind.DATA_AVAILABLE_STATUS
-        )
+        # ★ 为避免兼容性问题，这里只监听 DATA_AVAILABLE（旧版就是这么做的）
+        self.reader = self.sub.create_datareader(self.topic, rq, self.listener,
+                                                 dds.StatusKind.DATA_AVAILABLE_STATUS)
 
-        if self.debug:
-            logging.info("[ag] ZrddsAllgather ready: RELIABLE, writer KEEP_LAST depth="
-                  f"{history_depth}, reader KEEP_ALL")
+        logging.info(f"[ag] ZrddsAllgather ready: RELIABLE, writer KEEP_LAST depth={history_depth}, reader KEEP_LAST 4")
 
     @staticmethod
     def _make_key(group_id, round_id, name, part_id):
         return f"{group_id}|{round_id}|{name}|{part_id}"
+
     def bytes_counters(self):
         with self._lock:
             return self._tx_bytes, self._rx_bytes
+
+    def payload_counters(self):
+        with self._lock:
+            return self._tx_payload, self._rx_payload
 
     def reset_bytes_counters(self):
         with self._lock:
             self._tx_bytes = 0
             self._rx_bytes = 0
+            self._tx_payload = 0
+            self._rx_payload = 0
 
     def _on_raw(self, raw: bytes):
-        # 解析帧并入桶
         g, r, name, p, rank, world, seq, seq_cnt, payload = unpack_frame(raw)
         key = self._make_key(g, r, name, p)
 
         with self._lock:
-            self._rx_bytes += len(raw)  # ← 统计接收帧（含头）
+            self._rx_bytes   += len(raw)        # 含头
+            self._rx_payload += len(payload)    # 仅载荷
+            self._buckets[key][rank].append((seq, payload))
 
         logging.info(f"[ag][recv] key={key} from_rank={rank} seg={seq + 1}/{seq_cnt} "
-                f"len={len(payload)} frame={len(raw)} world={world} total_rx={self._rx_bytes}")
+                     f"len={len(payload)} frame={len(raw)} world={world} total_rx={self._rx_bytes}")
 
+        # rank 内分段齐了就拼接
         with self._lock:
-            self._buckets[key][rank].append((seq, payload))
-            # 该 rank 的分段齐了就拼接
             if len(self._buckets[key][rank]) == seq_cnt:
                 self._buckets[key][rank].sort(key=lambda x: x[0])
                 self._buckets[key][rank] = [b for _, b in self._buckets[key][rank]]
-                if self.debug:
-                    total_len = sum(len(b) for b in self._buckets[key][rank])
-                    logging.info(f"[ag][recv] rank={rank} all segments arrived, merged_len={total_len}")
+                total_len = sum(len(b) for b in self._buckets[key][rank])
+                logging.info(f"[ag][recv] rank={rank} all segments arrived, merged_len={total_len}")
 
             # 所有 rank 齐了就置完成
             ranks = self._buckets[key]
             done = len(ranks) == world and all(isinstance(v, list) and len(v) > 0 for v in ranks.values())
-            if done:
-                if self.debug:
-                    have = sorted(ranks.keys())
-                    logging.info(f"[ag][done] key={key} collected from ranks={have}, world={world}")
-                if key in self._done:
-                    self._done[key].set()
+            if done and key in self._done:
+                logging.info(f"[ag][done] key={key} collected from ranks={sorted(ranks.keys())}, world={world}")
+                self._done[key].set()
 
     def allgather_async(self, *, group_id:str, round_id:int, name:str, part_id:int,
                         rank:int, world:int, payload:bytes, max_chunk=4<<20):
-        """发送一个 part 的 payload；返回 handle（等待并取回所有 rank 的该 part）"""
+        """发送一个 part 的 payload；返回 _AGHandle（wait 的单位=毫秒）"""
         chunks = [payload[i:i+max_chunk] for i in range(0, len(payload or b""), max_chunk)] or [b""]
         key = self._make_key(group_id, round_id, name, part_id)
         with self._lock:
@@ -174,51 +205,32 @@ class ZrddsAllgather:
         for seq, ck in enumerate(chunks):
             mb = dds.ModelBlob()
             body = pack_frame(group_id, round_id, name, part_id, rank, world, seq, len(chunks), ck)
-
-            # 用 bytearray / memoryview 显式拷贝，规避某些绑定对 bytes 的坑
             mb.data = body
-
             self.writer.write(mb)
             with self._lock:
-                self._tx_bytes += len(body)
-            if self.debug:
-                logging.debug(f"[ag][send] key={key} rank={rank} seg={seq+1}/{len(chunks)} "
-                      f"len={len(ck)} (frame={len(body)}) total_tx={self._tx_bytes}")
+                self._tx_bytes   += len(body)  # 含头
+                self._tx_payload += len(ck)    # 仅载荷
+            logging.info(f"[ag][send] key={key} rank={rank} seg={seq+1}/{len(chunks)} "
+                         f"len={len(ck)} (frame={len(body)}) total_tx={self._tx_bytes}")
 
         ev = self._done[key]
 
-        def await_and_collect(timeout=None):
-            if self.debug:
-                logging.info(f"[ag][wait] key={key} waiting up to {timeout} ms")
-            ok = ev.wait(None if timeout is None else (timeout/1000.0))
-            if not ok:
-                raise TimeoutError(f"allgather timeout: {key}")
+        def _get_and_clear():
             with self._lock:
                 mp = self._buckets.pop(key, {})
                 self._done.pop(key, None)
-            # 统一按 rank 排序 & 拼接
-            out = [b"".join(mp[r]) for r in sorted(mp.keys())]
-            if self.debug:
-                sizes = [len(x) for x in out]
-                ranks = sorted(mp.keys())
-                logging.info(f"[ag][wait] key={key} done: ranks={ranks} sizes={sizes}")
+            out = [b"".join(mp[rk]) for rk in sorted(mp.keys())]
+            sizes = [len(x) for x in out]
+            logging.info(f"[ag][collect] key={key} done: ranks={sorted(mp.keys())} sizes={sizes}")
             return out
 
-        return (key, await_and_collect)
+        return _AGHandle(key, ev, _get_and_clear)
 
     def wait_for_discovery(self, *, world: int, timeout_ms: int = 8000, include_self: bool = True, poll_ms: int = 100):
-        """
-        轮询等待 DDS 匹配完成：
-          - world: 期望总参与数（rank 数）
-          - include_self=True 时，要求匹配数 >= world；False 时要求 >= world-1
-          - timeout_ms 超时抛出 TimeoutError
-        同时检查 writer 的 publication_matched 和 reader 的 subscription_matched
-        """
         deadline = time.time() + timeout_ms / 1000.0
         target = world if include_self else max(0, world - 1)
 
         def _get_pub_count():
-            # 兼容两种绑定风格：返回 struct 或者通过 out-param 填充
             try:
                 st = self.writer.get_publication_matched_status()
             except TypeError:
@@ -241,7 +253,6 @@ class ZrddsAllgather:
             if (cw >= target) and (cr >= target):
                 logging.info(f"[ag][discovery] OK: writer={cw}, reader={cr}, target={target}")
                 return
-            # 变化时打印一条
             if cw != last_w or cr != last_r:
                 logging.info(f"[ag][discovery] waiting... writer={cw}, reader={cr}, target={target}")
                 last_w, last_r = cw, cr
@@ -251,4 +262,11 @@ class ZrddsAllgather:
 
     @staticmethod
     def synchronize(handles, timeout=None):
-        return [h[1](timeout) for h in handles]
+        outs = []
+        for h in handles:
+            if hasattr(h, "wait"):
+                h.wait(None if timeout is None else timeout)  # timeout 按毫秒解释（旧语义）
+                outs.append(h.collect())
+            else:
+                outs.append(h[1](timeout))
+        return outs

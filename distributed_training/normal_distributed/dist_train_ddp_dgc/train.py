@@ -15,13 +15,16 @@ from compression import DGCCompressor
 from memory import DGCSGDMemory
 from dgc_eval import ddp_evaluate_top1   # 用你提供的 ddp_eval.py
 from dds_barrier_verbose import ddp_barrier_verbose
+
 # ---- 环境参数（也可从命令行传入）
-RANK      = int(os.environ.get("RANK", "1"))
+RANK      = int(os.environ.get("RANK", "0"))
 WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
 GROUP     = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
 DATA_DIR  = os.environ.get("DATA_DIR", "data")
+
 logging.basicConfig(level=logging.INFO)
+
 # ---- 模型：自动扁平化 28x28 -> 784
 class MNISTNet(nn.Module):
     def __init__(self, hidden=512, out_dim=10):
@@ -124,7 +127,11 @@ def main():
 
     global_step = 0
 
-    total_time=0.0
+    # 纯通信等待总时间（毫秒）
+    total_wait_ms = 0.0
+    max_wait_ms = 0.0
+    n_steps = 0
+
     for ep in range(epochs):
         comp.warmup_compress_ratio(ep)
         for xb, yb in train_loader:
@@ -135,10 +142,16 @@ def main():
             logits = model(xb)
             loss = loss_fn(logits, yb)
             loss.backward()
-            total_time+=stepper.begin_step(global_step)
 
-            total_time+=stepper.finish_and_apply(timeout_s=100000)
+            # 正确顺序：backward -> begin_step -> finish_and_apply -> optimizer.step
+            stepper.begin_step(global_step)
+            wait_ms = stepper.finish_and_apply(timeout_s=100000.0)  # 返回纯通信等待时间（毫秒）
+            total_wait_ms += wait_ms
+            if wait_ms > max_wait_ms: max_wait_ms = wait_ms
+            n_steps += 1
+
             opt.step()
+
             if RANK == 0 and (global_step % 100 == 0):
                 logging.info(f"[rank {RANK}] step {global_step} loss={loss.item():.4f}")
 
@@ -156,14 +169,21 @@ def main():
 
             global_step += 1
 
+        # 每个 epoch 结束打印一次 stepper 聚合统计
+        stepper.report_and_reset(tag=f"epoch-{ep}")
+
     dp.delete_contained_entities()
     end_time = datetime.datetime.now()
     if RANK == 0:
         duration = end_time - start_time
         logging.info(f"[train_scripts] finished at {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
         logging.info(f"[train_scripts] total duration: {str(duration)}")
+        logging.info(f"[COMM][train] steps={n_steps} "
+                     f"pure_wait_total={total_wait_ms/1000.0:.3f}s  "
+                     f"avg_wait={ (total_wait_ms/max(1,n_steps)) :.2f}ms  "
+                     f"max_wait={max_wait_ms:.2f}ms")
     if RANK == 0: logging.info("[train_scripts] done.")
-    print(f"[train] transition time: {total_time:8f} s")
+    print(f"[train] transition time: {total_wait_ms/1000.0:.6f} s")
 
 if __name__ == "__main__":
     main()

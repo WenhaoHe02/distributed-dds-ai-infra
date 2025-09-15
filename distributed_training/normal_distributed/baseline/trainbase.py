@@ -6,15 +6,15 @@ from torchvision import datasets, transforms
 
 import DDS_All as dds
 from ZrddsDenseBroadcast import ZrddsDenseBroadcast
-from dgc_stepperBaseline import DDPDGCStepper
-from compressionBaseline import Int8CompressorBase
-from memoryBaseline import Int8sgdmemoryBase
+from dgc_stepperBaseline import DDPDGCStepperBase
+# from compressionBaseline import Int8CompressorBase
+# from memoryBaseline import Int8sgdmemoryBase
 from dgc_evalBaseline import ddp_evaluate_top1
 from dds_barrier_verboseBaseline import ddp_barrier_verbose
 
 # ---- 环境参数（也可从命令行传入）
 RANK      = int(os.environ.get("RANK", "0"))
-WORLD     = int(os.environ.get("WORLD_SIZE", "1"))
+WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
 GROUP     = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
 DATA_DIR  = os.environ.get("DATA_DIR", "../data")
@@ -89,7 +89,7 @@ def main():
     dds.register_all_types(dp)
 
     # 通信引擎
-    ag = ZrddsDenseBroadcast(dp, topic="ddp/allgather_blob")
+    ag = ZrddsDenseBroadcast(dp, topic="ddp/allgather_blob",debug=False)
 
     # ---- ★ 在 barrier 之前先确保 discovery 已完成
     wait_for_discovery(ag, world=WORLD, timeout_ms=100000, include_self=True)
@@ -106,10 +106,7 @@ def main():
     model = MNISTNet().to(device)
     opt = optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
 
-    # Int8 压缩器
-    mem = Int8sgdmemoryBase(momentum=0.9, nesterov=False, gradient_clipping=None)
-    comp = Int8CompressorBase(memory=mem, warmup_epochs=3)
-    stepper = DDPDGCStepper(model, comp, ag, GROUP, RANK, WORLD)
+    stepper = DDPDGCStepperBase(model, ag, GROUP, RANK, WORLD)
 
     # 数据
     train_loader, val_loader = make_loaders(DATA_DIR, batch_size=128, device=device, subset_size=36000)
@@ -127,12 +124,12 @@ def main():
             yb = yb.to(device, non_blocking=True)
 
             opt.zero_grad(set_to_none=True)
-            stepper.begin_step(global_step)
 
             logits = model(xb)
             loss = loss_fn(logits, yb)
             loss.backward()
 
+            stepper.begin_step(global_step)  # ✅ 放在 backward 之后
             stepper.finish_and_apply(timeout_s=100000)
             opt.step()
 

@@ -7,7 +7,7 @@ from memory import Memory
 class DGCCompressor:
     def __init__(self, compress_ratio, memory=None,
                  sample_ratio=0.01, strided_sample=True,
-                 compress_upper_bound=1.3, compress_lower_bound=0.8, max_adaptation_iters=10, resample=True,
+                 compress_upper_bound=1.3, compress_lower_bound=0.8, max_adaptation_iters=2, resample=True,
                  fp16_values=False, int32_indices=False,
                  warmup_epochs=-1, warmup_coeff=None):
         self.world_size = 1   # DDP 下请在外部设置为实际 world_size

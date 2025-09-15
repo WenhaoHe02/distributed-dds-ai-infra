@@ -4,48 +4,76 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e138a3a6-543a-47a0-9f7a-53f13e8e1cca" name="Changes" comment="" />
+    <list default="true" id="e138a3a6-543a-47a0-9f7a-53f13e8e1cca" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/../DDSProfiler/src/receive/ReceiveService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/src/receive/ReceiveService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../DDSProfiler/src/send/SendService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../DDSProfiler/src/send/SendService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../client/app/src/main/java/com/example/ocrclient/ResultActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/../client/app/src/main/java/com/example/ocrclient/ResultActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../client/app/src/main/java/com/example/ocrclient/ResultDataManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/../client/app/src/main/java/com/example/ocrclient/ResultDataManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../client/app/src/main/java/com/example/ocrclient/internal/RequestState.java" beforeDir="false" afterPath="$PROJECT_DIR$/../client/app/src/main/java/com/example/ocrclient/internal/RequestState.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/patcher/Patcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/patcher/Patcher.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/spliter/Spliter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/spliter/Spliter.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
   <component name="MacroExpansionManager">
     <option name="directoryName" value="ltdhpst4" />
   </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 6
+}</component>
+  <component name="ProjectId" id="32b4hmKDBAPFEgsf586zjw7UBdL" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "git-widget-placeholder": "main",
-    "node.js.selected.package.tslint": "(autodetect)"
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "git-widget-placeholder": "Merging main",
+    "last_opened_file_path": "E:/dynamo",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.2",
+    "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="e138a3a6-543a-47a0-9f7a-53f13e8e1cca" name="Changes" comment="" />
+      <created>1757676062281</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1757676062281</updated>
+      <workItem from="1757676064132" duration="143000" />
+      <workItem from="1757740122197" duration="751000" />
+      <workItem from="1757758249959" duration="99000" />
+      <workItem from="1757896382628" duration="1378000" />
+    </task>
     <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
-        <line-breakpoint enabled="true" type="java-method">
-          <url>file://$PROJECT_DIR$/src/patcher/Patcher.java</url>
-          <line>133</line>
-          <properties class="patcher.Patcher" method="onClaim">
-            <option name="EMULATED" value="true" />
-            <option name="WATCH_EXIT" value="false" />
-          </properties>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-method">
-          <url>file://$PROJECT_DIR$/src/patcher/Patcher.java</url>
-          <line>172</line>
-          <properties class="patcher.Patcher" method="selectAndGrant">
-            <option name="EMULATED" value="true" />
-            <option name="WATCH_EXIT" value="false" />
-          </properties>
-          <option name="timeStamp" value="2" />
-        </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/src/spliter/Spliter.java</url>
-          <line>159</line>
+          <line>161</line>
           <option name="timeStamp" value="3" />
         </line-breakpoint>
       </breakpoints>

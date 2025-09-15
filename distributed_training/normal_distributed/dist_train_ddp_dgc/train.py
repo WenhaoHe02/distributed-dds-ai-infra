@@ -110,7 +110,7 @@ def main():
 
     # 压缩器
     mem = DGCSGDMemory(momentum=0.9, nesterov=False, gradient_clipping=None, momentum_masking=True)
-    comp = DGCCompressor(compress_ratio=0.001, memory=mem, fp16_values=False, int32_indices=True, warmup_epochs=3)
+    comp = DGCCompressor(compress_ratio=0.001, memory=mem, fp16_values=True, int32_indices=True, warmup_epochs=3)
     stepper = DDPDGCStepper(model, comp, ag, GROUP, RANK, WORLD)
 
     # 数据

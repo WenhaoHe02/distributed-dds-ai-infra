@@ -9,6 +9,7 @@ import com.zrdds.subscription.DataReaderQos;
 import com.zrdds.subscription.Subscriber;
 import com.zrdds.topic.Topic;
 import data_structure.*;
+import data_structure.Bytes;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -191,7 +192,36 @@ class ListenerDataReaderListener implements DataReaderListener {
         // 深拷贝items序列
         if (original.items != null) {
             copy.items = new ResultItemSeq();
-            copy.items.copy(original.items);
+            copy.items.ensure_length(original.items.length(),original.items.length());
+            // 手动深拷贝每个ResultItem
+            for (int i = 0; i < original.items.length(); i++) {
+                ResultItem originalItem = original.items.get_at(i);
+                if (originalItem != null) {
+                    ResultItem copyItem = new ResultItem();
+                    copyItem.task_id = originalItem.task_id != null ? new String(originalItem.task_id) : null;
+                    copyItem.status = originalItem.status != null ? new String(originalItem.status) : null;
+
+                    // 对于该测试中目前用不上的字段不做深拷贝
+
+//                    // 深拷贝output_blob
+//                    if (originalItem.output_blob != null) {
+//                        copyItem.output_blob = new Bytes();
+//                        if (originalItem.output_blob.value != null) {
+//                            copyItem.output_blob.value = new com.zrdds.infrastructure.ByteSeq();
+//                            copyItem.output_blob.value.copy(originalItem.output_blob.value);
+//                        }
+//                    }
+//
+//                    // 深拷贝texts
+//                    if (originalItem.texts != null) {
+//                        copyItem.texts = new com.zrdds.infrastructure.StringSeq();
+//                        copyItem.texts.copy(originalItem.texts);
+//                    }
+                    
+                    // 将拷贝的item添加到序列中
+                    copy.items.set_at(i, copyItem);
+                }
+            }
         } else {
             copy.items = null;
         }

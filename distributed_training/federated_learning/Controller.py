@@ -474,6 +474,27 @@ class Controller:
 class ClientUpdateListener(dds.DataReaderListener):
     def __init__(self, outer: Controller):
         super().__init__(); self.outer = outer
+
+    @staticmethod
+    def _latency_ms_from_info(info):
+        """返回 DDS 样本的近似传输时间（ms）。
+        利用 write() 端的 source_timestamp 与接收端当前时间差."""
+        try:
+            st = getattr(info, "source_timestamp", None)
+            if st is None:
+                return None
+            # 常见绑定：st.sec / st.nanosec；也兼容 (sec, nsec) 或 float 秒
+            if hasattr(st, "sec") and hasattr(st, "nanosec"):
+                send_ms = int(st.sec) * 1000 + int(st.nanosec) // 1_000_000
+            elif isinstance(st, (tuple, list)) and len(st) >= 2:
+                send_ms = int(st[0]) * 1000 + int(st[1]) // 1_000_000
+            else:
+                send_ms = int(float(st) * 1000.0)
+            now_ms = int(time.time() * 1000)
+            return max(0, now_ms - send_ms)
+        except Exception:
+            return None
+
     def on_data_available(self, reader):
         try:
             samples = dds.ClientUpdateSeq(); infos = dds.SampleInfoSeq()
@@ -481,6 +502,13 @@ class ClientUpdateListener(dds.DataReaderListener):
             try:
                 for i in range(samples.length()):
                     if not infos.get_at(i).valid_data: continue
+                    lat_ms = self._latency_ms_from_info(infos.get_at(i))
+                    if lat_ms is not None:
+                        s = samples.get_at(i)
+                        sz = 0 if (not hasattr(s, "data") or s.data is None) else len(s.data)
+                        rid = int(getattr(s, "round_id", -1))
+                        cid = int(getattr(s, "client_id", -1))
+                        print(f"[DDS][uplink] transit≈{lat_ms} ms (round={rid} client={cid} bytes={sz})")
                     self.outer.on_update(samples.get_at(i))
             finally:
                 reader.return_loan(samples, infos)

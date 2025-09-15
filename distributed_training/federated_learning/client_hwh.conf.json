@@ -3,12 +3,12 @@
   "client_id": 0,
   "num_clients": 1,
   "python_exe": "C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe",
-  "trainer_script": "E:\\distributed-dds-ai-serving-system\\distributed_training\\federal_train_scripts\\dist_train_v2.py",
+  "trainer_script": "E:\\distributed-dds-ai-serving-system\\distributed_training\\federal_train_scripts\\dist_train_v3.py",
   "data_dir": "E:/distributed-dds-ai-serving-system/data",
   "batch_size": 64,
 
 
-  "wire_format": "int8",
+  "wire_format": "sq8",
   "stream": true,
   "comm_every": 0,
   "sparse_first_round": false,

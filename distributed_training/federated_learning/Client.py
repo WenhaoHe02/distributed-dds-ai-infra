@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 """
 Client wire_format:
-  - "fp32_full"   : 直接全量权重
+  - "fp32"   : 直接全量权重
   - "fp32_sparse" : S4 浮点稀疏Δ（可流式）
   - "int8_dense"  : Q8 稠密权重（单包）
   - "sq8"         : 稀疏 + INT8 量化 Δ（本版新增；基于 S4 产物离线量化）
 
-* 当 wire_format="sq8" 时，训练仍走 v3 稀疏产物（--compress fp32_sparse），客户端把 .s4 包转换为 .sq8 再发送。
+* 当 wire_format="sq8" 时，训练仍走 v3 稀疏产物（--compres fp32_sparse），客户端把 .s4 包转换为 .sq8 再发送。
 * SQ8 打包格式：'S','Q',0,1 | dim | k | chunk | nChunks | idx[k] | scales[n] | q[k]
   - 将 k 个非零分成 nChunks=ceil(k/chunk)，每块一个 scale = max(|vals_chunk|)/127（=0 时置 1.0）。
 """
@@ -39,7 +39,7 @@ class Client:
     PYTHON_EXE = "python"
     TRAINER_PY = ""
 
-    WIRE_FORMAT = "fp32_full"     # fp32_full | fp32_sparse | int8_dense | sq8
+    WIRE_FORMAT = "fp32"     # fp32_full | fp32_sparse | int8_dense | sq8
     STREAM = True
     COMM_EVERY = 0
     SPARSE_FIRST_ROUND = False
@@ -90,7 +90,7 @@ class Client:
         Client.PYTHON_EXE = j.get("python_exe", _os.environ.get("PYTHON_EXE", "python"))
         Client.TRAINER_PY = j.get("trainer_script", "").strip()
 
-        Client.WIRE_FORMAT = j.get("wire_format", "fp32_full").strip().lower()
+        Client.WIRE_FORMAT = j.get("wire_format", "fp32").strip().lower()
         Client.STREAM = bool(j.get("stream", True))
         Client.COMM_EVERY = int(j.get("comm_every", 0))
         Client.SPARSE_FIRST_ROUND = bool(j.get("sparse_first_round", False))
@@ -375,18 +375,40 @@ class Client:
 class _TrainCmdListener(dds.DataReaderListener):
     def __init__(self, cli: Client):
         super().__init__(); self.client = cli
-    def on_data_available(self, reader):
+
+    @staticmethod
+    def _latency_ms_from_info(info):
         try:
-            samples = dds.TrainCmdSeq(); infos = dds.SampleInfoSeq()
-            reader.take(samples, infos, -1, dds.ANY_SAMPLE_STATE, dds.ANY_VIEW_STATE, dds.ANY_INSTANCE_STATE)
-            try:
-                for i in range(samples.length()):
-                    if not infos.get_at(i).valid_data: continue
-                    self._process(samples.get_at(i))
-            finally:
-                reader.return_loan(samples, infos)
+            st = getattr(info, "source_timestamp", None)
+            if st is None:
+                return None
+            if hasattr(st, "sec") and hasattr(st, "nanosec"):
+                send_ms = int(st.sec) * 1000 + int(st.nanosec) // 1_000_000
+            elif isinstance(st, (tuple, list)) and len(st) >= 2:
+                send_ms = int(st[0]) * 1000 + int(st[1]) // 1_000_000
+            else:
+                send_ms = int(float(st) * 1000.0)
+            now_ms = int(_time.time() * 1000)
+            return max(0, now_ms - send_ms)
         except Exception:
-            import traceback as _tb; _tb.print_exc()
+            return None
+
+    @staticmethod
+    def _latency_ms_from_info(info):
+        try:
+            st = getattr(info, "source_timestamp", None)
+            if st is None:
+                return None
+            if hasattr(st, "sec") and hasattr(st, "nanosec"):
+                send_ms = int(st.sec) * 1000 + int(st.nanosec) // 1_000_000
+            elif isinstance(st, (tuple, list)) and len(st) >= 2:
+                send_ms = int(st[0]) * 1000 + int(st[1]) // 1_000_000
+            else:
+                send_ms = int(float(st) * 1000.0)
+            now_ms = int(_time.time() * 1000)
+            return max(0, now_ms - send_ms)
+        except Exception:
+            return None
     def _process(self, cmd):
         round_id = int(cmd.round_id); subset = int(cmd.subset_size)
         epochs = int(cmd.epochs); lr = float(cmd.lr); seed = int(cmd.seed)

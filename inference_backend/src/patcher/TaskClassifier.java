@@ -1,83 +1,73 @@
 package patcher;
 
 import data_structure.*; // SingleTask / InferenceRequest / Task / TaskSeq / OpenBatch / Grant / TaskList
-
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * TaskClassifier — per-model windowed batcher aligned to final ai.idl (Scheme B)
+ * TaskClassifier — per-(model_id, priority) windowed batcher (no IDL change)
  *
- * Responsibilities
- *  - Accept InferenceRequest / SingleTask and aggregate into per-model windows.
- *  - When a window reaches thresholds (maxBatch or maxWaitMs), cut a batch:
- *      * create a new batch_id
- *      * snapshot TaskSeq and store internally (pendingBatches)
- *      * emit an OpenBatch{batch_id, model_id, size, create_ts_ms}
- *  - When Patcher later decides the winner via Grant{batch_id, winner_worker_id},
- *      * onGrant(...) will emit a TaskList{batch_id, model_id, assigned_worker_id, tasks}
- *
- * This class does NOT select a winner from Claims — that orchestration remains in Patcher.
- * It only: window → OpenBatch, and Grant → TaskList.
+ * - Priority is parsed from InferenceRequest.request_id, e.g. "... priority:0".
+ * - Windows are keyed by (model_id, priority). Different priorities never batch together.
+ * - OpenBatch is unchanged; we encode priority into batch_id: "b-p{p}-{ts}-{seq}".
+ * - Patcher will parse p from batch_id.
  */
 public class TaskClassifier {
 
     /* -------------------- Wiring contracts -------------------- */
-    /** Publish OpenBatch announcements. */
     public interface OpenBatchEmitter { void emit(OpenBatch ob); }
-    /** Publish the final assigned TaskList after Grant. */
-    public interface TaskListEmitter { void emit(TaskList tl); }
+    public interface TaskListEmitter  { void emit(TaskList tl); }
 
     /* -------------------- Config -------------------- */
     public static class Config {
-        /** Priority: 0=GPU小批极短等, 1=不打批即切, 2=CPU略等合批（默认） */
-        public int priority = 2;
+        public int  defaultMaxCpuBatch = 8;  // used for p=2
+        public int  defaultMaxGpuBatch = 4;  // used for p=0
+        public long defaultMaxWaitMs   = 8;  // used for p=2
+        public long waitFastMs         = 4;  // used for p=0 (very short)
+        public long waitNoneMs         = 0;  // used for p=1 (no wait)
 
-        /** 批大小基线（可被 perModelMaxBatch 覆盖） */
-        public int defaultMaxCpuBatch = 8;
-        public int defaultMaxGpuBatch = 4;
+        public Map<String, Integer> perModelMaxBatch  = new ConcurrentHashMap<>();
+        public Map<String, Long>    perModelMaxWaitMs = new ConcurrentHashMap<>();
 
-        /** 等待基线（可被 perModelMaxWaitMs 覆盖） */
-        public long defaultMaxWaitMs = 8;   // 用于 priority=2
-        public long waitFastMs = 4;         // 用于 priority=0（极短等）
-        public long waitNoneMs = 0;         // 用于 priority=1（不等）
-
-        /** Per-model overrides. Key = model_id (String). */
-        public Map<String, Integer> perModelMaxBatch = new ConcurrentHashMap<>();
-        public Map<String, Long> perModelMaxWaitMs = new ConcurrentHashMap<>();
-
-        /** Per-window capacity to guard memory. Oldest items dropped if exceeded. */
-        public int perWindowCapacity = 256;
-        /** Ticker period for closing time windows. */
-        public long tickPeriodMs = 1L;
-        /** Keep recently served batches this long for safety (ms). */
+        public int  perWindowCapacity = 256;
+        public long tickPeriodMs      = 1L;
         public long servedRetentionMs = 10_000L;
-
     }
+
+    private static final int DEFAULT_PRIORITY = 2; // 0=GPU快, 1=不等, 2=默认（建议默认 2，可按需改为 0）
 
     /* -------------------- Internal types -------------------- */
     private static class PendingItem {
-        final String requestId;
-        final String taskId;
-        final String clientId;
-        final Bytes payload;
+        final String requestId, taskId, clientId; final Bytes payload;
         PendingItem(String requestId, String taskId, String clientId, Bytes payload){
-            this.requestId = requestId; this.taskId = taskId; this.clientId = clientId; this.payload = payload;
+            this.requestId=requestId; this.taskId=taskId; this.clientId=clientId; this.payload=payload;
         }
         Task toTask(){
             Task t = new Task();
-            t.request_id = requestId; t.task_id = taskId; t.client_id = clientId; t.payload = payload;
+            t.request_id=requestId; t.task_id=taskId; t.client_id=clientId; t.payload=payload;
             return t;
         }
     }
 
+    /** Window key = (modelId, priority) */
+    private static final class Key {
+        final String modelId; final int priority;
+        Key(String m, int p){ this.modelId=m; this.priority=p; }
+        @Override public boolean equals(Object o){
+            if (this==o) return true;
+            if (!(o instanceof Key)) return false;
+            Key k=(Key)o; return priority==k.priority && Objects.equals(modelId, k.modelId);
+        }
+        @Override public int hashCode(){ return Objects.hash(modelId, priority); }
+    }
+
     private static class Window {
-        final String modelId;
-        final ConcurrentLinkedDeque<PendingItem> q;
+        final String modelId; final int priority;
+        final ConcurrentLinkedDeque<PendingItem> q = new ConcurrentLinkedDeque<>();
         long firstArrivedAt = 0L;
-        Window(String modelId, int capacity){ this.modelId = modelId; this.q = new ConcurrentLinkedDeque<>(); }
-        int size(){ return q.size(); }
+        Window(String modelId, int priority){ this.modelId=modelId; this.priority=priority; }
+        int  size(){ return q.size(); }
         boolean isEmpty(){ return q.isEmpty(); }
         void add(PendingItem pi){ if (q.isEmpty()) firstArrivedAt = System.currentTimeMillis(); q.addLast(pi); }
         List<PendingItem> drainUpTo(int n){
@@ -89,13 +79,10 @@ public class TaskClassifier {
     }
 
     private static class StoredBatch {
-        final String batchId;
-        final String modelId;
-        final long createTs;
-        final TaskSeq tasks;
+        final String batchId, modelId; final long createTs; final TaskSeq tasks; final int priority;
         volatile String assignedWorkerId = null;
-        StoredBatch(String batchId, String modelId, long createTs, TaskSeq tasks){
-            this.batchId=batchId; this.modelId=modelId; this.createTs=createTs; this.tasks=tasks;
+        StoredBatch(String batchId, String modelId, long createTs, TaskSeq tasks, int priority){
+            this.batchId=batchId; this.modelId=modelId; this.createTs=createTs; this.tasks=tasks; this.priority=priority;
         }
     }
 
@@ -104,9 +91,9 @@ public class TaskClassifier {
     private final OpenBatchEmitter openBatchEmitter;
     private final TaskListEmitter taskListEmitter;
 
-    private final ConcurrentMap<String, Window> windows = new ConcurrentHashMap<>();                // model_id -> window
-    private final ConcurrentMap<String, StoredBatch> pendingBatches = new ConcurrentHashMap<>();     // batch_id -> stored
-    private final Deque<StoredBatch> servedRecently = new ConcurrentLinkedDeque<>();                            // for retention cleanup
+    private final ConcurrentMap<Key, Window> windows = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, StoredBatch> pendingBatches = new ConcurrentHashMap<>();
+    private final Deque<StoredBatch> servedRecently = new ConcurrentLinkedDeque<>();
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "taskclassifier-ticker"); t.setDaemon(true); return t; });
@@ -128,56 +115,46 @@ public class TaskClassifier {
     }
 
     /* -------------------- Public API -------------------- */
-    /** Offer a full request (fan-out items into per-model windows). */
+
+    /** Fan-out into per-(model_id, priority) windows, priority parsed from request_id. */
     public void offer(InferenceRequest req){
         if (req == null || req.tasks == null || req.tasks.length() == 0) return;
-
-        cfg.priority = extractPriority(req.request_id);
-
+        int pri = extractPriority(req.request_id); // 0/1/2 (from request_id)
         for (int i = 0; i < req.tasks.length(); i++) {
             SingleTask st = req.tasks.get_at(i);
             if (st == null) continue;
-            offer(st);
+            offer(st, pri);
         }
     }
 
-    /** Offer a single task (already contains model_id). */
-    public void offer(SingleTask st){
+    /** Offer a single task with explicit priority. */
+    public void offer(SingleTask st, int pri){
         if (st == null || st.payload == null) return;
-        Window w = windows.computeIfAbsent(st.model_id, mid -> new Window(mid, cfg.perWindowCapacity));
-        if (w.q.size() >= cfg.perWindowCapacity) { w.q.pollFirst(); } // simple backpressure: drop oldest
+        Key key = new Key(st.model_id, pri);
+        Window w = windows.computeIfAbsent(key, k -> new Window(k.modelId, k.priority));
+        if (w.q.size() >= cfg.perWindowCapacity) { w.q.pollFirst(); } // simple backpressure
         w.add(new PendingItem(st.request_id, st.task_id, st.client_id, st.payload));
 
-        int maxBatch = effectiveMaxBatch(w.modelId);
+        int maxBatch = effectiveMaxBatch(w.modelId, w.priority);
         if (w.size() >= maxBatch) cutAndAnnounce(w, maxBatch);
     }
 
-    /** When Patcher decided a winner, call this to emit the assigned TaskList. */
     public void onGrant(Grant grant){
         if (grant == null) return;
         StoredBatch sb = pendingBatches.remove(grant.batch_id);
-        if (sb == null) return; // already served or unknown
-
+        if (sb == null) return;
         sb.assignedWorkerId = grant.winner_worker_id;
-
-        // 解析 winner 是 CPU 还是 GPU，仅用于可观测性（不改变协议/行为）
-        String dev = parseDevice(sb.assignedWorkerId);
-        // 简单日志：你也可以替换成实际 logger
-        // System.out.println("[TaskClassifier] Grant batch=" + sb.batchId + " -> " + sb.assignedWorkerId + " (" + dev + ")");
-
         emitTaskList(sb);
         servedRecently.addLast(sb);
         cleanupServed();
     }
 
-
-
     /* -------------------- Internal -------------------- */
     private void tick(){
         for (Window w : windows.values()){
             if (w.isEmpty()) continue;
-            int  maxBatch = effectiveMaxBatch(w.modelId);
-            long maxWait  = effectiveMaxWaitMs(w.modelId);
+            int  maxBatch = effectiveMaxBatch(w.modelId, w.priority);
+            long maxWait  = effectiveMaxWaitMs(w.modelId, w.priority);
             if (w.size() >= maxBatch || w.ageMs() >= maxWait){
                 cutAndAnnounce(w, maxBatch);
             }
@@ -185,35 +162,25 @@ public class TaskClassifier {
         cleanupServed();
     }
 
-    /** 根据优先级/模型覆盖，计算有效批大小 */
-    private int effectiveMaxBatch(String modelId){
+    private int effectiveMaxBatch(String modelId, int pri){
         Integer override = cfg.perModelMaxBatch.get(modelId);
         if (override != null && override > 0) return override;
-
-        switch (cfg.priority) {
-            case 0: // GPU 快速小批
-                return Math.max(1, cfg.defaultMaxGpuBatch);
-            case 1: // 不打批
-                return 1;
-            case 2: // CPU 略等合批（默认）
-            default:
-                return Math.max(1, cfg.defaultMaxCpuBatch);
+        switch (pri) {
+            case 0: return Math.max(1, cfg.defaultMaxGpuBatch); // fast small batch
+            case 1: return 1;                                   // no batching
+            case 2:
+            default: return Math.max(1, cfg.defaultMaxCpuBatch);
         }
     }
 
-    /** 根据优先级/模型覆盖，计算有效等待时长 */
-    private long effectiveMaxWaitMs(String modelId){
+    private long effectiveMaxWaitMs(String modelId, int pri){
         Long override = cfg.perModelMaxWaitMs.get(modelId);
         if (override != null && override >= 0) return override;
-
-        switch (cfg.priority) {
-            case 0: // GPU 快速小批，极短等
-                return Math.max(0L, cfg.waitFastMs);
-            case 1: // 不打批，直接切
-                return Math.max(0L, cfg.waitNoneMs);
-            case 2: // CPU 略等合批（默认）
-            default:
-                return Math.max(0L, cfg.defaultMaxWaitMs);
+        switch (pri) {
+            case 0: return Math.max(0L, cfg.waitFastMs);  // very short
+            case 1: return Math.max(0L, cfg.waitNoneMs);  // no wait
+            case 2:
+            default: return Math.max(0L, cfg.defaultMaxWaitMs);
         }
     }
 
@@ -221,22 +188,22 @@ public class TaskClassifier {
         List<PendingItem> items = w.drainUpTo(maxBatch);
         if (items.isEmpty()) return;
 
-        String batchId = newBatchId();
+        String batchId = newBatchId(w.priority); // encode priority into batch_id
         TaskSeq seq = new TaskSeq();
         seq.ensure_length(items.size(), items.size());
         for (int i=0;i<items.size();i++) seq.set_at(i, items.get(i).toTask());
-        StoredBatch sb = new StoredBatch(batchId, w.modelId, System.currentTimeMillis(), seq);
+
+        StoredBatch sb = new StoredBatch(batchId, w.modelId, System.currentTimeMillis(), seq, w.priority);
         pendingBatches.put(batchId, sb);
 
         OpenBatch ob = new OpenBatch();
         ob.batch_id = batchId;
         ob.model_id = w.modelId;
         ob.size = items.size();
-        // 注意：IDL若是int，这里仍按int写入；如需long请改IDL
-        ob.create_ts_ms =  (int)sb.createTs;
-        System.out.println("[TaskClassifier] OPEN batch: batch_id=" + ob.batch_id +
-                " model_id=" + ob.model_id + " size=" + ob.size);
+        ob.create_ts_ms = (int) sb.createTs; // keep IDL compatibility
 
+        System.out.println("[TaskClassifier] OPEN batch: batch_id=" + ob.batch_id +
+                " model_id=" + ob.model_id + " size=" + ob.size + " pri=" + w.priority);
         try { openBatchEmitter.emit(ob); } catch (Exception e){ e.printStackTrace(); }
     }
 
@@ -258,37 +225,21 @@ public class TaskClassifier {
         }
     }
 
-    private String newBatchId(){
-        return "b-" + System.currentTimeMillis() + "-" + batchSeq.incrementAndGet();
+    private String newBatchId(int p){
+        return "b-p" + p + "-" + System.currentTimeMillis() + "-" + batchSeq.incrementAndGet();
     }
 
-    /* -------------------- Helpers -------------------- */
-
-    /** 从系统属性或环境变量读取，均无则用默认值 */
-    private static String sysOrEnv(String sysKey, String envKey, String defVal) {
-        String v = System.getProperty(sysKey);
-        if (v != null && !v.isEmpty()) return v;
-        v = System.getenv(envKey);
-        if (v != null && !v.isEmpty()) return v;
-        return defVal;
-    }
-
-    /** 解析 workerId 后缀，返回 "gpu"/"cpu"/"unknown" */
-    private static String parseDevice(String workerId) {
-        if (workerId == null) return "unknown";
-        String id = workerId.toLowerCase(Locale.ROOT);
-        if (id.endsWith("-gpu")) return "gpu";
-        if (id.endsWith("-cpu")) return "cpu";
-        return "unknown";
-    }
-    public int extractPriority(String request_id){
-        if (request_id == null) return 0;
-        int idx = request_id.indexOf("priority:");
-        if (idx < 0) return 0;
+    /** Parse priority from request_id, e.g. "... priority:0". Default to DEFAULT_PRIORITY. */
+    public static int extractPriority(String requestId){
+        if (requestId == null) return DEFAULT_PRIORITY;
+        int i = requestId.indexOf("priority:");
+        if (i < 0) return DEFAULT_PRIORITY;
         try {
-            return Integer.parseInt(request_id.substring(idx + 9).trim());
-        } catch (NumberFormatException e) {
-            return 0;
+            String s = requestId.substring(i + 9).trim();
+            int p = Integer.parseInt(s);
+            return (p==0 || p==1) ? p : 2;
+        } catch (Exception ignore){
+            return DEFAULT_PRIORITY;
         }
     }
 }

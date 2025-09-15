@@ -121,12 +121,22 @@ class ZrddsAllgather:
     @staticmethod
     def _make_key(group_id, round_id, name, part_id):
         return f"{group_id}|{round_id}|{name}|{part_id}"
+    def bytes_counters(self):
+        with self._lock:
+            return self._tx_bytes, self._rx_bytes
+
+    def reset_bytes_counters(self):
+        with self._lock:
+            self._tx_bytes = 0
+            self._rx_bytes = 0
 
     def _on_raw(self, raw: bytes):
         # 解析帧并入桶
         g, r, name, p, rank, world, seq, seq_cnt, payload = unpack_frame(raw)
         key = self._make_key(g, r, name, p)
 
+        with self._lock:
+            self._rx_bytes += len(raw)  # ← 统计接收帧（含头）
 
         logging.info(f"[ag][recv] key={key} from_rank={rank} seg={seq + 1}/{seq_cnt} "
                 f"len={len(payload)} frame={len(raw)} world={world} total_rx={self._rx_bytes}")
@@ -152,7 +162,7 @@ class ZrddsAllgather:
                     self._done[key].set()
 
     def allgather_async(self, *, group_id:str, round_id:int, name:str, part_id:int,
-                        rank:int, world:int, payload:bytes, max_chunk=1<<20):
+                        rank:int, world:int, payload:bytes, max_chunk=4<<20):
         """发送一个 part 的 payload；返回 handle（等待并取回所有 rank 的该 part）"""
         chunks = [payload[i:i+max_chunk] for i in range(0, len(payload or b""), max_chunk)] or [b""]
         key = self._make_key(group_id, round_id, name, part_id)
@@ -220,7 +230,7 @@ class ZrddsAllgather:
             try:
                 st = self.reader.get_subscription_matched_status()
             except TypeError:
-                st = dds.SubscriptionMatchedStatus()
+                st = dds.SubscriptionMatchedaStatus()
                 self.reader.get_subscription_matched_status(st)
             return int(getattr(st, "current_count", 0))
 

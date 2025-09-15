@@ -9,12 +9,12 @@ class DGCCompressor:
                  sample_ratio=0.01, strided_sample=True,
                  compress_upper_bound=1.3, compress_lower_bound=0.8, max_adaptation_iters=2, resample=True,
                  fp16_values=False, int32_indices=False,
-                 warmup_epochs=-1, warmup_coeff=None):
+                 warmup_epochs=-1, warmup_coeff=None,  min_numel_to_compress=0):
         self.world_size = 1   # DDP 下请在外部设置为实际 world_size
         self.op = "average"   # 简化：目标语义 = 平均
         self.fp16_values = fp16_values
         self.int32_indices = int32_indices
-
+        self.min_numel_to_compress = int(min_numel_to_compress)
         self.base_compress_ratio = self.compress_ratio = compress_ratio if compress_ratio <= 1.0 else 1.0 / compress_ratio
         self.memory = Memory if memory is None else memory
         self.warmup_epochs = warmup_epochs
@@ -137,6 +137,12 @@ class DGCCompressor:
             tensor_compensated = self.memory.compensate(tensor, name, accumulate=True)
             values, indices, numel, shape, num_selects = self._sparsify(tensor_compensated, name)
             self.memory.update(name, (indices,))
+            if numel < self.min_numel_to_compress:
+                # 小张量直接走 dense
+                ctx = (name, None, None, tensor.dtype, None, None)
+                if self.fp16_values and tensor.dtype.is_floating_point:
+                    tensor = tensor.type(torch.float16)
+                return tensor, ctx
             indices = indices.view(-1, 1)
             values = values.view(-1, 1)
             ctx = (name, numel, shape, values.dtype, indices.dtype, tensor.data.view(numel))

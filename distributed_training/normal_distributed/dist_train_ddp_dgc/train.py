@@ -17,7 +17,7 @@ from dgc_eval import ddp_evaluate_top1   # 用你提供的 ddp_eval.py
 from dds_barrier_verbose import ddp_barrier_verbose
 # ---- 环境参数（也可从命令行传入）
 RANK      = int(os.environ.get("RANK", "0"))
-WORLD     = int(os.environ.get("WORLD_SIZE", "1"))
+WORLD     = int(os.environ.get("WORLD_SIZE", "2"))
 GROUP     = os.environ.get("GROUP_ID", "job-20250908-01")
 DOMAIN_ID = int(os.environ.get("DDS_DOMAIN_ID", "200"))
 DATA_DIR  = os.environ.get("DATA_DIR", "data")
@@ -109,7 +109,7 @@ def main():
     opt = optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
 
     # 压缩器
-    mem = DGCSGDMemory(momentum=0.9, nesterov=False, gradient_clipping=None, momentum_masking=True)
+    mem = DGCSGDMemory(momentum=0.0, nesterov=False, gradient_clipping=None, momentum_masking=True)
     comp = DGCCompressor(compress_ratio=0.001, memory=mem, fp16_values=True, int32_indices=True, warmup_epochs=3)
     stepper = DDPDGCStepper(model, comp, ag, GROUP, RANK, WORLD)
 
@@ -124,20 +124,19 @@ def main():
 
     global_step = 0
     for ep in range(epochs):
+        comp.warmup_compress_ratio(ep)
         for xb, yb in train_loader:
             xb = xb.to(device, non_blocking=True)
             yb = yb.to(device, non_blocking=True)
 
             opt.zero_grad(set_to_none=True)
-            stepper.begin_step(global_step)
-
             logits = model(xb)
             loss = loss_fn(logits, yb)
             loss.backward()
+            stepper.begin_step(global_step)
 
             stepper.finish_and_apply(timeout_s=100000)
             opt.step()
-
             if RANK == 0 and (global_step % 100 == 0):
                 logging.info(f"[rank {RANK}] step {global_step} loss={loss.item():.4f}")
 

@@ -31,12 +31,18 @@ class DDPDGCStepperBase:
 
         self._txrx0 = (0, 0)  # bytes基线（含帧头）
         self._cur_step = -1
-        self.log_every = int(os.environ.get("DGC_LOG_EVERY", "0"))
+        self.log_every = int(os.environ.get("DGC_LOG_EVERY", "100"))
         self._win_ms = 0.0
         self._win_tx = 0
         self._win_rx = 0
+        self._win_pl_tx = 0
+        self._win_pl_rx = 0
         self._win_steps = 0
         self._ema_ms = None
+        if hasattr(self.comm, "payload_counters"):
+            self._pl0 = self.comm.payload_counters()
+        else:
+            self._pl0 = (0, 0)
 
     @staticmethod
     def _pack_data_with_scale(compressed_tensor: torch.Tensor, scale: float, dtype_val, dtype_scale):
@@ -200,6 +206,11 @@ class DDPDGCStepperBase:
             dtx = tx1 - self._txrx0[0]
             drx = rx1 - self._txrx0[1]
 
+        if hasattr(self.comm, "payload_counters") and self._cur_step >= 0:
+            ptx1, prx1 = self.comm.payload_counters()
+            self._win_pl_tx += int(ptx1 - self._pl0[0])
+            self._win_pl_rx += int(prx1 - self._pl0[1])
+
         self._win_ms += self._last_dds_wait_ms
         self._win_tx += int(dtx)
         self._win_rx += int(drx)
@@ -208,15 +219,22 @@ class DDPDGCStepperBase:
         if self.rank == 0 and self.log_every > 0 and self._win_steps >= self.log_every:
             avg_ms = self._win_ms / max(1, self._win_steps)
             mb_total = (self._win_tx + self._win_rx) / (1024.0 * 1024.0)
-            mb_avg   = mb_total / self._win_steps
+            mb_avg = mb_total / self._win_steps
+
+            pl_mb_total = (self._win_pl_tx + self._win_pl_rx) / (1024.0 * 1024.0)
+            pl_mb_avg = pl_mb_total / self._win_steps
+
             self._ema_ms = avg_ms if self._ema_ms is None else (0.9 * self._ema_ms + 0.1 * avg_ms)
             step_lo = self._cur_step - self._win_steps + 1
             step_hi = self._cur_step
             logging.info(
                 f"[DDS][{step_lo}-{step_hi}] wait_sum(avg)={avg_ms:.2f} ms  "
-                f"phase_wall(last)={comm_wall_ms:.2f} ms  avg_bytes={mb_avg:.3f} MB  total_bytes={mb_total:.2f} MB"
+                f"phase_wall(last)={comm_wall_ms:.2f} ms  "
+                f"avg_bytes={mb_avg:.3f} MB  total_bytes={mb_total:.2f} MB  "
+                f"avg_payload={pl_mb_avg:.3f} MB  total_payload={pl_mb_total:.2f} MB"
             )
             self._win_ms = self._win_tx = self._win_rx = 0
+            self._win_pl_tx = self._win_pl_rx = 0
             self._win_steps = 0
 
         #logging.info(f"[Timing]  finish_and_apply transmission took {total_t:.6f} seconds")

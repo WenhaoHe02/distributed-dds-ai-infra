@@ -27,6 +27,8 @@ class DDPDGCStepper:
         self.world = int(world)
         self.dtype_val = dtype_val
         self.dtype_idx = dtype_idx
+        self._win_pl_tx = 0
+        self._win_pl_rx = 0
 
         self.named_params = [(n, p) for n, p in model.named_parameters() if p.requires_grad]
         self.comp.set_world_size(self.world)
@@ -42,7 +44,7 @@ class DDPDGCStepper:
         self._last_dds_wait_ms = 0.0  # 本步纯 wait 总和（毫秒）
 
         # 窗口聚合
-        self.log_every = int(os.environ.get("DGC_LOG_EVERY", "0"))
+        self.log_every = int(os.environ.get("DGC_LOG_EVERY", "100"))
         self._win_ms = 0.0
         self._win_tx = 0
         self._win_rx = 0
@@ -85,6 +87,10 @@ class DDPDGCStepper:
         """请在 backward 后调用，保证 p.grad 已就绪"""
         self._cur_step = step_id
         self._last_dds_wait_ms = 0.0
+        if hasattr(self.comm, "payload_counters"):
+            self._pl0 = self.comm.payload_counters()
+        else:
+            self._pl0 = (0, 0)
 
         if hasattr(self.comm, "bytes_counters"):
             self._txrx0 = self.comm.bytes_counters()
@@ -169,6 +175,12 @@ class DDPDGCStepper:
             dtx = tx1 - self._txrx0[0]
             drx = rx1 - self._txrx0[1]
 
+        # 新增：仅载荷增量
+        if hasattr(self.comm, "payload_counters") and self._cur_step >= 0:
+            ptx1, prx1 = self.comm.payload_counters()
+            self._win_pl_tx += int(ptx1 - self._pl0[0])
+            self._win_pl_rx += int(prx1 - self._pl0[1])
+
         self._win_ms   += self._last_dds_wait_ms
         self._win_tx   += int(dtx)
         self._win_rx   += int(drx)
@@ -178,15 +190,26 @@ class DDPDGCStepper:
             avg_ms = self._win_ms / max(1, self._win_steps)
             mb_total = (self._win_tx + self._win_rx) / (1024.0 * 1024.0)
             mb_avg   = mb_total / self._win_steps
-            self._ema_ms = avg_ms if self._ema_ms is None else (0.9 * self._ema_ms + 0.1 * avg_ms)
+            pl_mb_total = (self._win_pl_tx + self._win_pl_rx) / (1024.0 * 1024.0)  # 仅载荷
+            pl_mb_avg = pl_mb_total / self._win_steps
             step_lo = self._cur_step - self._win_steps + 1
             step_hi = self._cur_step
             logging.info(
                 f"[DDS][{step_lo}-{step_hi}] wait_sum(avg)={avg_ms:.2f} ms  "
-                f"phase_wall(last)={comm_wall_ms:.2f} ms  avg_bytes={mb_avg:.3f} MB  total_bytes={mb_total:.2f} MB"
+                f"phase_wall(last)={comm_wall_ms:.2f} ms  "
+                f"avg_bytes={mb_avg:.3f} MB  total_bytes={mb_total:.2f} MB  "
+                f"avg_payload={pl_mb_avg:.3f} MB  total_payload={pl_mb_total:.2f} MB"
             )
             self._win_ms = self._win_tx = self._win_rx = 0
+            self._win_pl_tx = self._win_pl_rx = 0
             self._win_steps = 0
+            self._ema_ms = avg_ms if self._ema_ms is None else (0.9 * self._ema_ms + 0.1 * avg_ms)
+
+            logging.info(
+                f"[DDS][{step_lo}-{step_hi}] wait_sum(avg)={avg_ms:.2f} ms  "
+                f"phase_wall(last)={comm_wall_ms:.2f} ms  avg_bytes={mb_avg:.3f} MB  total_bytes={mb_total:.2f} MB"
+            )
+
 
         return self._last_dds_wait_ms
 

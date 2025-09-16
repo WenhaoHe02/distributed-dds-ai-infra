@@ -1,4 +1,4 @@
-# ZrddsDenseBroadcast.py
+# zrdds_dense_broadcast.py
 # -*- coding: utf-8 -*-
 import logging
 import struct, threading, time, traceback
@@ -103,6 +103,8 @@ class ZrddsDenseBroadcast:
         self._tx_bytes = 0  # 已发送
         self._rx_bytes = 0  # 已接收
         self._lock = threading.Lock()
+        self._tx_payload = 0
+        self._rx_payload = 0
 
         # [DEBUG] Reader listener: 打印 subscription matched + 数据到达
         class _ReaderL(dds.DataReaderListener):
@@ -219,7 +221,8 @@ class ZrddsDenseBroadcast:
                   f"(frame={len(body)}) total_tx={self._tx_bytes}")
         ev = self._done[key]
 
-        def await_and_collect(timeout=None):
+
+        def _get_and_clear(timeout=10000000):
             if self.debug:
                 logging.info(f"[ag][wait] key={key} waiting up to {timeout} ms")
             ok = ev.wait(None if timeout is None else (timeout/1000.0))
@@ -234,15 +237,6 @@ class ZrddsDenseBroadcast:
                 sizes = [len(x) for x in out]
                 ranks = sorted(mp.keys())
                 logging.info(f"[ag][wait] key={key} done: ranks={ranks} sizes={sizes}")
-            return out
-
-        def _get_and_clear():
-            with self._lock:
-                mp = self._buckets.pop(key, {})
-                self._done.pop(key, None)
-            out = [mp[r] for r in sorted(mp.keys())]
-            sizes = [len(x) for x in out]
-            logging.info(f"[ag][collect] key={key} done: ranks={sorted(mp.keys())} sizes={sizes}")
             return out
 
         return _AGHandle(key, ev, _get_and_clear)

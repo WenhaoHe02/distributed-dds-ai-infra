@@ -1,0 +1,20 @@
+{
+  "domain_id": 200,
+  "client_id": 0,
+  "num_clients": 2,
+  "python_exe": "C:/Users/32137/.conda/envs/dds/python.exe",
+  "trainer_script": "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/distributed_training/federal_train_scripts/dist_train_v3.py",
+  "data_dir": "D:/Study/SummerSchool/codes/distributed-dds-ai-serving-system/data",
+  "batch_size": 64,
+
+
+  "wire_format": "sq8",
+  "stream": false,
+  "comm_every": -1,
+  "sparse_first_round": false,
+  "sparse_ratio": 0.1,
+
+  "int8_chunk": 8192,
+  "init_model_path": "",
+  "wait_model_ms": 800000
+}

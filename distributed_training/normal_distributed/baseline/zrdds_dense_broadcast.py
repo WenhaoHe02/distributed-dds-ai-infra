@@ -172,7 +172,8 @@ class ZrddsDenseBroadcast:
         # 解析帧
         g, r, name, p, rank, world, seq, seq_cnt, payload = unpack_frame(raw)
         key = self._make_key(g, r, name, p)
-
+        with self._lock:
+            self._rx_payload += len(payload)
         if self.debug:
             logging.info(f"[dense][recv] key={key} from_rank={rank} len={len(payload)} world={world}")
 
@@ -193,6 +194,16 @@ class ZrddsDenseBroadcast:
                     logging.info(f"[dense][done] key={key} collected from ranks={have}, sizes={sizes}, world={world}")
                 if key in self._done:
                     self._done[key].set()
+    # ===== Counters =====
+    def bytes_counters(self):
+        """返回 (tx_bytes, rx_bytes)，含帧头。"""
+        with self._lock:
+            return self._tx_bytes, self._rx_bytes
+
+    def payload_counters(self):
+        """返回 (tx_payload, rx_payload)，仅载荷，不含帧头/头部元信息。"""
+        with self._lock:
+            return self._tx_payload, self._rx_payload
 
     def allgather_async(self, *, group_id:str, round_id:int, name:str, part_id:int,
                         rank:int, world:int, payload:bytes, max_chunk=1<<20):
@@ -214,6 +225,7 @@ class ZrddsDenseBroadcast:
             self.writer.write(mb)
             with self._lock:
                 self._tx_bytes += len(body)
+                self._tx_payload += len(ck)
             if self.debug:
                 logging.info(f"[ag][send] key={key} rank={rank} seg={seq + 1}/{len(chunks)} len={len(ck)}")
             logging.info(f"[ag][send] key={key} rank={rank} "

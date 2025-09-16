@@ -1,0 +1,243 @@
+[DEBUG] 正在加载 DDS_All 模块...
+[DEBUG] Python版本: cp39
+[DEBUG] 平台: win_amd64
+[DEBUG] .pyd 文件路径: C:\Users\HWH\venv\lib\site-packages\DDS_All\bin\cp39-win_amd64\DDS_All.pyd
+[DEBUG] .pyd 文件是否存在: True
+[DEBUG] 成功加载依赖: ZRDDSCd_VS2019.dll
+[DEBUG] 成功加载依赖: ZRDDSCppd_VS2019.dll
+[DEBUG] 成功加载依赖: ZRDDSCpp_VS2019.dll
+[DEBUG] 成功加载依赖: ZRDDSC_VS2019.dll
+[DEBUG] 成功导入 DDS_All.pyd
+INFO:root:[ag] topic created: name=train_scripts/allgather_blob, type=ModelBlob
+INFO:root:[ag] ZrddsAllgather ready: RELIABLE, writer KEEP_LAST depth=4, reader KEEP_LAST 4
+[ag][discovery] waiting... writer=1, reader=1, target=3
+********************  2025-09-16 11:32:35:586  ********************
+Current ZRDDS version(2.4.4-r2761701) for SEU was compiled at Aug 22 2025 16:09:15
+*******************************************************************
+[C++] trampoline:on_data_available enter, reader=000002D97F7E4F80
+INFO:root:[ag][recv] key=1|1113674322|barrier|0 from_rank=2 seg=1/1 len=4 frame=36 world=3 total_rx=36
+INFO:root:[ag][recv] rank=2 all segments arrived, merged_len=4
+[C++] trampoline:on_data_available enter, reader=000002D97F7E4F80
+INFO:root:[ag][send] key=1|1113674322|barrier|0 rank=0 seg=1/1 len=4 (frame=36) total_tx=36
+INFO:root:[ag][recv] key=1|1113674322|barrier|0 from_rank=0 seg=1/1 len=4 frame=36 world=3 total_rx=72
+INFO:root:[ag][recv] rank=0 all segments arrived, merged_len=4
+[ag][discovery] OK: writer=3, reader=3, target=3
+========== [barrier] env ==========
+[barrier] group_id=1 rank=0 world=3 domain_id=200 topic=train_scripts/allgather_blob
+========== [barrier] matching ==========
+[barrier] reader matched: current=3 total=3 change=0
+[barrier] writer matched: current=3 total=3 change=0
+========== [barrier] allgather ==========
+[barrier] seen ranks: [0, 1, 2]
+========== [barrier] result: OK ==========
+[Controller] writer matched: current=0 total=0
+[C++] trampoline:on_data_available enter, reader=000002D97F7E4F80
+INFO:root:[ag][recv] key=1|1113674322|barrier|0 from_rank=1 seg=1/1 len=4 frame=36 world=3 total_rx=108
+INFO:root:[ag][recv] rank=1 all segments arrived, merged_len=4
+INFO:root:[ag][done] key=1|1113674322|barrier|0 collected from ranks=[0, 1, 2], world=3
+INFO:root:[ag][collect] key=1|1113674322|barrier|0 done: ranks=[0, 1, 2] sizes=[4, 4, 4]
+[Controller] writer matched: current=0 total=0
+[Controller] writer matched: current=2 total=2
+[Controller] reader matched: current=2 total=2
+[Controller] ready.
+
+================ Round 1 ================
+[Controller] TrainCmd written: round=1
+[Controller] progress: final-ready=0/2 (min=2)
+[DDS][uplink] transit≈446 ms (round=1 client=0 bytes=1204590)
+[Controller] recv: round=1 client=0 bytes=1204590 ns=6000 magic=Q8/v1
+[Controller] progress: final-ready=1/2 (min=2)
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[DDS][uplink] transit≈112 ms (round=1 client=1 bytes=1204590)
+[Controller] recv: round=1 client=1 bytes=1204590 ns=6000 magic=Q8/v1
+[Controller] progress: final-ready=2/2 (min=2)
+[Controller] collected clients: 2 / expected 2
+[Controller] published FP32 model, bytes=4799528
+[Controller] round time: 10491 ms
+[Controller] spawn eval: C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py --model E:\distributed-dds-ai-serving-system\distributed_training\federated_learning\eval_model_1757993581568.bin --data_dir E:/distributed-dds-ai-serving-system/data --batch_size 64
+[PY] E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py:34: UserWarning: The given buffer is not writable, and PyTorch does not support non-writable tensors. This means you can write to the underlying (supposedly non-writable) buffer using the tensor. You may want to copy the buffer to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\utils\tensor_new.cpp:1584.)
+[PY]   vec = torch.frombuffer(model_bytes, dtype=torch.float32)
+[PY] [Evaluate] Accuracy: 0.8568 (8568/10000)
+[Controller] Eval exit=0
+
+================ Round 2 ================
+[Controller] TrainCmd written: round=2
+[Controller] progress: final-ready=0/2 (min=2)
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[DDS][uplink] transit≈480 ms (round=2 client=0 bytes=1204590)
+[Controller] recv: round=2 client=0 bytes=1204590 ns=6000 magic=Q8/v1
+[Controller] progress: final-ready=1/2 (min=2)
+[DDS][uplink] transit≈120 ms (round=2 client=1 bytes=1204590)
+[Controller] recv: round=2 client=1 bytes=1204590 ns=6000 magic=Q8/v1
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[Controller] progress: final-ready=2/2 (min=2)
+[Controller] collected clients: 2 / expected 2
+[Controller] published FP32 model, bytes=4799528
+[Controller] round time: 9964 ms
+[Controller] spawn eval: C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py --model E:\distributed-dds-ai-serving-system\distributed_training\federated_learning\eval_model_1757993597034.bin --data_dir E:/distributed-dds-ai-serving-system/data --batch_size 64
+[PY] E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py:34: UserWarning: The given buffer is not writable, and PyTorch does not support non-writable tensors. This means you can write to the underlying (supposedly non-writable) buffer using the tensor. You may want to copy the buffer to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\utils\tensor_new.cpp:1584.)
+[PY]   vec = torch.frombuffer(model_bytes, dtype=torch.float32)
+[PY] [Evaluate] Accuracy: 0.9290 (9290/10000)
+[Controller] Eval exit=0
+
+================ Round 3 ================
+[Controller] TrainCmd written: round=3
+[Controller] progress: final-ready=0/2 (min=2)
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[DDS][uplink] transit≈449 ms (round=3 client=0 bytes=1204590)
+[Controller] recv: round=3 client=0 bytes=1204590 ns=6000 magic=Q8/v1
+[Controller] progress: final-ready=1/2 (min=2)
+[DDS][uplink] transit≈195 ms (round=3 client=1 bytes=1204590)
+[Controller] recv: round=3 client=1 bytes=1204590 ns=6000 magic=Q8/v1
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[Controller] progress: final-ready=2/2 (min=2)
+[Controller] collected clients: 2 / expected 2
+[Controller] published FP32 model, bytes=4799528
+[Controller] round time: 9696 ms
+[Controller] spawn eval: C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py --model E:\distributed-dds-ai-serving-system\distributed_training\federated_learning\eval_model_1757993613042.bin --data_dir E:/distributed-dds-ai-serving-system/data --batch_size 64
+[PY] E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py:34: UserWarning: The given buffer is not writable, and PyTorch does not support non-writable tensors. This means you can write to the underlying (supposedly non-writable) buffer using the tensor. You may want to copy the buffer to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\utils\tensor_new.cpp:1584.)
+[PY]   vec = torch.frombuffer(model_bytes, dtype=torch.float32)
+[PY] [Evaluate] Accuracy: 0.9572 (9572/10000)
+[Controller] Eval exit=0
+
+================ Round 4 ================
+[Controller] TrainCmd written: round=4
+[Controller] progress: final-ready=0/2 (min=2)
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[DDS][uplink] transit≈865 ms (round=4 client=0 bytes=1204590)
+[Controller] recv: round=4 client=0 bytes=1204590 ns=6000 magic=Q8/v1
+[Controller] progress: final-ready=1/2 (min=2)
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[DDS][uplink] transit≈64 ms (round=4 client=1 bytes=1204590)
+[Controller] recv: round=4 client=1 bytes=1204590 ns=6000 magic=Q8/v1
+[Controller] progress: final-ready=2/2 (min=2)
+[Controller] collected clients: 2 / expected 2
+[Controller] published FP32 model, bytes=4799528
+[Controller] round time: 10529 ms
+[Controller] spawn eval: C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py --model E:\distributed-dds-ai-serving-system\distributed_training\federated_learning\eval_model_1757993630076.bin --data_dir E:/distributed-dds-ai-serving-system/data --batch_size 64
+[PY] E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py:34: UserWarning: The given buffer is not writable, and PyTorch does not support non-writable tensors. This means you can write to the underlying (supposedly non-writable) buffer using the tensor. You may want to copy the buffer to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\utils\tensor_new.cpp:1584.)
+[PY]   vec = torch.frombuffer(model_bytes, dtype=torch.float32)
+[PY] [Evaluate] Accuracy: 0.9670 (9670/10000)
+[Controller] Eval exit=0
+
+================ Round 5 ================
+[Controller] TrainCmd written: round=5
+[Controller] progress: final-ready=0/2 (min=2)
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[DDS][uplink] transit≈473 ms (round=5 client=0 bytes=1204590)
+[Controller] recv: round=5 client=0 bytes=1204590 ns=6000 magic=Q8/v1
+[Controller] progress: final-ready=1/2 (min=2)
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[DDS][uplink] transit≈69 ms (round=5 client=1 bytes=1204590)
+[Controller] recv: round=5 client=1 bytes=1204590 ns=6000 magic=Q8/v1
+[Controller] progress: final-ready=2/2 (min=2)
+[Controller] collected clients: 2 / expected 2
+[Controller] published FP32 model, bytes=4799528
+[Controller] round time: 8549 ms
+[Controller] spawn eval: C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py --model E:\distributed-dds-ai-serving-system\distributed_training\federated_learning\eval_model_1757993644248.bin --data_dir E:/distributed-dds-ai-serving-system/data --batch_size 64
+[PY] E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py:34: UserWarning: The given buffer is not writable, and PyTorch does not support non-writable tensors. This means you can write to the underlying (supposedly non-writable) buffer using the tensor. You may want to copy the buffer to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\utils\tensor_new.cpp:1584.)
+[PY]   vec = torch.frombuffer(model_bytes, dtype=torch.float32)
+[PY] [Evaluate] Accuracy: 0.9759 (9759/10000)
+[Controller] Eval exit=0
+
+================ Round 6 ================
+[Controller] TrainCmd written: round=6
+[Controller] progress: final-ready=0/2 (min=2)
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[DDS][uplink] transit≈429 ms (round=6 client=0 bytes=1204590)
+[Controller] recv: round=6 client=0 bytes=1204590 ns=6000 magic=Q8/v1
+[Controller] progress: final-ready=1/2 (min=2)
+[DDS][uplink] transit≈64 ms (round=6 client=1 bytes=1204590)
+[Controller] recv: round=6 client=1 bytes=1204590 ns=6000 magic=Q8/v1
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[Controller] progress: final-ready=2/2 (min=2)
+[Controller] collected clients: 2 / expected 2
+[Controller] published FP32 model, bytes=4799528
+[Controller] round time: 10208 ms
+[Controller] spawn eval: C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py --model E:\distributed-dds-ai-serving-system\distributed_training\federated_learning\eval_model_1757993660316.bin --data_dir E:/distributed-dds-ai-serving-system/data --batch_size 64
+[PY] E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py:34: UserWarning: The given buffer is not writable, and PyTorch does not support non-writable tensors. This means you can write to the underlying (supposedly non-writable) buffer using the tensor. You may want to copy the buffer to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\utils\tensor_new.cpp:1584.)
+[PY]   vec = torch.frombuffer(model_bytes, dtype=torch.float32)
+[PY] [Evaluate] Accuracy: 0.9784 (9784/10000)
+[Controller] Eval exit=0
+
+================ Round 7 ================
+[Controller] TrainCmd written: round=7
+[Controller] progress: final-ready=0/2 (min=2)
+[DDS][uplink] transit≈468 ms (round=7 client=0 bytes=1204590)
+[Controller] recv: round=7 client=0 bytes=1204590 ns=6000 magic=Q8/v1
+[Controller] progress: final-ready=1/2 (min=2)
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[DDS][uplink] transit≈62 ms (round=7 client=1 bytes=1204590)
+[Controller] recv: round=7 client=1 bytes=1204590 ns=6000 magic=Q8/v1
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[Controller] progress: final-ready=2/2 (min=2)
+[Controller] collected clients: 2 / expected 2
+[Controller] published FP32 model, bytes=4799528
+[Controller] round time: 10365 ms
+[Controller] spawn eval: C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py --model E:\distributed-dds-ai-serving-system\distributed_training\federated_learning\eval_model_1757993676379.bin --data_dir E:/distributed-dds-ai-serving-system/data --batch_size 64
+[PY] E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py:34: UserWarning: The given buffer is not writable, and PyTorch does not support non-writable tensors. This means you can write to the underlying (supposedly non-writable) buffer using the tensor. You may want to copy the buffer to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\utils\tensor_new.cpp:1584.)
+[PY]   vec = torch.frombuffer(model_bytes, dtype=torch.float32)
+[PY] [Evaluate] Accuracy: 0.9785 (9785/10000)
+[Controller] Eval exit=0
+
+================ Round 8 ================
+[Controller] TrainCmd written: round=8
+[Controller] progress: final-ready=0/2 (min=2)
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[DDS][uplink] transit≈457 ms (round=8 client=0 bytes=1204590)
+[Controller] recv: round=8 client=0 bytes=1204590 ns=6000 magic=Q8/v1
+[Controller] progress: final-ready=1/2 (min=2)
+[DDS][uplink] transit≈77 ms (round=8 client=1 bytes=1204590)
+[Controller] recv: round=8 client=1 bytes=1204590 ns=6000 magic=Q8/v1
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[Controller] progress: final-ready=2/2 (min=2)
+[Controller] collected clients: 2 / expected 2
+[Controller] published FP32 model, bytes=4799528
+[Controller] round time: 8500 ms
+[Controller] spawn eval: C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py --model E:\distributed-dds-ai-serving-system\distributed_training\federated_learning\eval_model_1757993690582.bin --data_dir E:/distributed-dds-ai-serving-system/data --batch_size 64
+[PY] E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py:34: UserWarning: The given buffer is not writable, and PyTorch does not support non-writable tensors. This means you can write to the underlying (supposedly non-writable) buffer using the tensor. You may want to copy the buffer to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\utils\tensor_new.cpp:1584.)
+[PY]   vec = torch.frombuffer(model_bytes, dtype=torch.float32)
+[PY] [Evaluate] Accuracy: 0.9820 (9820/10000)
+[Controller] Eval exit=0
+
+================ Round 9 ================
+[Controller] TrainCmd written: round=9
+[Controller] progress: final-ready=0/2 (min=2)
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[DDS][uplink] transit≈457 ms (round=9 client=0 bytes=1204590)
+[Controller] recv: round=9 client=0 bytes=1204590 ns=6000 magic=Q8/v1
+[Controller] progress: final-ready=1/2 (min=2)
+[DDS][uplink] transit≈98 ms (round=9 client=1 bytes=1204590)
+[Controller] recv: round=9 client=1 bytes=1204590 ns=6000 magic=Q8/v1
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[Controller] progress: final-ready=2/2 (min=2)
+[Controller] collected clients: 2 / expected 2
+[Controller] published FP32 model, bytes=4799528
+[Controller] round time: 10856 ms
+[Controller] spawn eval: C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py --model E:\distributed-dds-ai-serving-system\distributed_training\federated_learning\eval_model_1757993707337.bin --data_dir E:/distributed-dds-ai-serving-system/data --batch_size 64
+[PY] E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py:34: UserWarning: The given buffer is not writable, and PyTorch does not support non-writable tensors. This means you can write to the underlying (supposedly non-writable) buffer using the tensor. You may want to copy the buffer to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\utils\tensor_new.cpp:1584.)
+[PY]   vec = torch.frombuffer(model_bytes, dtype=torch.float32)
+[PY] [Evaluate] Accuracy: 0.9784 (9784/10000)
+[Controller] Eval exit=0
+
+================ Round 10 ================
+[Controller] TrainCmd written: round=10
+[Controller] progress: final-ready=0/2 (min=2)
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[DDS][uplink] transit≈533 ms (round=10 client=0 bytes=1204590)
+[Controller] recv: round=10 client=0 bytes=1204590 ns=6000 magic=Q8/v1
+[Controller] progress: final-ready=1/2 (min=2)
+[C++] trampoline:on_data_available enter, reader=000002D97FA36E90
+[DDS][uplink] transit≈59 ms (round=10 client=1 bytes=1204590)
+[Controller] recv: round=10 client=1 bytes=1204590 ns=6000 magic=Q8/v1
+[Controller] progress: final-ready=2/2 (min=2)
+[Controller] collected clients: 2 / expected 2
+[Controller] published FP32 model, bytes=4799528
+[Controller] round time: 10664 ms
+[Controller] spawn eval: C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py --model E:\distributed-dds-ai-serving-system\distributed_training\federated_learning\eval_model_1757993723707.bin --data_dir E:/distributed-dds-ai-serving-system/data --batch_size 64
+[PY] E:\distributed-dds-ai-serving-system\distributed_training\federal_train_scripts\evaluate.py:34: UserWarning: The given buffer is not writable, and PyTorch does not support non-writable tensors. This means you can write to the underlying (supposedly non-writable) buffer using the tensor. You may want to copy the buffer to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\utils\tensor_new.cpp:1584.)
+[PY]   vec = torch.frombuffer(model_bytes, dtype=torch.float32)
+[PY] [Evaluate] Accuracy: 0.9821 (9821/10000)
+[Controller] Eval exit=0
+[Controller] shutdown.

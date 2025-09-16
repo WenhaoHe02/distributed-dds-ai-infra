@@ -9,8 +9,8 @@
 
 
   "wire_format": "sq8",
-  "stream": true,
-  "comm_every": 0,
+  "stream": false,
+  "comm_every": -1,
   "sparse_first_round": false,
   "sparse_ratio": 0.1,
 

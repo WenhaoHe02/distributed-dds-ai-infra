@@ -87,16 +87,15 @@ class ZrddsAllgather:
         wq = dds.DataWriterQos()
         self.pub.get_default_datawriter_qos(wq)
         wq.reliability.kind = dds.ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS
-        wq.history.kind = dds.HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS
+        wq.history.kind = dds.HistoryQosPolicyKind.KEEP_ALL_HISTORY_QOS
         wq.history.depth = history_depth
         self.writer = self.pub.create_datawriter(self.topic, wq, None, 0)
 
-        # Reader：RELIABLE + KEEP_LAST(4)
         rq = dds.DataReaderQos()
         self.sub.get_default_datareader_qos(rq)
         rq.reliability.kind = dds.ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS
-        rq.history.kind = dds.HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS
-        rq.history.depth = 4
+        rq.history.kind = dds.HistoryQosPolicyKind.KEEP_ALL_HISTORY_QOS
+
 
         # Buckets / state
         self._buckets = defaultdict(lambda: defaultdict(list))  # key -> rank -> [(seq, bytes)...]

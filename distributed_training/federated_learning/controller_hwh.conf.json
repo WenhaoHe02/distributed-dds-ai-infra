@@ -3,7 +3,7 @@
   "expected_clients": 2,
   "min_clients_to_aggregate": 2,
   "timeout_ms": 300000000,
-  "rounds": 5,
+  "rounds": 10,
   "python_exe": "C:/Users/HWH/AppData/Local/Programs/Python/Python39/python.exe",
   "eval_script": "E:\\distributed-dds-ai-serving-system\\distributed_training\\federal_train_scripts\\evaluate.py",
   "data_dir": "E:/distributed-dds-ai-serving-system/data",

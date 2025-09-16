@@ -1,0 +1,39 @@
+fp32_dense
+=== 每个client的平均通信时间（10轮） ===
+Client 0: 547.30 ms
+Client 1: 193.90 ms
+
+=== 每轮总时间（10轮平均） ===
+10484.80 ms
+[PY] [Evaluate] Accuracy: 0.9831 (9831/10000)
+[Controller] recv: round=8 client=1 bytes=4799528 ns=6000 magic=FP32(?)
+int8_dense
+
+int8_dense
+Client 0: 505.70 ms
+Client 1: 92.00 ms
+
+=== 每轮总时间（10轮平均） ===
+9982.20 ms
+[PY] [Evaluate] Accuracy: 0.9821 (9821/10000)
+[Controller] recv: round=10 client=0 bytes=1204590 ns=6000 magic=Q8/v1
+
+fp32_sparse
+=== 每个client的平均通信时间（10轮） ===
+Client 0: 450.20 ms
+Client 1: 66.50 ms
+
+=== 每轮总时间（10轮平均） ===
+9432.70 ms
+[PY] [Evaluate] Accuracy: 0.9812 (9812/10000)
+[Controller] recv: round=10 client=0 bytes=959916 ns=6000 magic=S4/v1
+int8_sparse
+=== 每个client的平均通信时间（10轮） ===
+Client 0: 429.70 ms
+Client 1: 65.10 ms
+
+=== 每轮总时间（10轮平均） ===
+9589.00 ms
+[PY] [Evaluate] Accuracy: 0.9817 (9817/10000)
+[Controller] recv: round=10 client=1 bytes=600432 ns=6000 magic=SQ8/v1
+

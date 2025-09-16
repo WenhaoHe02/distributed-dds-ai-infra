@@ -87,13 +87,13 @@ class ZrddsDenseBroadcast:
         wq = dds.DataWriterQos();
         self.pub.get_default_datawriter_qos(wq)
         wq.reliability.kind = dds.ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS
-        wq.history.kind = dds.HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS
+        wq.history.kind = dds.HistoryQosPolicyKind.KEEP_ALL_HISTORY_QOS
         wq.history.depth = history_depth
         self.writer = self.pub.create_datawriter(self.topic, wq, None, 0)
         rq = dds.DataReaderQos()
         self.sub.get_default_datareader_qos(rq)
         rq.reliability.kind = dds.ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS
-        rq.history.kind = dds.HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS
+        rq.history.kind = dds.HistoryQosPolicyKind.KEEP_ALL_HISTORY_QOS
         rq.history.depth = 4
 
 

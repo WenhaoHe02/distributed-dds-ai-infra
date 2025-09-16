@@ -129,7 +129,7 @@ class Controller:
         self.subscriber.get_default_datareader_qos(rq)
         rq.reliability.kind = dds.ReliabilityQosPolicyKind.RELIABLE_RELIABILITY_QOS
         rq.history.kind = dds.HistoryQosPolicyKind.KEEP_LAST_HISTORY_QOS
-        rq.history.depth = 64
+        rq.history.depth = 8
         self.client_update_reader = self.subscriber.create_datareader(t_upd, rq, None, 0)
         if not self.client_update_reader:
             raise RuntimeError("create ClientUpdate reader failed")
@@ -524,6 +524,6 @@ if __name__ == "__main__":
     ctrl.init()
     try:
         for i in range(cfg.rounds):
-            ctrl.run_round(subset_size=6000, epochs=5, lr=0.01, seed=12345+i)
+            ctrl.run_round(subset_size=6000, epochs=1, lr=0.01, seed=12345+i)
     finally:
         ctrl.shutdown()

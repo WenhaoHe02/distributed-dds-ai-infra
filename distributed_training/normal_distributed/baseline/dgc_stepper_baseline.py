@@ -93,7 +93,10 @@ class DDPDGCStepperBase:
         else:
             self._txrx0 = (0, 0)
         self._last_dds_wait_ms = 0.0
-
+        if hasattr(self.comm, "payload_counters"):
+            self._pl0 = self.comm.payload_counters()
+        else:
+            self._pl0 = (0, 0)
         for name, p in self.named_params:
             if p.grad is None:
                 logging.info(f"[begin_step] skip {name}: grad is None")

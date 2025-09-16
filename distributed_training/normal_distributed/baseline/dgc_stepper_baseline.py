@@ -39,10 +39,6 @@ class DDPDGCStepperBase:
         self._win_pl_rx = 0
         self._win_steps = 0
         self._ema_ms = None
-        if hasattr(self.comm, "payload_counters"):
-            self._pl0 = self.comm.payload_counters()
-        else:
-            self._pl0 = (0, 0)
 
     @staticmethod
     def _pack_data_with_scale(compressed_tensor: torch.Tensor, scale: float, dtype_val, dtype_scale):
@@ -92,6 +88,10 @@ class DDPDGCStepperBase:
             self._txrx0 = self.comm.bytes_counters()
         else:
             self._txrx0 = (0, 0)
+        if hasattr(self.comm, "payload_counters"):
+            self._pl0 = self.comm.payload_counters()
+        else:
+            self._pl0 = (0, 0)
         self._last_dds_wait_ms = 0.0
 
         for name, p in self.named_params:

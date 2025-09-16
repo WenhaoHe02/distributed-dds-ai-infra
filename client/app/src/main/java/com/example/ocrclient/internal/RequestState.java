@@ -19,6 +19,9 @@ public class RequestState {
     private long expectedTaskCount = -1; // -1表示尚未设置
     private boolean completed = false;
 
+    // 第一个任务超时时间（毫秒）- 400ms
+    private static final long FIRST_TASK_TIMEOUT = 4000;
+
     public RequestState(String requestId) {
         this.requestId = requestId;
         this.startTime = System.currentTimeMillis();
@@ -142,17 +145,43 @@ public class RequestState {
             return 30000;
         }
         // 计算公式：基础时间(5秒) + 每个任务2秒
-        return 5000000 + (expectedTaskCount * 2000);
+        return 5000 + (expectedTaskCount * 2000);
     }
 
     /**
-     * 检查是否超时
+     * 检查是否超时（整体超时）
      *
      * @return 是否超时
      */
     public boolean isTimeout() {
         long elapsed = System.currentTimeMillis() - startTime;
         return elapsed > calculateTimeout();
+    }
+
+    /**
+     * 检查第一个任务是否超时
+     * 如果在规定时间内（10秒）没有收到任何结果，则判定为超时
+     *
+     * @return 第一个任务是否超时
+     */
+    public boolean isFirstTaskTimeout() {
+        // 如果已经收到了结果，则不会第一个任务超时
+        if (receivedResults.size() > 0) {
+            return false;
+        }
+        
+        // 检查是否超过了第一个任务的超时时间
+        long elapsed = System.currentTimeMillis() - startTime;
+        return elapsed > FIRST_TASK_TIMEOUT;
+    }
+
+    /**
+     * 检查是否超时（包括整体超时和第一个任务超时）
+     *
+     * @return 是否超时
+     */
+    public boolean isAnyTimeout() {
+        return isFirstTaskTimeout() || isTimeout();
     }
 
     /**
@@ -176,7 +205,21 @@ public class RequestState {
         if (expectedTaskCount <= 0) {
             return "处理中... (已接收: " + receivedResults.size() + ")";
         }
-        return "处理中... (进度: " + receivedResults.size() + "/" + expectedTaskCount +
-                " - " + getProgressPercentage() + "%)";
+        // 如果没有超时
+        if(!isAnyTimeout()) {
+            if(expectedTaskCount>receivedResults.size()) {
+                // 没有全部处理完成
+                return "处理中... (进度: " + receivedResults.size() + "/" + expectedTaskCount +
+                        " - " + getProgressPercentage() + "%)";
+            }
+            else{
+                return "处理完成 (进度: " + receivedResults.size() + "/" + expectedTaskCount +
+                    " - " + getProgressPercentage() + "%)";
+            }
+        }
+        else{
+            return "处理超时 (进度: " + receivedResults.size() + "/" + expectedTaskCount +
+                    " - " + getProgressPercentage() + "%)";
+        }
     }
 }

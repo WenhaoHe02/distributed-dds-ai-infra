@@ -4,10 +4,9 @@ sys.path.append(os.path.dirname(__file__))
 import logging
 log_format = "%(asctime)s - %(levelname)s - %(message)s"
 
-# 2. 配置 logging
 logging.basicConfig(
-    level=logging.INFO,        # 设置日志级别：DEBUG < INFO < WARNING < ERROR < CRITICAL
-    format=log_format          # 设置输出格式
+    level=logging.INFO,
+    format=log_format
 )
 
 class TaskRunner:
@@ -22,12 +21,11 @@ class TaskRunner:
 
         if "model_id" not in config or "model_config" not in config:
             raise KeyError("config must contain 'model_id' and 'model_config'")
-        # ✅ 统一检查 parameter（而不是 model_parameter）
         if "parameter" not in config["model_config"]:
             raise KeyError("model_config must contain 'parameter'")
 
         self.model_id = config["model_id"]
-        # 原样传给具体 runner（里头包含 parameter / input / output / params / batch / images 等）
+        # 传给具体 runner（包含 parameter / input / output / params / batch / images ）
         self.model_config = dict(config["model_config"])
 
     def _import_runner(self, model_id: str):

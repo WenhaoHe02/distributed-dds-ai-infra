@@ -1,0 +1,7 @@
+INFO:root:[DDS][2629-2728] wait_sum(avg)=23.96 ms  phase_wall(last)=21.49 ms  avg_bytes=0.010 MB  total_bytes=1.03 MB  avg_payload=0.009 MB  total_payload=0.91 MB
+INFO:root:[COMM][pure_wait] steps=2810 total=58.520s  avg=20.83ms  max=414.15ms
+INFO:root:[VAL] step 02699 acc=98.11% (19621/20000)
+
+INFO:root:[DDS][2700-2799] wait_sum(avg)=18.31 ms  phase_wall(last)=15.91 ms  avg_bytes=1.165 MB  total_bytes=116.53 MB  avg_payload=1.165 MB  total_payload=116.46 MB
+INFO:root:[COMM][train] steps=2810 pure_wait_total=71.777s  avg_wait=25.54ms  max_wait=3025.49ms
+INFO:root:[VAL] step 02699 acc=98.07% (19614/20000)

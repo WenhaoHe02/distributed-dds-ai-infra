@@ -1,8 +1,4 @@
-#!/usr/bin/env python3
-"""
-Worker (Scheme B, Claim updated: {batch_id, worker_id, queue_length})
-Python version of the Java Worker class
-"""
+
 import logging
 import os
 import sys
@@ -40,7 +36,6 @@ logging.basicConfig(level=logging.INFO)
 def load_worker_config(model_id: str, base_dir: str = "configs") -> dict:
     """
     从 worker/configs 读取 {model_id}_worker.conf.json；也支持 env 覆盖：
-    WORKER_CONFIG_FILE=/abs/path/to/xxx.json
     """
     override = os.environ.get("WORKER_CONFIG_FILE")
     if override:
@@ -65,7 +60,6 @@ def load_worker_config(model_id: str, base_dir: str = "configs") -> dict:
         raise KeyError("config.model_config is required")
 
     mc = cfg["model_config"]
-    # 同时兼容 parameter / model_parameter
     parameter = mc.get("parameter") or mc.get("model_parameter")
     if not parameter:
         raise KeyError("config.model_config.parameter (or model_parameter) is required")

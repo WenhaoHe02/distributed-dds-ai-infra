@@ -10,16 +10,18 @@ import shutil
 import time
 import uuid
 from pathlib import Path
-from typing import Optional, NamedTuple, List, Tuple, Callable, Any
+from typing import Optional, NamedTuple, List, Tuple, Callable, Any, Dict
+from copy import deepcopy
 
+import DDS_All
 from DDS_All import TaskList, WorkerResult, WorkerTaskResult
 import logging
 log_format = "%(asctime)s - %(levelname)s - %(message)s"
 
 # 2. 配置 logging
 logging.basicConfig(
-    level=logging.INFO,        # 设置日志级别：DEBUG < INFO < WARNING < ERROR < CRITICAL
-    format=log_format          # 设置输出格式
+    level=logging.INFO,        # DEBUG < INFO < WARNING < ERROR < CRITICAL
+    format=log_format
 )
 
 class RunPaths(NamedTuple):
@@ -56,6 +58,7 @@ class ModelRunner:
         self.base_model_config = dict(mc)
         self.base_model_config["parameter"] = parameter
         self.base_model_config["model_parameter"] = parameter
+        self.model_config: Dict[str, Any] = deepcopy(base_config["model_config"])
 
     # ====== 入口：按批运行（DDS 传入的 TaskList）======
     def run_batched_task(self, tasks: TaskList) -> WorkerResult:
@@ -63,12 +66,12 @@ class ModelRunner:
         wr.batch_id = tasks.batch_id
         wr.model_id = tasks.model_id
 
-        logging.info("[WorkerRunner] batch_id: %s model_id: %s", wr.batch_id,wr.model_id)
+        logging.info("[WorkerRunner] batch_id: %s model_id: %s", wr.batch_id, wr.model_id)
 
         seq = getattr(tasks, "tasks", None) or []
         n, get_at = self._make_seq_accessors(seq)
 
-        # 统一用 Python list（避免 WorkerTaskResultSeq）
+        # 统一用 Python list
         results_list: List[WorkerTaskResult] = []
         if n == 0:
             wr.results = results_list
@@ -100,11 +103,14 @@ class ModelRunner:
             )
             config_obj = {"model_id": model_id, "model_config": model_config}
 
-            # 执行具体 runner
-            from model_service.task_runner import TaskRunner
+            # 执行具体 runner（兼容两种路径）
+            try:
+                from model_service.task_runner import TaskRunner  # 若你的工程是包结构
+            except ImportError:
+                from task_runner import TaskRunner                # 若 task_runner.py 在项目根
             TaskRunner(config_obj).execute()
 
-            # 3) 回读输出，填充结果（统一 bytes）
+            # 3) 回读输出，填充结果（统一 bytes；OCR 额外回 texts）
             for i in range(n):
                 t = get_at(i)
                 res = WorkerTaskResult()
@@ -112,6 +118,7 @@ class ModelRunner:
                 res.task_id = getattr(t, "task_id", "")
                 res.client_id = getattr(t, "client_id", "")
 
+                # 3.1 output_blob：优先读取图片/常见格式
                 data = self._read_first_output_of_task(run_paths.outputs, str(res.task_id))
                 if data is not None:
                     res.status = "OK"
@@ -119,13 +126,21 @@ class ModelRunner:
                 else:
                     res.status = "ERROR_NO_OUTPUT"
                     res.output_blob = b""
+
+                # 3.2 texts：仅 OCR 读取 <task_id>.txt；YOLO/其他为空列表
+                if model_id in {"ocr", "rapidocr", "textocr"}:
+                    texts = self._read_texts_of_task(run_paths.outputs, str(res.task_id))
+                    self._set_texts(res, texts)   # 非空则 Spliter 会下发；空等价于无
+                else:
+                    self._set_texts(res, [])      # YOLO 文本置空即可
+
                 results_list.append(res)
 
             wr.results = results_list
             return wr
 
         except Exception as e:
-            logging.error(f"Batch processing error: %s",e)
+            logging.error("Batch processing error: %s", e)
             # 兜底：构造 ERROR_RUNNER
             for i in range(n):
                 t = get_at(i)
@@ -135,6 +150,7 @@ class ModelRunner:
                 res.client_id = getattr(t, "client_id", "")
                 res.status = "ERROR_RUNNER"
                 res.output_blob = b""
+                self._set_texts(res, [])  # 兜底时不发文本
                 results_list.append(res)
             wr.results = results_list
             return wr
@@ -170,7 +186,7 @@ class ModelRunner:
         try:
             shutil.rmtree(root_path, ignore_errors=True)
         except Exception as e:
-            logging.error(f"Failed to delete %s: %s",root_path,e)
+            logging.error("Failed to delete %s: %s", root_path, e)
 
     @staticmethod
     def _safe_name(name: str, default: str = "unknown") -> str:
@@ -223,7 +239,7 @@ class ModelRunner:
         except Exception:
             return b""
 
-    # ====== 回读输出 ======
+    # ====== 回读输出（用于 output_blob）======
     @staticmethod
     def _read_first_output_of_task(output_dir: Path, task_id: str) -> Optional[bytes]:
         if not output_dir.exists():
@@ -245,3 +261,28 @@ class ModelRunner:
             return (rank, -path.stat().st_mtime)
         best = sorted(candidates, key=_rank)[0]
         return best.read_bytes() if best.exists() else None
+
+    # ====== 回读 OCR 文本（<task_id>.txt，每行一条；忽略空行）======
+    @staticmethod
+    def _read_texts_of_task(output_dir: Path, task_id: str) -> List[str]:
+        txt = output_dir / f"{task_id}.txt"
+        if not txt.exists() or not txt.is_file():
+            return []
+        try:
+            # 尝试 UTF-8；失败再退回默认编码
+            try:
+                content = txt.read_text(encoding="utf-8", errors="ignore")
+            except Exception:
+                content = txt.read_text()
+            lines = [ln.strip() for ln in content.splitlines()]
+            return [ln for ln in lines if ln]
+        except Exception as e:
+            logging.warning("read texts failed for %s: %s", txt, e)
+            return []
+
+    # ====== 写入 WorkerTaskResult.texts（本绑定直接用 list[str]）======
+    @staticmethod
+    def _set_texts(res: WorkerTaskResult, texts: List[str]) -> None:
+        # 你的 pybind 暴露的是 list[str] getter/setter，无需 StringSeq
+        # 直接赋值即可；C++ 侧会 ensure_length + set_at 完成拷贝。
+        res.texts = [str(s) for s in texts]

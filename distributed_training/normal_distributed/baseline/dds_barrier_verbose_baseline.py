@@ -3,7 +3,7 @@ import time
 import struct
 import DDS_All as dds
 
-# ====== 工具：打印匹配状态（沿用你 Client_v2 的思路） ======
+# ====== 工具：打印匹配状态 ======
 
 def _wait_writer_matched(writer, min_matches, timeout_ms, tag="[barrier]"):
     start = time.time() * 1000.0
@@ -59,12 +59,6 @@ def ddp_barrier_verbose(zrdds_allgather,
                         min_reader_matches: int = 1,
                         match_timeout_s: float = 15.0,
                         barrier_timeout_s: float = 60.0):
-    """
-    - zrdds_allgather: 你的 ZrddsAllgather 实例（需要 .writer / .reader）
-    - min_writer_matches / min_reader_matches:
-        * 保守建议设为 1（至少有人在听/有人在发）
-        * 若你确认 DDS 本地 writer/reader 也算匹配，可设为 world（或 world-1）
-    """
 
     logging.info("========== [barrier] env ==========")
     logging.info(f"[barrier] group_id={group_id} rank={rank} world={world} "

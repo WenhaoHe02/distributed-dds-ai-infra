@@ -54,7 +54,6 @@ def _save_ocr_outputs(result: Any, out_dir: Path, stem: str):
                 # 不影响文本输出
                 pass
 
-    # —— 文本：用你写好的解析器，永不对 None 调用 join —— #
     texts = _parse_texts(result)  # 一定返回 list[str] 或 []
     try:
         with open(txt_path, "w", encoding="utf-8") as f:

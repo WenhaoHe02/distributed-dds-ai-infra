@@ -248,7 +248,7 @@ public class Patcher {
         return 2;
     }
 
-    /* ===================== Example main (与你原来一致，仅日志微调) ===================== */
+    /* ===================== Example main===================== */
 
     public static void main(String[] args) throws Exception {
         DomainParticipant dp = null; Publisher pub = null; Subscriber sub = null;

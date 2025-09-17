@@ -1,16 +1,5 @@
 # =================== Controller_merged.py ===================
 # -*- coding: utf-8 -*-
-"""
-Controller: 接收三种格式并发布 FP32 模型
-  - FP32 全量  (len % 4 == 0)
-  - S4 稀疏Δ  header: 'S','4',0,1 | dim | k | idx[k] | val[k]
-  - SQ8 稀疏量化Δ header: 'S','Q',0,1 | dim | k | chunk | nChunks | idx[k] | scales[nChunks] | q[k] (int8)
-  - Q8 稠密权重 header: 'Q','8',0,1 | chunk | total | nChunks | scales[nChunks] | q[total]
-
-聚合规则：
-  - 若本轮全部是 Δ（S4 或 SQ8），则对 Δ 做加权平均后叠加到 current_model。
-  - 若出现“权重型”（FP32/Q8），则按 FedAvg 更新权重（本版仍支持，但你说所有客户端都发 SQ8 就不会触发该分支）。
-"""
 import json, struct, subprocess, sys, threading, time
 from pathlib import Path
 from typing import Dict, List, Optional

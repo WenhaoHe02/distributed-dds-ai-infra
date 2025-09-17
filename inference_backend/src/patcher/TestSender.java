@@ -71,7 +71,7 @@ public class TestSender {
             req.request_id = "req-" + System.currentTimeMillis();
             req.tasks = new SingleTaskSeq(); // 空任务列表
 
-            // 如果你想发一个最小的占位任务，取消以下注释：
+            
 //            SingleTask t = new SingleTask();
 //            t.request_id = req.request_id;
 //            t.task_id = "t-1";

@@ -13,7 +13,7 @@ from zrdds_allgather import ZrddsAllgather
 from dgc_stepper import DDPDGCStepper
 from compression import DGCCompressor
 from memory import DGCSGDMemory
-from dgc_eval import ddp_evaluate_top1   # 用你提供的 ddp_eval.py
+from dgc_eval import ddp_evaluate_top1   
 from dds_barrier_verbose import ddp_barrier_verbose
 
 # ---- 环境参数（也可从命令行传入）

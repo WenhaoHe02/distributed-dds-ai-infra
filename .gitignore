@@ -119,7 +119,7 @@ ehthumbs.db
 Thumbs.db
 *.lnk
 
-# Node.js (if any web components)
+# Node.js 
 node_modules/
 npm-debug.log*
 yarn-debug.log*
@@ -176,7 +176,6 @@ dist/
 profile_default/
 ipython_config.py
 
-# Model parameters and weights (uncomment if you want to exclude large model files)
 # *.onnx
 # *.pt
 # *.pth
@@ -197,8 +196,6 @@ site/
 *_backup
 backup_*
 
-# Specific to your project structure
-# Uncomment these if you want to exclude certain directories
 # data/client_*_state/
 # data/MNIST/
 # inference_backend/workdir/

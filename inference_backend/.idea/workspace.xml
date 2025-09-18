@@ -5,19 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e138a3a6-543a-47a0-9f7a-53f13e8e1cca" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/../distributed_training/federal_train_scripts/log/ddp_record.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../distributed_training/federal_train_scripts/log/plot_ddp.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../distributed_training/federated_learning/client_hwh.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/federated_learning/client_hwh.conf.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../distributed_training/normal_distributed/baseline/trainbase.py" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/normal_distributed/baseline/trainbase.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../distributed_training/normal_distributed/dist_train_ddp_dgc/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/../distributed_training/normal_distributed/dist_train_ddp_dgc/train.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../docs/DGC_seqence.png" beforeDir="false" afterPath="$PROJECT_DIR$/../docs/DGC_seqence.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../docs/image.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../docs/训练框架.md" beforeDir="false" afterPath="$PROJECT_DIR$/../docs/训练框架.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/federated_learning/Client_v2.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/federated_learning/Client_v3.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/federated_learning/Controller_v2.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/federated_learning/Controller_v3.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/federated_learning/client_v3_hwh.conf.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/federated_learning/client_v3_szh.conf.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/federated_learning/controller_v2_hwh.conf.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/federated_learning/controller_v3_hwh.conf.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../distributed_training/federated_learning/controller_v3_szh.conf.json" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/model_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_runner.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/model_service/task_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/model_service/task_runner.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/worker/woker.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/worker/woker.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../性能测试工具.md" beforeDir="false" afterPath="$PROJECT_DIR$/../性能测试工具.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -39,23 +36,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "E:/dynamo",
-    "node.js.detected.package.eslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.2",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;E:/dynamo&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
@@ -69,6 +66,8 @@
       <workItem from="1757758249959" duration="99000" />
       <workItem from="1757896382628" duration="1378000" />
       <workItem from="1758021382411" duration="1230000" />
+      <workItem from="1758198306249" duration="25000" />
+      <workItem from="1758198348719" duration="1689000" />
     </task>
     <servers />
   </component>

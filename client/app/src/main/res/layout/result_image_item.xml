@@ -96,22 +96,34 @@
 
                 </FrameLayout>
 
-                <!-- OCR文字显示区域 -->
-                <TextView
-                    android:id="@+id/ocr_text"
-                    android:layout_width="150dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:textSize="12sp"
-                    android:visibility="gone"
-                    android:background="@android:color/white"
-                    android:padding="4dp"
-                    android:maxLines="10"
-                    android:scrollbars="vertical" />
-
             </LinearLayout>
 
         </LinearLayout>
+
+        <!-- OCR文字显示区域 -->
+        <ScrollView
+            android:id="@+id/ocr_scroll_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:maxHeight="20dp"
+            android:visibility="gone"
+            android:background="@android:color/white"
+            android:elevation="2dp"
+            android:scrollbars="vertical"
+            android:fadeScrollbars="false">
+
+            <TextView
+                android:id="@+id/ocr_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:padding="8dp"
+                android:textIsSelectable="true" />
+
+        </ScrollView>
 
     </LinearLayout>
 

@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 from typing import List, Optional
 
-import DDS_All as dds  # 你的 pybind11 绑定
+import DDS_All as dds  
 from normal_distributed.dist_train_ddp_dgc.dds_barrier_verbose import ddp_barrier_verbose
 from  normal_distributed.dist_train_ddp_dgc.zrdds_allgather import ZrddsAllgather
 

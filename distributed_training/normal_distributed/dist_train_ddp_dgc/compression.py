@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# 你的 DGCCompressor，按 DDP 适配：支持设置 world_size 和 AVG 语义
 import math, random
 import torch
 from memory import Memory

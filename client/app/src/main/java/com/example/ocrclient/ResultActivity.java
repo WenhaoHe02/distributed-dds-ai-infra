@@ -8,8 +8,10 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ScrollView;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -128,6 +130,7 @@ public class ResultActivity extends AppCompatActivity implements ResultUpdateLis
             ImageView resultImage = itemView.findViewById(R.id.result_image);
             ProgressBar loadingProgress = itemView.findViewById(R.id.loading_progress);
             TextView waitingText = itemView.findViewById(R.id.waiting_text);
+            ScrollView ocrScrollView = itemView.findViewById(R.id.ocr_scroll_view);
 
             titleText.setText("图片 " + (i + 1));
 
@@ -138,6 +141,28 @@ public class ResultActivity extends AppCompatActivity implements ResultUpdateLis
             final int index = i;
             originalImage.setOnClickListener(v -> showFullscreenImage(allUris.get(index)));
             resultImage.setOnClickListener(v -> showResultImageFullscreen(index));
+
+            // 为OCR ScrollView设置触摸事件处理，解决滚动冲突
+            if (ocrScrollView != null) {
+                ocrScrollView.setOnTouchListener(new View.OnTouchListener() {
+                    @Override
+                    public boolean onTouch(View v, MotionEvent event) {
+                        // 当用户触摸OCR文本区域时，请求父视图不要拦截触摸事件
+                        v.getParent().requestDisallowInterceptTouchEvent(true);
+                        
+                        // 处理滚动到边界时的情况
+                        switch (event.getAction() & MotionEvent.ACTION_MASK) {
+                            case MotionEvent.ACTION_UP:
+                            case MotionEvent.ACTION_CANCEL:
+                                // 触摸结束时，允许父视图重新拦截触摸事件
+                                v.getParent().requestDisallowInterceptTouchEvent(false);
+                                break;
+                        }
+                        
+                        return false; // 让ScrollView正常处理滚动事件
+                    }
+                });
+            }
 
             imagesContainer.addView(itemView);
         }
@@ -229,6 +254,7 @@ public class ResultActivity extends AppCompatActivity implements ResultUpdateLis
             ImageView resultImage = itemView.findViewById(R.id.result_image);
             ProgressBar loadingProgress = itemView.findViewById(R.id.loading_progress);
             TextView waitingText = itemView.findViewById(R.id.waiting_text);
+            ScrollView ocrScrollView = itemView.findViewById(R.id.ocr_scroll_view);
             TextView ocrText = itemView.findViewById(R.id.ocr_text);
 
             // 这里应该根据任务ID获取对应的结果，暂时用索引代替（目前taskId是从1开始自增的）
@@ -266,10 +292,10 @@ public class ResultActivity extends AppCompatActivity implements ResultUpdateLis
                             textBuilder.append(resultItem.texts.get_at(j));
                         }
                         ocrText.setText(textBuilder.toString());
-                        ocrText.setVisibility(View.VISIBLE);
+                        ocrScrollView.setVisibility(View.VISIBLE);
                     } else {
                         Log.d(TAG, "OCR文字不存在");
-                        ocrText.setVisibility(View.GONE);
+                        ocrScrollView.setVisibility(View.GONE);
                     }
 
                     // 标记该任务ID已经渲染
@@ -280,7 +306,7 @@ public class ResultActivity extends AppCompatActivity implements ResultUpdateLis
                     resultImage.setVisibility(View.GONE);
                     loadingProgress.setVisibility(View.VISIBLE);
                     waitingText.setVisibility(View.GONE);
-                    ocrText.setVisibility(View.GONE);
+                    ocrScrollView.setVisibility(View.GONE);
                 }
             } else {
                 Log.d(TAG, "结果项为空");
@@ -296,7 +322,7 @@ public class ResultActivity extends AppCompatActivity implements ResultUpdateLis
                     loadingProgress.setVisibility(View.VISIBLE);
                     waitingText.setVisibility(View.GONE);
                 }
-                ocrText.setVisibility(View.GONE);
+                ocrScrollView.setVisibility(View.GONE);
             }
         }
         Log.d(TAG, "图片结果更新完成");

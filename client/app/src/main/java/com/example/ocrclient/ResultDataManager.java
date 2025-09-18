@@ -158,10 +158,12 @@ public class ResultDataManager {
         // 深拷贝 texts（假设 texts 支持按索引 get_at 和 length）
         if (original.texts != null && original.texts.length() > 0) {
             Log.d(TAG, "texts不为空，开始拷贝");
+            Log.d(TAG, "texts长度: " + original.texts.length());
             copy.texts = new StringSeq();
+            copy.texts.ensure_length(original.texts.length(), original.texts.length());
             for (int i = 0; i < original.texts.length(); i++) {
                 String text = original.texts.get_at(i);
-                copy.texts.append(text);
+                copy.texts.set_at(i, text);
                 Log.d(TAG, "拷贝text[" + i + "]: " + text);
             }
             Log.d(TAG, "texts拷贝完成，总数量: " + copy.texts.length());

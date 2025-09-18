@@ -79,7 +79,7 @@ class ModelRunner:
 
         run_paths: Optional[RunPaths] = None
         try:
-            # 临时工作目录（我们只用 outputs）
+            # 临时工作目录
             run_paths = self._make_batch_run_paths(tasks.batch_id)
 
             # 1) 组装内存批处理 images: [(task_id, bytes), ...]
@@ -105,7 +105,7 @@ class ModelRunner:
 
             # 执行具体 runner（兼容两种路径）
             try:
-                from model_service.task_runner import TaskRunner  # 若你的工程是包结构
+                from model_service.task_runner import TaskRunner 
             except ImportError:
                 from task_runner import TaskRunner                # 若 task_runner.py 在项目根
             TaskRunner(config_obj).execute()
@@ -283,6 +283,5 @@ class ModelRunner:
     # ====== 写入 WorkerTaskResult.texts（本绑定直接用 list[str]）======
     @staticmethod
     def _set_texts(res: WorkerTaskResult, texts: List[str]) -> None:
-        # 你的 pybind 暴露的是 list[str] getter/setter，无需 StringSeq
         # 直接赋值即可；C++ 侧会 ensure_length + set_at 完成拷贝。
         res.texts = [str(s) for s in texts]
